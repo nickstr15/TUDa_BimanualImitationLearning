@@ -1,0 +1,29 @@
+devices:
+  - id: 1
+    name: "panda_01"
+    max_vel: [0, 5]
+    start_body: "link0_panda_01"
+    EE: "hand_panda_01"
+    num_gripper_joints: 2
+  - id: 2
+    name: "panda_02"
+    max_vel: [0, 5]
+    start_body: "link0_panda_02"
+    EE: "hand_panda_02"
+    num_gripper_joints: 2
+
+robots:
+  - id: 0
+    name: "DualPanda"
+    device_ids: [1, 2]
+
+controller_configs:
+    - name: "ee_osc"
+      kp: 20
+      kv: 10
+      ki: 1
+      ko: 20
+      k: [1,2,3]
+      d: [0.5,1,1]
+    - name: "nullspace"
+      kv: 30
