@@ -1,0 +1,10 @@
+<mujoco>
+    <compiler angle="radian" meshdir="meshes"/>
+    <option timestep="0.003" solver="Newton" impratio="10" tolerance="1e-10"/>
+
+    <size njmax="3000" nconmax="1000"/>
+    <include file="assets/world.xml"/>
+    <include file="assets/franka_emika_panda/dual_panda.xml"/>
+
+    <include file="assets/hand_over/cuboid.xml"/>
+</mujoco>

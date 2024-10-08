@@ -448,7 +448,9 @@
         <torque name="torque_ee_panda_02" site="ft_frame_panda_02"/>
     </sensor>
 
+  <!--
   <keyframe>
     <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0.04 0.04 0 0 0 -1.57079 0 1.57079 -0.7853 0.04 0.04"/>
   </keyframe>
+  -->
 </mujoco>

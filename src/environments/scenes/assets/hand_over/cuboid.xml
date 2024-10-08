@@ -1,0 +1,14 @@
+<mujocoimport model="cuboid">
+    <asset>
+        <material name="red" specular="1" shininess="0.5" reflectance="1" emission="0.25" rgba="0.82 0 0 1"/>
+    </asset>
+
+    <worldbody>
+        <body name="cuboid" pos="0 0 0.5">
+            <freejoint />
+            <inertial pos="0 0 0" mass="0.1" diaginertia="0.005 0.005 0.005"/>
+            <geom type="box" size="0.02 0.15 0.02" material="red" condim="3"/>
+        </body>
+    </worldbody>
+
+</mujocoimport>

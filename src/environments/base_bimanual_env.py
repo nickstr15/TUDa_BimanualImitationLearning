@@ -1,5 +1,6 @@
 import os.path
 from typing import Any, Dict
+import time
 
 import numpy as np
 
@@ -189,5 +190,19 @@ class BasePandaBimanualEnv(MujocoEnv):
         for ctrl_idx, ctrl in zip(*controller_output):
             ctrl_array[ctrl_idx] = ctrl
         return ctrl_array
+
+    def visualize_static(self, duration=10) -> None:
+        self.set_state(qpos=self.q_home, qvel=np.zeros_like(self.data.qvel))
+        targets = self.x_home_targets
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            ctrl = self._generate_control(targets)
+            self.do_simulation(ctrl, self.frame_skip)
+
+            self.render()
+
+if __name__ == "__main__":
+    env = BasePandaBimanualEnv()
+    env.visualize_static()
 
 
