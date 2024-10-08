@@ -30,6 +30,9 @@
         <body name="y_dir" pos="0 0.05 0.021" mocap="true">
             <geom type="box" size=".01 .1 .04" rgba="0 1 0 1" contype="2" conaffinity="2"/>
         </body>
+        <body name="z_dir" pos="0 0 0.1" mocap="true">
+            <geom type="box" size=".01 .01 .04" rgba="0 0 1 1" contype="2" conaffinity="2"/>
+        </body>
 
         <camera pos="2 0 1" xyaxes="0 1 0 -0.65 0 1"/>
     </worldbody>

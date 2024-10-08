@@ -1,51 +1,41 @@
 import copy
-from enum import Enum
 from threading import Lock
 from typing import Any, Callable, Dict
 
 import mujoco
 import numpy as np
 
-
-class DeviceState(Enum):
-    Q = "Q"
-    Q_ACTUATED = "Q_ACTUATED"
-    DQ = "DQ"
-    DQ_ACTUATED = "DQ_ACTUATED"
-    DDQ = "DDQ"
-    EE_XYZ = "EE_XYZ"
-    EE_XYZ_VEL = "EE_XYZ_VEL"
-    EE_QUAT = "EE_QUAT"
-    FORCE = "FORCE"
-    TORQUE = "TORQUE"
-    J = "JACOBIAN"
+from src.control.utils.enums import GripperState, DeviceState
 
 
 class Device:
     """
-    A Device is a single Panda arm.
-    The Device class encapsulates the device parameters,
-    and it collects data from the simulator, obtaining the
+    The Device class encapsulates the device parameters specified in the config file
+    that is passed to MujocoApp. It collects data from the simulator, obtaining the
     desired device states.
     """
-    def __init__(self, device_config: Dict, model, data, use_sim: bool):
+
+    def __init__(self, device_cfg: Dict, model, data, use_sim: bool) -> None:
         self._data = data
         self._model = model
         self.__use_sim = use_sim
+        # Assign config parameters
+        self._name = device_cfg["name"]
+        self._max_vel = device_cfg.get("max_vel")
+        self._EE = device_cfg["EE"]
+        self._num_gripper_joints = device_cfg["num_gripper_joints"]
 
-        self._name = device_config["name"]
-        self._max_vel = device_config.get("max_vel")
-        self._EE = device_config["EE"]
+        self._controller_type = device_cfg["controller"]
+        self._has_gripper = self._num_gripper_joints > 0
 
-        self._num_gripper_joints = device_config["num_gripper_joints"]
 
-        if "start_body" in device_config.keys():
-            start_body_name = device_config["start_body"]
+        if "start_body" in device_cfg.keys():
+            start_body_name = device_cfg["start_body"]
             start_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, start_body_name)
         else:
             start_body = 0
 
-        # Reference: ABR Control
+
         # Get the joint ids, using the specified EE / start body
         # start with the end-effector (EE) and work back to the world body
         body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, self._EE)
@@ -78,6 +68,8 @@ class Device:
         actuator_trnids = model.actuator_trnid[:, 0]
         self._ctrl_idxs = np.intersect1d(actuator_trnids, self._all_joint_ids, return_indices=True)[1]
         self._actuator_trnids = actuator_trnids[self._ctrl_idxs]
+        
+        self._gripper_ctrl_idx = self._ctrl_idxs[-1] + 1 if self._has_gripper else None
 
         # Initialize dicts to keep track of the state variables and locks
         self.__state_var_map: Dict[DeviceState, Callable[[], np.ndarray]] = {
@@ -98,6 +90,7 @@ class Device:
             DeviceState.FORCE: lambda: self.__get_force(),
             DeviceState.TORQUE: lambda: self.__get_torque(),
             DeviceState.J: lambda: self.__get_jacobian(),
+            DeviceState.GRIPPER: lambda: self.__get_gripper_state(),
         }
 
         self.__state: Dict[DeviceState, Any] = dict()
@@ -112,6 +105,7 @@ class Device:
             DeviceState.EE_QUAT,
             DeviceState.FORCE,
             DeviceState.TORQUE,
+            DeviceState.GRIPPER
         ]
 
     @property
@@ -121,6 +115,14 @@ class Device:
     @property
     def all_joint_ids(self):
         return self._all_joint_ids
+
+    @property
+    def joint_ids(self):
+        return self._joint_ids
+
+    @property
+    def gripper_ids(self):
+        return self._gripper_ids
 
     @property
     def max_vel(self):
@@ -133,43 +135,47 @@ class Device:
     @property
     def actuator_trnids(self):
         return self._actuator_trnids
+    
+    @property
+    def gripper_ctrl_idx(self):
+        return self._gripper_ctrl_idx
+    
+    @property
+    def has_gripper(self):
+        return self._has_gripper
+
+    @property
+    def controller_type(self):
+        return self._controller_type
 
     def __get_jacobian(self):
         """
-        :returns: The full jacobian (of the Device, using its EE)
+        :return: full jacobian (of the Device, using its EE)
         """
-        _J = np.array([])
-        _EE_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_BODY, self._EE)
-        _J = np.zeros((3, self._model.nv))
-        _Jr = np.zeros((3, self._model.nv))
-        mujoco.mj_jacBody(self._model, self._data, jacp=_J, jacr=_Jr, body=_EE_id)
-        _J = np.vstack([_J, _Jr]) if _J.size else _Jr
-        return _J
+        EE_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_BODY, self._EE)
+        J = np.zeros((3, self._model.nv))
+        Jr = np.zeros((3, self._model.nv))
+        mujoco.mj_jacBody(self._model, self._data, jacp=J, jacr=Jr, body=EE_id)
+        J = np.vstack([J, Jr]) if J.size else Jr
+        return J
 
-    def __get_R(self):
+    def __get_gripper_state(self):
         """
-        Get rotation matrix for device's ft_frame
+        Get the state of the gripper joints
         """
-        if self._name == "ur5right": #TODO replace
-            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, "ft_frame_ur5right")
-        elif self._name == "ur5left":
-            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, "ft_frame_ur5left")
-        else:
-            raise ValueError(f"Wrong name specification: {self._name}")
-
-        xmat = self._data.site_xmat[site_id].reshape(3, 3)
-        return xmat
+        q_gripper = self._data.qpos[self._gripper_ids]
+        return GripperState.OPEN if np.all(q_gripper > 0) else GripperState.CLOSED
 
     def __get_force(self):
         """
         Get the external forces, used (for admittance control) acting upon
         the gripper sensors
         """
-        if self._name == "ur5right": # TODO replace and fix indices
-            force = np.matmul(self.__get_R(), self._data.sensordata[0:3])
+        if self._name == "panda_01":
+            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[0:3])
             return force
-        if self._name == "ur5left":
-            force = np.matmul(self.__get_R(), self._data.sensordata[6:9])
+        if self._name == "panda_02":
+            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[6:9])
             return force
         else:
             return np.zeros(3)
@@ -179,14 +185,30 @@ class Device:
         Get the external torques, used (for admittance control) acting upon
         the gripper sensors
         """
-        if self._name == "ur5right": #TODO replace + fix incides
-            force = np.matmul(self.__get_R(), self._data.sensordata[3:6])
+        if self._name == "panda_01":
+            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[3:6])
             return force
-        if self._name == "ur5left":
-            force = np.matmul(self.__get_R(), self._data.sensordata[9:12])
+        if self._name == "panda_02":
+            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[9:12])
             return force
         else:
             return np.zeros(3)
+
+    def __get_R_ft_frame(self):
+        """
+        Get rotation matrix for device's ft_frame
+        """
+        if self._name == "panda_01":
+            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, "ft_frame_ur5right")
+        elif self._name == "panda_02":
+            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, "ft_frame_ur5left")
+        else:
+            raise ValueError("Invalid called method. Invalid device name: {}, expected one of {}".format(
+                self._name, ["panda_01", "panda_02"])
+            )
+
+        xmat = self._data.site_xmat[site_id].reshape(3, 3)
+        return xmat
 
     def __set_state(self, state_var: DeviceState):
         """
@@ -210,6 +232,10 @@ class Device:
     def get_state(self, state_var: DeviceState):
         """
         Get the state of the device corresponding to the key value (if exists)
+
+        :param state_var: the state variable to get
+
+        :return: the state of the device
         """
         if self.__use_sim:
             func = self.__state_var_map[state_var]
@@ -225,8 +251,10 @@ class Device:
 
     def update_state(self):
         """
-        This should be running in a thread, e.g. Robot.start()
+        This should run in a thread: Robot.start()
         """
         assert self.__use_sim is False
         for var in DeviceState:
             self.__set_state(var)
+
+

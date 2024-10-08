@@ -1,13 +1,9 @@
-from enum import Enum
-
 import numpy as np
 from transforms3d.euler import euler2quat, quat2euler
 
-class GripperState(Enum):
-    OPEN = 255
-    CLOSED = 0
+from src.control.utils.enums import GripperState
 
-class SingleArmTarget:
+class Target:
     """
     The Target class holds a target vector for
         - orientation (quaternion)
@@ -26,7 +22,7 @@ class SingleArmTarget:
         """
         :param xyz_abg: xyz position and euler angles of the target
         :param xyz_abg_vel: xyz velocity and euler angles velocity of the target
-        :param grip: gripper state of the target
+        :param grip: gripper state of the target (open or closed)
         """
 
         assert len(xyz_abg) == 6 and len(xyz_abg_vel) == 6
@@ -95,12 +91,20 @@ class SingleArmTarget:
         assert len(xyz_vel) == 3
         self.__xyz_vel = np.asarray(xyz_vel)
 
+
     def set_quat(self, quat: np.ndarray) -> None:
         """
         :param quat: quaternion orientation of the target
         """
         assert len(quat) == 4
         self.__quat = np.asarray(quat)
+
+    def update_quat(self, quat: np.ndarray) -> None:
+        """
+        :param quat: quaternion orientation of the target
+        """
+        assert len(quat) == 4
+        self.__quat += np.asarray(quat)
 
     def set_quat_vel(self, quat_vel: np.ndarray) -> None:
         """
