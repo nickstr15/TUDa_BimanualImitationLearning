@@ -130,69 +130,74 @@ class OSCGripperController:
         return u_task
 
     @staticmethod
-    def calc_task_space_error(target: Target, device: Device) -> np.ndarray:
+    def calc_task_space_error(target: Target, device: Device, relative_targets : bool) -> np.ndarray:
         """
         Compute the difference between the target and device EE
         for the x,y,z and a,b,g components
 
         :param target: the target object
         :param device: the device object to calculate the error for
+        :param relative_targets: boolean to indicate if the targets are relative
 
         :return: the task space error
         """
         u_task = np.zeros(6)
 
         # Calculate x,y,z error
-        diff = device.get_state(DeviceState.EE_XYZ) - target.get_xyz()
+        if relative_targets:
+            diff = -target.get_xyz()
+        else:
+            diff = device.get_state(DeviceState.EE_XYZ) - target.get_xyz()
         u_task[:3] = diff
 
         # Calculate a,b,g error
-        q_r = np.array(
-            qmult(device.get_state(DeviceState.EE_QUAT), qinverse(target.get_quat()))
-        )
+        if relative_targets:
+            q_r = np.array(qinverse(target.get_quat()))
+        else:
+            q_r = np.array(
+                qmult(device.get_state(DeviceState.EE_QUAT), qinverse(target.get_quat()))
+            )
         u_task[3:] = quat2euler(q_r)
 
         return u_task
 
-    def generate_absolute(self, targets: Dict[str, Target]) -> Tuple[list, list]:
+    def generate(self, targets: Dict[str, Target], relative_targets = False) -> Tuple[list, list]:
         """
         Generate control signal for the corresponding devices which are in the
         robot's sub-devices. Accepts a dictionary of device names (keys),
         which map to a Target (absolute target).
 
-        :param targets: dict of device names mapping to absolute Target objects
+        If the relative_targets is True, the targets are relative to the current state,
+        and it is assumed that a static target is the goal (all target velocities are zero).
+
+        :param targets: dict of device names mapping to Target objects
+        :param relative_targets: boolean to indicate if the targets are relative
 
         :return: tuple of (control indices, corresponding control signals)
         """
-        return self._generate(targets)
+        if relative_targets:
+            for device_name, target in targets.items():
+                if not np.all(target.get_xyz_vel() == 0) or not np.all(target.get_abg_vel() == 0):
+                    print("Warning: " + \
+                          "Relative targets are assumed to be static targets (all target velocities are zero). " + \
+                          "Ignoring target velocities.")
 
-    def generate_relative(self, relative_targets: Dict[str, Target]) -> Tuple[list, list]:
-        """
-        Generate control signal for the corresponding devices which are in the
-        robot's sub-devices. Accepts a dictionary of device names (keys),
-        which map to a Target (relative target).
+        return self._generate(targets, relative_targets)
 
-        :param relative_targets: dict of device names mapping to relative Target objects
-
-        :return: tuple of (control indices, corresponding control signals)
-        """
-        return self._generate(relative_targets, relative=True)
-
-
-    def _generate(self, targets: Dict[str, Target], relative : bool = False) -> Tuple[list, list]:
+    def _generate(self, targets: Dict[str, Target], relative_targets : bool = False) -> Tuple[list, list]:
         """
         Generate control signal for the corresponding devices which are in the
         robot's sub-devices. Accepts a dictionary of device names (keys),
         which map to a Target (absolute target).
 
-        :param targets: dict of device names mapping to absolute Target objects
-        :param relative: boolean to indicate if the targets are relative
+        If the relative_targets is True, the targets are relative to the current state,
+        and it is assumed that a static target is the goal (all target velocities are zero).
+
+        :param targets: dict of device names mapping to Target objects
+        :param relative_targets: boolean to indicate if the targets are relative
 
         :return: tuple of (control indices, corresponding control signals)
         """
-        if relative:
-            raise NotImplementedError
-
         # check that all device names are in the targets dict
         for device_name in self.device_names:
             if device_name not in targets.keys():
@@ -234,7 +239,7 @@ class OSCGripperController:
             device = self.robot.get_device(device_name)
 
             # Calculate the error from the device EE to target
-            u_task = self.calc_task_space_error(target, device)
+            u_task = self.calc_task_space_error(target, device, relative_targets)
             stiffness = np.array(self.device_configs[device_name]["k"] + [1] * 3)
             damping = np.array(self.device_configs[device_name]["d"] + [1] * 3)
 
@@ -248,7 +253,11 @@ class OSCGripperController:
 
             # Apply kv gain
             kv = self.device_configs[device.name]["kv"]
+
             target_vel = np.hstack([target.get_xyz_vel(), target.get_abg_vel()])
+            if relative_targets:
+                target_vel = np.zeros_like(target_vel)
+
             if np.all(target_vel == 0):
                 ist, c1, c2 = np.intersect1d(
                     device.all_joint_ids, self.robot.all_joint_ids[mask], return_indices=True

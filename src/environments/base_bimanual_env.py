@@ -1,17 +1,11 @@
 import os.path
-import time
-from abc import ABC, abstractmethod
-from typing import Tuple, List, Any, Dict
+from typing import Any, Dict
 
 import numpy as np
 
-import mujoco
-
 import gymnasium as gym
 import yaml
-from gymnasium import Space
 from gymnasium.envs.mujoco import MujocoEnv
-from numpy import dtype, ndarray
 from numpy.typing import NDArray
 
 from src.control.controller import OSCGripperController
@@ -20,7 +14,7 @@ from src.control.utils.enums import GripperState
 from src.control.utils.robot import Robot
 from src.control.utils.target import Target
 from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS
-from src.utils.paths import ENVIRONMENTS_DIR, SCENES_DIR, CONTROL_CONFIGS_DIR
+from src.utils.paths import SCENES_DIR, CONTROL_CONFIGS_DIR
 
 
 class BasePandaBimanualEnv(MujocoEnv):
@@ -189,30 +183,11 @@ class BasePandaBimanualEnv(MujocoEnv):
             if entry["name"] == name:
                 return entry
 
-    def _generate_control(self, targets : Dict[str, Target]) -> NDArray[np.float64]:
-        controller_output = self.controller.generate_absolute(targets)
+    def _generate_control(self, targets : Dict[str, Target], relative_targets : bool = False) -> NDArray[np.float64]:
+        controller_output = self.controller.generate(targets, relative_targets)
         ctrl_array = np.zeros_like(self.data.ctrl)
         for ctrl_idx, ctrl in zip(*controller_output):
             ctrl_array[ctrl_idx] = ctrl
         return ctrl_array
 
-    def visualize(self, duration = 10) -> None:
-        # move robot to home position
-        self.set_state(qpos=self.q_home, qvel=np.zeros_like(self.data.qvel))
 
-        targets = self.x_home_targets
-
-        targets["panda_01"].set_xyz(targets["panda_01"].get_xyz() + np.array([0.1, 0, 0]))
-        targets["panda_02"].set_xyz(targets["panda_02"].get_xyz() + np.array([-0.1, 0, 0]))
-
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            ctrl = self._generate_control(targets)
-            self.do_simulation(ctrl, self.frame_skip)
-
-            self.render()
-
-
-if __name__ == "__main__":
-    env = BasePandaBimanualEnv()
-    env.visualize()
