@@ -1,13 +1,15 @@
 import os.path
-from typing import Any, Dict
+from typing import Any, Dict, Tuple, List
 import time
 
+import mujoco
 import numpy as np
 
 import gymnasium as gym
 import yaml
 from gymnasium.envs.mujoco import MujocoEnv
 from numpy.typing import NDArray
+from typing_extensions import override
 
 from src.control.controller import OSCGripperController
 from src.control.utils.device import Device
@@ -37,6 +39,7 @@ class BasePandaBimanualEnv(MujocoEnv):
             width=480,
             height=360,
             frame_skip=MUJOCO_FRAME_SKIP,
+            store_frames=False
         ):
 
         full_scene_path = os.path.join(SCENES_DIR, scene_file)
@@ -101,6 +104,12 @@ class BasePandaBimanualEnv(MujocoEnv):
             admittance_gain=admittance_gain,
         )
 
+        self._store_frames = store_frames
+        if self._store_frames:
+            assert render_mode == 'rgb_array', "Frames can only be stored when render_mode is 'rgb_array'"
+        self._rendered_frames = [] if self._store_frames else None
+
+
     @staticmethod
     def _viewer_setup(viewer) -> None:
         viewer.cam.azimuth = 190
@@ -113,8 +122,9 @@ class BasePandaBimanualEnv(MujocoEnv):
     @property
     def q_home(self) -> NDArray[np.float64]:
         """
-        Return the home position of the robot
-        :return: q_home
+        Return the home position of the robot in the joint space
+
+        :return: joint positions
         """
         return np.array(
             [0, 0, 0, -1.57079, 0, 1.57079, -0.7853, 0.04, 0.04]*2,
@@ -124,7 +134,7 @@ class BasePandaBimanualEnv(MujocoEnv):
     @property
     def x_home(self) -> Any:
         """
-        Return the home position of the robot
+        Return the home position of the robot in the world frame
         :return: x_home
         """
         return [
@@ -135,7 +145,7 @@ class BasePandaBimanualEnv(MujocoEnv):
     @property
     def x_home_targets(self) -> Dict[str, Target]:
         """
-        Return the home position of the target
+        Return the home position of the robot in the world frame as targets
         :return: x_home_target
         """
         targets = {
@@ -151,6 +161,36 @@ class BasePandaBimanualEnv(MujocoEnv):
         targets["panda_02"].set_quat(self.x_home[11:15])
         targets["panda_02"].set_gripper_state(self.x_home[15])
         return targets
+
+    def set_robot_joint_pos(self, joint_pos : np.ndarray) -> None:
+        """
+        Set the joint positions of the robot.
+
+        :param joint_pos: joint positions
+        :return:
+        """
+        assert len(joint_pos) == self.robot.num_joints_total, "Joint positions must have the same length as the number of joints"
+        self.data.qpos[:len(joint_pos)] = joint_pos
+
+    def set_free_joint_pos(self, free_joint_name : str , quat : np.ndarray = None, pos : np.ndarray = None):
+        """
+        Set the position of the free joint.
+
+        :param free_joint_name: name of the free joint
+        :param quat: orientation of the free joint as a quaternion
+        :param pos: position of the free joint (x, y, z)
+        :return:
+        """
+        jnt_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, free_joint_name)
+        offset = self.model.jnt_qposadr[jnt_id]
+
+        if quat is not None:
+            quat_idxs = np.arange(offset + 3, offset + 7)  # Quaternion indices
+            self.data.qpos[quat_idxs] = quat
+
+        if pos is not None:
+            pos_idxs = np.arange(offset, offset + 3)  # Position indices
+            self.data.qpos[pos_idxs] = pos
 
     @staticmethod
     def __get_devices(mj_model, mj_data, cfg, use_sim=True) -> Any:
@@ -191,8 +231,9 @@ class BasePandaBimanualEnv(MujocoEnv):
             ctrl_array[ctrl_idx] = ctrl
         return ctrl_array
 
-    def visualize_static(self, duration=10) -> None:
-        self.set_state(qpos=self.q_home, qvel=np.zeros_like(self.data.qvel))
+    def visualize_static(self, duration=5) -> None:
+        self.reset()
+
         targets = self.x_home_targets
         start_time = time.time()
         while time.time() - start_time < duration:
@@ -201,8 +242,77 @@ class BasePandaBimanualEnv(MujocoEnv):
 
             self.render()
 
+    @property
+    def default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        """
+        Return the default positions of the free joints.
+        The value of a specific joint is a tuple of the quaternion and the position.
+        :return: key-value pairs of free joint names and their positions
+        """
+
+        # the base environment does not have any free joints
+        return { }
+
+    @property
+    def render_fps(self) -> int:
+        """
+        Return the frames per second of the rendering.
+        :return: fps
+        """
+        return self.metadata['render_fps']
+
+    def reset_model(self) -> NDArray[np.float64]:
+        """
+        Reset the model to the initial state.
+        :return: observation
+        """
+        self._reset_model()
+        return self._get_obs()
+
+    def _reset_model(self) -> None:
+        """
+        Initialize the simulation with the robot at the home position
+        and the free joints to the default positions.
+
+        :return:
+        """
+        mujoco.mj_forward(self.model, self.data)
+        self.set_robot_joint_pos(self.q_home)
+        for joint_name, pos in self.default_free_joint_positions.items():
+            self.set_free_joint_pos(joint_name, *pos)
+
+    def _get_obs(self) -> NDArray[np.float64]:
+        """
+        Return the observation of the environment.
+        :return: observation
+        """
+        return np.concatenate([self.data.qpos, self.data.qvel])
+
+    def get_mujoco_renders(self):
+        """
+        Return the rendered frames.
+        :return:
+        """
+        return self._rendered_frames
+
+    @override
+    def render(self) -> Any:
+        """
+        Render the environment.
+        :return:
+        """
+        rendering = self.mujoco_renderer.render(
+            self.render_mode, self.camera_id, self.camera_name
+        )
+
+        if self._store_frames:
+            self._rendered_frames.append(rendering)
+
+        return rendering
+
 if __name__ == "__main__":
     env = BasePandaBimanualEnv()
     env.visualize_static()
+    env.close()
 
 

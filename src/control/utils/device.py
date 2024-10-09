@@ -24,6 +24,7 @@ class Device:
         self._max_vel = device_cfg.get("max_vel")
         self._EE = device_cfg["EE"]
         self._num_gripper_joints = device_cfg["num_gripper_joints"]
+        self.gripper_range_q = device_cfg["gripper_range_q"]
 
         self._controller_type = device_cfg["controller"]
         self._has_gripper = self._num_gripper_joints > 0
@@ -90,7 +91,7 @@ class Device:
             DeviceState.FORCE: lambda: self.__get_force(),
             DeviceState.TORQUE: lambda: self.__get_torque(),
             DeviceState.J: lambda: self.__get_jacobian(),
-            DeviceState.GRIPPER: lambda: self.__get_gripper_state(),
+            DeviceState.GRIPPER: lambda: self.__get_gripper_state()
         }
 
         self.__state: Dict[DeviceState, Any] = dict()

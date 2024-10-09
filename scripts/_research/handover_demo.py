@@ -1,28 +1,129 @@
+import os
 import time
+from typing import List, Tuple, Dict
 import numpy as np
+from copy import deepcopy as copy
+import argparse
+
+from src.utils.record_video import export_video
 
 from src.control.utils.enums import GripperState
 from src.control.utils.target import Target
 from src.environments import PandaBimanualHandoverEnv
 
+from src.utils.paths import RECORDING_DIR
+
 class PandaBimanualHandoverDemo(PandaBimanualHandoverEnv):
-    def run(self) -> None:
-        self.set_state(qpos=self.q_home, qvel=np.zeros_like(self.data.qvel))
+    """
+    Panda bimanual handover demo environment.
+    The robot arms follow a hardcoded trajectory to perform a handover task.
+    """
 
+    def _build_targets_traj(self) -> List[Tuple[Dict[str, Target], float]]:
+        """
+        Builds a trajectory of targets and their durations
+        to complete the handover task
+
+        :return: trajectory of targets and their durations
+        """
+        targets_traj = []
+
+        # (1) Move robot to home position
         targets = self.x_home_targets
+        targets_traj += [(copy(targets), 2.0)]
 
-        targets["panda_01"].set_xyz(targets["panda_01"].get_xyz())
-        targets["panda_02"].set_xyz(targets["panda_02"].get_xyz())
+        # (2) Move panda_02 to cuboid
+        targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.18]))
+        targets_traj += [(copy(targets), 7.0)]
 
+
+        # (3) Close gripper of panda_02
+        targets["panda_02"].set_gripper_state(GripperState.CLOSED)
+        targets_traj += [(copy(targets), 1.0)]
+
+        # (4) Move panda_02 up
+        targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.3]))
+        targets_traj += [(copy(targets), 2.0)]
+
+        # (5) Move panda_02 to handover position
+        # and panda_01 close to handover position
+        targets["panda_01"].set_xyz(np.array([0.3, 0.2, 0.5]))
+        targets["panda_01"].set_quat(np.array([1, 1, 0, 0]))
+        targets["panda_02"].set_xyz(np.array([0.2, -0.1, 0.5]))
+        targets["panda_02"].set_quat(np.array([-1, 1, 0, 0]))
+        targets_traj += [(copy(targets), 8.0)]
+
+        # (6) Move panda_01 to cuboid in handover position
+        targets["panda_01"].set_xyz(np.array([0.27, 0.11, 0.49]))
+        targets_traj += [(copy(targets), 2.0)]
+
+        # (7) Close gripper of panda_01
         targets["panda_01"].set_gripper_state(GripperState.CLOSED)
+        targets_traj += [(copy(targets), 1.0)]
 
-        while True:
-            ctrl = self._generate_control(targets)
-            self.do_simulation(ctrl, self.frame_skip)
+        # (8) Open gripper of panda_02
+        targets["panda_02"].set_gripper_state(GripperState.OPEN)
+        targets_traj += [(copy(targets), 1.0)]
 
-            self.render()
+        # (9) Move panda_02 back
+        targets["panda_02"].set_xyz(np.array([0.3, -0.3, 0.5]))
+        targets_traj += [(copy(targets), 1.0)]
+
+        # (10) Move to home position
+        targets = self.x_home_targets
+        targets["panda_01"].set_gripper_state(GripperState.CLOSED)
+        targets_traj += [(copy(targets), 3.0)]
+
+        # (11) Move panda_01 to table surface
+        targets["panda_01"].set_xyz(np.array([0.4, 0.45, 0.22]))
+        targets_traj += [(copy(targets), 8.0)]
+
+        # (12) Open gripper of panda_01
+        targets["panda_01"].set_gripper_state(GripperState.OPEN)
+        targets_traj += [(copy(targets), 1.0)]
+
+        # (13) Move to home position
+        targets = self.x_home_targets
+        targets_traj += [(copy(targets), 8.0)]
+
+        return targets_traj
+
+    def run(self):
+        """
+        Run the handover demo.
+
+        :return:
+        """
+        trajectory = self._build_targets_traj()
+
+        for targets, duration in trajectory:
+            start_time = time.time()
+            while time.time() - start_time < duration:
+                ctrl = self._generate_control(targets)
+                self.do_simulation(ctrl, self.frame_skip)
+                self.render()
+
+
 
 if __name__ == "__main__":
-    env = PandaBimanualHandoverDemo()
+    parser = argparse.ArgumentParser(description="Handover demo")
+    parser.add_argument("--record", "-r", action="store_true", help="Record video of the demo")
+    args = parser.parse_args()
+    recording = args.record
+
+    env = PandaBimanualHandoverDemo(
+        render_mode="rgb_array" if recording else "human",
+        store_frames=recording,
+    )
+    env.reset()
     env.run()
+
+    if recording:
+        export_video(
+            frames=env.get_mujoco_renders(),
+            video_folder=os.path.join(RECORDING_DIR, "handover_demo"),
+            filename="handover_demo.mp4",
+            fps=env.render_fps,
+        )
+    env.close()
 

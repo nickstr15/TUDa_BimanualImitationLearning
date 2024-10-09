@@ -4,6 +4,7 @@ devices:
     max_vel: [0.15, 5]
     EE: "hand_panda_01"
     num_gripper_joints: 2
+    gripper_range_q: [0.0, 0.04]
     controller: "osc"
 
   - id: 1
@@ -11,6 +12,7 @@ devices:
     max_vel: [0.15, 5]
     EE: "hand_panda_02"
     num_gripper_joints: 2
+    gripper_range_q: [0.0, 0.04]
     controller: "osc"
 
 robots:

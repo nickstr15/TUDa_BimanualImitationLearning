@@ -5,11 +5,12 @@ from transforms3d.derivations.quaternions import qmult
 from transforms3d.euler import quat2euler
 from transforms3d.quaternions import qinverse
 
-from src.control.utils.enums import RobotState, DeviceState
+from src.control.utils.enums import RobotState, DeviceState, GripperState
 from src.control.utils.device import Device
 from src.control.utils.robot import Robot
 from src.control.utils.target import Target
 from src.control.control_configs.controller_config import ControllerConfig
+
 
 class OSCGripperController:
     """
@@ -309,7 +310,9 @@ class OSCGripperController:
         for i, dev in enumerate(self.robot.sub_devices):
             # add gripper control
             if dev.has_gripper:
-                ctrls[i] = np.append(ctrls[i], targets[dev.name].get_gripper_state())
+                q_target = targets[dev.name].get_gripper_state()
+
+                ctrls[i] = np.append(ctrls[i], q_target)
                 ctrl_idxs[i] = np.append(ctrl_idxs[i], dev.gripper_ctrl_idx)
 
         return ctrl_idxs, ctrls

@@ -1,7 +1,7 @@
 from enum import Enum, IntEnum
 
 class GripperState(IntEnum):
-    OPEN = 1
+    OPEN = 255
     CLOSED = 0
 
 class DeviceState(Enum):

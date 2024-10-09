@@ -1,0 +1,12 @@
+<mujocoimport model="cuboid_target">
+    <asset>
+        <material name="target" specular="1" shininess="0.5" reflectance="1" emission="0.25" rgba="0 0.82 0 0.1"/>
+    </asset>
+
+    <worldbody>
+        <body name="cuboid_target" pos="0.4 0.4 0.08" mocap="true">
+            <geom type="box" size="0.05 0.13 0.03" material="target" contype="4" conaffinity="4"/>
+        </body>
+    </worldbody>
+
+</mujocoimport>

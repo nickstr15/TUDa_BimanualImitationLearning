@@ -94,6 +94,14 @@ class Robot:
         """
         return self._all_joint_ids
 
+    @property
+    def num_joints_total(self) -> int:
+        """
+        Get the total number of joints of the robot
+        :return: the total number of joints of the robot
+        """
+        return self._num_joints_total
+
     def __get_gravity(self) -> np.ndarray:
         """
         :return: gravity vector

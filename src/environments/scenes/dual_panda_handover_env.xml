@@ -7,4 +7,5 @@
     <include file="assets/franka_emika_panda/dual_panda.xml"/>
 
     <include file="assets/hand_over/cuboid.xml"/>
+    <include file="assets/hand_over/target_region.xml"/>
 </mujoco>

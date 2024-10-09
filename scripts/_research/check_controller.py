@@ -8,8 +8,7 @@ from src.environments import BasePandaBimanualEnv
 class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
 
     def visualize(self, duration=10) -> None:
-        # move robot to home position
-        self.set_state(qpos=self.q_home, qvel=np.zeros_like(self.data.qvel))
+        self._reset()
 
         targets = self.x_home_targets
 
@@ -25,9 +24,9 @@ class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
 
             self.render()
 
-    def visualize_relative(self, duration=10) -> None:
+    def visualize_relative(self, duration=20) -> None:
         # Move robot to home position
-        self.set_state(qpos=self.q_home, qvel=np.zeros_like(self.data.qvel))
+        self.reset()
 
         # Define initial targets
         targets = {
@@ -37,7 +36,7 @@ class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
 
         def set_targets(m):
             offset = 0.01 if m else -0.01
-            abg_offset = np.pi / 4 if m else -np.pi / 4
+            abg_offset = np.pi / 3 if m else -np.pi / 3
 
             targets["panda_01"].set_xyz(np.array([0, offset, offset]))
             targets["panda_02"].set_xyz(np.array([0, -offset, -offset]))
@@ -70,6 +69,8 @@ class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
 if __name__ == "__main__":
     env = MoveToPointPandaBimanualEnv()
 
-    #env.visualize()
-    env.visualize_relative()
+    #env.visualize(3)
+    env.visualize_relative(10)
+
+    env.close()
 

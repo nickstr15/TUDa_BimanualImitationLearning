@@ -5,9 +5,9 @@
 
     <worldbody>
         <body name="cuboid" pos="0 0 0.5">
-            <freejoint />
-            <inertial pos="0 0 0" mass="0.1" diaginertia="0.005 0.005 0.005"/>
-            <geom type="box" size="0.02 0.15 0.02" material="red" condim="3"/>
+            <freejoint name="free_joint_cuboid"/>
+            <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
+            <geom type="box" size="0.02 0.1 0.02" material="red" condim="3"/>
         </body>
     </worldbody>
 
