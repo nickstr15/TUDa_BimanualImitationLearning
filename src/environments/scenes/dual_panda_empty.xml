@@ -5,4 +5,8 @@
     <size njmax="3000" nconmax="1000"/>
     <include file="assets/world.xml"/>
     <include file="assets/franka_emika_panda/dual_panda.xml"/>
+
+    <worldbody>
+        <!--<camera name="top_view" pos="0 0 1.5" xyaxes="1 0 0 0 1 0"/>-->
+    </worldbody>
 </mujoco>

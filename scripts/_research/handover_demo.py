@@ -18,7 +18,6 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
     Panda bimanual handover demo environment.
     The robot arms follow a hardcoded trajectory to perform a handover task.
     """
-
     def _build_targets_traj(self) -> List[Tuple[Dict[str, Target], float]]:
         """
         Builds a trajectory of targets and their durations
@@ -101,14 +100,19 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         trajectory = self._build_targets_traj()
         _warning = False
         for i, (targets, duration) in enumerate(trajectory):
+
             if logging:
                 print(f"Step {i+1}/{len(trajectory)}: {duration}sec")
             steps = int(duration * self.render_fps)
+
             for _ in range(steps):
                 start_time = time.time()
-                ctrl = self._generate_control(targets)
-                self.do_simulation(ctrl, self.frame_skip)
-                self.render()
+
+                #################################
+                # Actual simulation step ########
+                self.step(targets)              #
+                self.render()                   #
+                #################################
 
                 if self.render_mode == "human":
                     elapsed_time = time.time() - start_time

@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import numpy as np
 
 from src.environments.core.panda_environment import PandaEnvBase
@@ -10,9 +10,18 @@ class EmptyPandaEnv(PandaEnvBase):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(
-            scene_file="dual_panda_env.xml",
+            scene_file="dual_panda_empty.xml",
             **kwargs
         )
+
+    @property
+    def _free_joints(self) -> List[str]:
+        """
+        List of free joints in the environment.
+        The empty environment has no free joints and therefor returns an empty list.
+        :return:
+        """
+        return []
 
     @property
     def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:

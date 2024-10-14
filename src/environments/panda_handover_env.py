@@ -15,6 +15,10 @@ class PandaHandoverEnv(PandaEnvBase):
         )
 
     @property
+    def _free_joints(self):
+        return ["free_joint_cuboid"]
+
+    @property
     def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         """
         Default free joint positions for the bimanual handover environment.
@@ -25,7 +29,7 @@ class PandaHandoverEnv(PandaEnvBase):
             "free_joint_cuboid" : (
                 np.array([1.0, 0.0, 0.0, 0.0]),
                 np.array([0.4, -0.4, 0.15])
-            ),
+            )
         }
 
     def _get_obs(self) -> Dict:

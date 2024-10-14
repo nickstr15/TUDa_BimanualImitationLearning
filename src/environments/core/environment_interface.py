@@ -1,7 +1,7 @@
 import os
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List, Optional
 import time
 
 
@@ -46,8 +46,7 @@ class IEnvironment(MujocoEnv, ABC):
             render_mode : str = 'human',
             width : int = DEFAULT_WIDTH,
             height : int = DEFAULT_HEIGHT,
-
-            store_frames : bool = False
+            store_frames : bool = False,
         ) -> None:
         """
         Initialize the environment with the specified scene and control config files.
@@ -63,8 +62,10 @@ class IEnvironment(MujocoEnv, ABC):
         :param render_mode: mujoco render mode
         :param width: width of the render window
         :param height: height of the render window
-        :param store_frames: boolean value indicating if **all** the rendered frames should be stored
+        :param store_frames: boolean value indicating if **all** the rendered frames
+               (of the main viewer) should be stored
         """
+
 
         assert scene_file is not None, "Scene file must be specified!"
         assert control_config_file is not None, "Control config file must be specified!"
@@ -91,10 +92,10 @@ class IEnvironment(MujocoEnv, ABC):
                 low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float64
             )
 
-        # setup viewer
+        # setup main viewer
         viewer = self.mujoco_renderer._get_viewer(render_mode)
         viewer._create_overlay = lambda: None
-        self._viewer_setup(viewer)
+        self.__viewer_setup(viewer)
 
         # set control
         with open(full_control_config_path, 'r') as f:
@@ -136,14 +137,15 @@ class IEnvironment(MujocoEnv, ABC):
             assert render_mode == 'rgb_array', "Frames can only be stored when render_mode is 'rgb_array'"
         self._rendered_frames = [] if self._store_frames else None
 
-
     @staticmethod
-    def _viewer_setup(viewer) -> None:
+    def __viewer_setup(viewer) -> None:
         """
-        Set the initial camera position of the viewer.
+        Set the initial camera position of the main viewer.
         :param viewer: mujoco viewer
         :return:
         """
+        viewer.cam.fixedcamid = -1
+        viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
         viewer.cam.azimuth = 190
         viewer.cam.elevation = -20
         viewer.cam.lookat[0] = 0.0
@@ -292,19 +294,22 @@ class IEnvironment(MujocoEnv, ABC):
         """
         return self.metadata['render_fps']
 
-    def reset_model(self) -> Dict:
+    def reset_model(self, options : Optional[dict] = None) -> Dict:
         """
         Reset the model to the initial state.
+
+        :param options: additional parameters for device state and free joint positions
         :return: observation of the environment as a dictionary
         """
-        self._reset_model()
+        self._reset_model(options)
         return self._get_obs()
 
-    def _reset_model(self) -> None:
+    def _reset_model(self, options : Optional[dict] = None) -> None:
         """
         Initialize the simulation with the robot at the home position
         and the free joints to the default positions.
 
+        :param options: additional options for the reset
         :return:
         """
         mujoco.mj_forward(self.model, self.data)
