@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 
 from src.control.utils.enums import GripperState
 from src.control.utils.target import Target
-from src.utils.constants import MUJOCO_FRAME_SKIP
+from src.utils.constants import MUJOCO_FRAME_SKIP, DEFAULT_WIDTH, DEFAULT_HEIGHT
 from src.environments.core.environment_interface import IEnvironment
 
 
@@ -17,17 +17,17 @@ class EmptyPandaEnv(IEnvironment):
     """
 
     def __init__(
-            self,
-            scene_file="dual_panda_env.xml",
-            frame_skip=MUJOCO_FRAME_SKIP,
-            observation_space: gym.spaces.Space = None,
-            control_config_file="dual_panda.yaml",
-            robot_name="DualPanda",
-            render_mode='human',
-            width=480,
-            height=360,
-            store_frames=False
-        ) -> None:
+        self,
+        scene_file : str = "dual_panda_env.xml",
+        frame_skip : int = MUJOCO_FRAME_SKIP,
+        observation_space : gym.spaces.Space = None,
+        control_config_file : str = "dual_panda.yaml",
+        robot_name : str = "DualPanda",
+        render_mode : str = 'human',
+        width : int = DEFAULT_WIDTH,
+        height : int = DEFAULT_HEIGHT,
+        store_frames : bool = False
+    ) -> None:
         """
         Initialize the environment with the specified scene and control config files.
 

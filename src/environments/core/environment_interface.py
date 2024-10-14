@@ -18,7 +18,7 @@ from src.control.controller import OSCGripperController
 from src.control.utils.device import Device
 from src.control.utils.robot import Robot
 from src.control.utils.target import Target
-from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS
+from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS, DEFAULT_WIDTH, DEFAULT_HEIGHT
 from src.utils.paths import SCENES_DIR, CONTROL_CONFIGS_DIR
 
 
@@ -44,8 +44,8 @@ class IEnvironment(MujocoEnv, ABC):
             control_config_file : str = None,
             robot_name : str = None,
             render_mode : str = 'human',
-            width : int = 480,
-            height : int = 360,
+            width : int = DEFAULT_WIDTH,
+            height : int = DEFAULT_HEIGHT,
 
             store_frames : bool = False
         ) -> None:

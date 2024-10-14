@@ -24,17 +24,17 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         Builds a trajectory of targets and their durations
         to complete the handover task
 
-        :return: trajectory of targets and their durations
+        :return: trajectory of targets and their duration in seconds
         """
         targets_traj = []
 
         # (1) Move robot to home position
         targets = self.x_home_targets
-        targets_traj += [(copy(targets), 2.0)]
+        targets_traj += [(copy(targets), 1.0)]
 
         # (2) Move panda_02 to cuboid
         targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.18]))
-        targets_traj += [(copy(targets), 7.0)]
+        targets_traj += [(copy(targets), 4.0)]
 
 
         # (3) Close gripper of panda_02
@@ -51,11 +51,11 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         targets["panda_01"].set_quat(np.array([1, 1, 0, 0]))
         targets["panda_02"].set_xyz(np.array([0.2, -0.1, 0.5]))
         targets["panda_02"].set_quat(np.array([-1, 1, 0, 0]))
-        targets_traj += [(copy(targets), 8.0)]
+        targets_traj += [(copy(targets), 5.0)]
 
         # (6) Move panda_01 to cuboid in handover position
         targets["panda_01"].set_xyz(np.array([0.27, 0.11, 0.49]))
-        targets_traj += [(copy(targets), 2.0)]
+        targets_traj += [(copy(targets), 1.0)]
 
         # (7) Close gripper of panda_01
         targets["panda_01"].set_gripper_state(GripperState.CLOSED)
@@ -72,11 +72,11 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         # (10) Move to home position
         targets = self.x_home_targets
         targets["panda_01"].set_gripper_state(GripperState.CLOSED)
-        targets_traj += [(copy(targets), 3.0)]
+        targets_traj += [(copy(targets), 1.0)]
 
         # (11) Move panda_01 to table surface
-        targets["panda_01"].set_xyz(np.array([0.4, 0.45, 0.22]))
-        targets_traj += [(copy(targets), 8.0)]
+        targets["panda_01"].set_xyz(np.array([0.39, 0.45, 0.22]))
+        targets_traj += [(copy(targets), 4.0)]
 
         # (12) Open gripper of panda_01
         targets["panda_01"].set_gripper_state(GripperState.OPEN)
@@ -84,24 +84,44 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
 
         # (13) Move to home position
         targets = self.x_home_targets
-        targets_traj += [(copy(targets), 8.0)]
+        targets_traj += [(copy(targets), 1.0)]
+
+        total_duration = sum([duration for _, duration in targets_traj])
+        print(f"Trajectory of total (real-time) duration: {total_duration}sec")
 
         return targets_traj
 
-    def run(self):
+    def run(self, logging : bool = False):
         """
         Run the handover demo.
 
+        :param logging: boolean value indicating if progress is logged to the console.
         :return:
         """
         trajectory = self._build_targets_traj()
-
-        for targets, duration in trajectory:
-            start_time = time.time()
-            while time.time() - start_time < duration:
+        _warning = False
+        for i, (targets, duration) in enumerate(trajectory):
+            if logging:
+                print(f"Step {i+1}/{len(trajectory)}: {duration}sec")
+            steps = int(duration * self.render_fps)
+            for _ in range(steps):
+                start_time = time.time()
                 ctrl = self._generate_control(targets)
                 self.do_simulation(ctrl, self.frame_skip)
                 self.render()
+
+                if self.render_mode == "human":
+                    elapsed_time = time.time() - start_time
+                    sleep_time = 1/self.render_fps - elapsed_time
+                    if sleep_time < 0 and not _warning:
+                        print("Simulation running slower than real time.")
+                        _warning = True
+                    elif sleep_time >= 0 and _warning:
+                        print("Running at real-time speed.")
+                        _warning = False
+
+                    sleep_time = max(0.0, sleep_time)
+                    time.sleep(sleep_time)
 
 
 
@@ -114,11 +134,15 @@ if __name__ == "__main__":
     env = PandaBimanualHandoverDemo(
         render_mode="rgb_array" if recording else "human",
         store_frames=recording,
+        # Full HD resolution (if the demo is too long, consider reducing the resolution to prevent memory overflow)
+        width=1920,
+        height=1080,
     )
     env.reset()
-    env.run()
+    env.run(logging=recording)
 
     if recording:
+        print("Exporting video...")
         export_video(
             frames=env.get_mujoco_renders(),
             video_folder=os.path.join(RECORDING_DIR, "handover_demo"),
