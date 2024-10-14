@@ -84,10 +84,10 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
 
         # (13) Move to home position
         targets = self.x_home_targets
-        targets_traj += [(copy(targets), 1.0)]
+        targets_traj += [(copy(targets), 4.0)]
 
         total_duration = sum([duration for _, duration in targets_traj])
-        print(f"Trajectory of total (real-time) duration: {total_duration}sec")
+        print(f"Trajectory with total (real-time) duration: {total_duration}sec")
 
         return targets_traj
 
@@ -122,8 +122,6 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
 
                     sleep_time = max(0.0, sleep_time)
                     time.sleep(sleep_time)
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Handover demo")

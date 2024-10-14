@@ -96,9 +96,6 @@ class IEnvironment(MujocoEnv, ABC):
         viewer._create_overlay = lambda: None
         self._viewer_setup(viewer)
 
-        # set action space
-        self.ctrl_action_space = self.action_space
-
         # set control
         with open(full_control_config_path, 'r') as f:
             self._control_config = yaml.safe_load(f)
@@ -121,6 +118,10 @@ class IEnvironment(MujocoEnv, ABC):
 
         nullspace_config = self.__get_controller_config("nullspace")
         admittance_gain = self.__get_controller_config("admittance")["gain"]
+
+        # set action space
+        self.ctrl_action_space = self.action_space
+        self.action_space = None #TODO: set action space
 
         self.controller = OSCGripperController(
             robot=self.robot,
@@ -243,6 +244,30 @@ class IEnvironment(MujocoEnv, ABC):
             ctrl_array[ctrl_idx] = ctrl
         return ctrl_array
 
+    @override
+    def step(self, action: Dict[str, Target]) -> Tuple[Any, float, bool, bool, Dict]:
+        """
+        Step function of the environment.
+        :param action: dictionary of targets for the devices
+        :return: observation, reward, terminated, truncated, info
+        """
+        self._step_impl(action)
+        obs = self._get_obs()
+        info = self._get_info()
+        reward = self._get_reward()
+        terminated = self._get_terminated()
+        truncated = self._get_truncated()
+        return obs, reward, terminated, truncated, info
+
+    def _step_impl(self, action: Dict[str, Target]) -> None:
+        """
+        Execute a step in the environment.
+        :param action: action to be executed, a dictionary of targets
+        :return: observation, reward, terminated, truncated, info
+        """
+        ctrl = self._generate_control(action)
+        self.do_simulation(ctrl, self.frame_skip)
+
     def visualize_static(self, duration=5) -> None:
         """
         Visualize the robot in the home position for the specified duration.
@@ -267,10 +292,10 @@ class IEnvironment(MujocoEnv, ABC):
         """
         return self.metadata['render_fps']
 
-    def reset_model(self) -> NDArray[np.float64]:
+    def reset_model(self) -> Dict:
         """
         Reset the model to the initial state.
-        :return: observation
+        :return: observation of the environment as a dictionary
         """
         self._reset_model()
         return self._get_obs()
@@ -328,15 +353,6 @@ class IEnvironment(MujocoEnv, ABC):
         """
         pass
 
-    @abstractmethod
-    def _get_obs(self) -> NDArray[np.float64]:
-        """
-        Return the observation of the environment.
-        Must be compatible with the observation space.
-        :return: observation
-        """
-        pass
-
     @property
     @abstractmethod
     def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
@@ -344,5 +360,48 @@ class IEnvironment(MujocoEnv, ABC):
         Return the default positions of the free joints.
         The value of a specific joint is a tuple of the quaternion and the position.
         :return: key-value pairs of free joint names and their positions
+        """
+        pass
+
+    @abstractmethod
+    def _get_obs(self) -> Dict:
+        """
+        Return the observation of the environment as a dictionary.
+        Must be compatible with the observation space.
+        :return: observation
+        """
+        pass
+
+    @abstractmethod
+    def _get_info(self) -> Dict:
+        """
+        Return additional information about the environment state as a dictionary.
+        :return: additional state information
+        """
+        pass
+
+
+
+    @abstractmethod
+    def _get_reward(self) -> float:
+        """
+        Return the reward for the current state.
+        :return: reward
+        """
+        pass
+
+    @abstractmethod
+    def _get_terminated(self) -> bool:
+        """
+        Return a boolean value indicating if the episode is terminated.
+        :return: boolean indicating if the episode is terminated
+        """
+        pass
+
+    @abstractmethod
+    def _get_truncated(self) -> bool:
+        """
+        Return a boolean value indicating if the episode is truncated.
+        :return: boolean indicating if the episode is truncated
         """
         pass

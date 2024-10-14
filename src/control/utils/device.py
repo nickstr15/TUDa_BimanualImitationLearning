@@ -24,7 +24,10 @@ class Device:
         self._max_vel = device_cfg.get("max_vel")
         self._EE = device_cfg["EE"]
         self._num_gripper_joints = device_cfg["num_gripper_joints"]
-        self.gripper_range_q = device_cfg["gripper_range_q"]
+        self._gripper_range_q = device_cfg["gripper_range_q"]
+        self._force_sensor_idx = device_cfg.get("force_sensor_idx", -1)
+        self._torque_sensor_idx = device_cfg.get("torque_sensor_idx", -1)
+        self._ft_sensor_site = device_cfg.get("ft_sensor_site", None)
 
         self._controller_type = device_cfg["controller"]
         self._has_gripper = self._num_gripper_joints > 0
@@ -172,11 +175,8 @@ class Device:
         Get the external forces, used (for admittance control) acting upon
         the gripper sensors
         """
-        if self._name == "panda_01":
-            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[0:3])
-            return force
-        if self._name == "panda_02":
-            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[6:9])
+        if self._force_sensor_idx > -1:
+            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[self._force_sensor_idx:self._force_sensor_idx+3])
             return force
         else:
             return np.zeros(3)
@@ -186,12 +186,9 @@ class Device:
         Get the external torques, used (for admittance control) acting upon
         the gripper sensors
         """
-        if self._name == "panda_01":
-            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[3:6])
-            return force
-        if self._name == "panda_02":
-            force = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[9:12])
-            return force
+        if self._torque_sensor_idx > -1:
+            torque = np.matmul(self.__get_R_ft_frame(), self._data.sensordata[self._torque_sensor_idx:self._torque_sensor_idx+3])
+            return torque
         else:
             return np.zeros(3)
 
@@ -199,14 +196,10 @@ class Device:
         """
         Get rotation matrix for device's ft_frame
         """
-        if self._name == "panda_01":
-            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, "ft_frame_ur5right")
-        elif self._name == "panda_02":
-            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, "ft_frame_ur5left")
+        if self._ft_sensor_site is not None:
+            site_id = mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_SITE, self._ft_sensor_site)
         else:
-            raise ValueError("Invalid called method. Invalid device name: {}, expected one of {}".format(
-                self._name, ["panda_01", "panda_02"])
-            )
+            raise ValueError("Invalid called method. ft_sensor_site is None.")
 
         xmat = self._data.site_xmat[site_id].reshape(3, 3)
         return xmat

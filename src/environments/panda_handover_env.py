@@ -1,23 +1,19 @@
 from typing import Dict, Tuple
-
 import numpy as np
-from typing_extensions import override
 
-from src.environments import EmptyPandaEnv
+from src.environments.core.panda_environment import PandaEnvBase
 
-class PandaHandoverEnv(EmptyPandaEnv):
+class PandaHandoverEnv(PandaEnvBase):
     """
-    Environment with two Panda robots performing a handover of a cuboid.
+    Environment with two Panda robots to perform a handover of a cuboid.
     """
-    def __init__(
-            self,
+
+    def __init__(self, **kwargs):
+        super().__init__(
             scene_file="dual_panda_handover_env.xml",
             **kwargs
-        ):
+        )
 
-        super().__init__(scene_file, **kwargs)
-
-    @override
     @property
     def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         """
@@ -31,6 +27,25 @@ class PandaHandoverEnv(EmptyPandaEnv):
                 np.array([0.4, -0.4, 0.15])
             ),
         }
+
+    def _get_obs(self) -> Dict:
+        return {
+            "qpos": self.data.qpos,
+            "qvel": self.data.qvel,
+        }
+
+    def _get_info(self) -> Dict:
+        return {}
+
+    def _get_reward(self) -> float:
+        return 0.0
+
+    def _get_terminated(self) -> bool:
+        return False
+
+    def _get_truncated(self) -> bool:
+        return False
+
 
 if __name__ == "__main__":
     env = PandaHandoverEnv()
