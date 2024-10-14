@@ -3,12 +3,21 @@ import numpy as np
 
 from src.control.utils.enums import GripperState
 from src.control.utils.target import Target
-from src.environments import BasePandaBimanualEnv
+from src.environments import EmptyPandaEnv
 
-class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
+class PandaMoveToPointEnv(EmptyPandaEnv):
+    """
+    Environment with two Panda robots moving to a specific (relative) point in space.
+    """
 
     def visualize(self, duration=10) -> None:
-        self._reset()
+        """
+        Visualize the two Panda robots moving to a specific point in space.
+        :param duration: simulation time in seconds
+        :return:
+        """
+        # Move robot to home position
+        self.reset()
 
         targets = self.x_home_targets
 
@@ -25,6 +34,11 @@ class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
             self.render()
 
     def visualize_relative(self, duration=20) -> None:
+        """
+        Visualize the two Panda robots moving to a specific relative point in space.
+        :param duration: simulation time in seconds
+        :return:
+        """
         # Move robot to home position
         self.reset()
 
@@ -67,10 +81,10 @@ class MoveToPointPandaBimanualEnv(BasePandaBimanualEnv):
                 switch_time = time.time()
 
 if __name__ == "__main__":
-    env = MoveToPointPandaBimanualEnv()
+    env = PandaMoveToPointEnv()
 
-    #env.visualize(3)
-    env.visualize_relative(10)
+    env.visualize(3)
+    #env.visualize_relative(10)
 
     env.close()
 

@@ -1,6 +1,9 @@
-import os.path
-from typing import Any, Dict, Tuple, List
+import os
+
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Tuple
 import time
+
 
 import mujoco
 import numpy as np
@@ -13,14 +16,17 @@ from typing_extensions import override
 
 from src.control.controller import OSCGripperController
 from src.control.utils.device import Device
-from src.control.utils.enums import GripperState
 from src.control.utils.robot import Robot
 from src.control.utils.target import Target
 from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS
 from src.utils.paths import SCENES_DIR, CONTROL_CONFIGS_DIR
 
 
-class BasePandaBimanualEnv(MujocoEnv):
+class IEnvironment(MujocoEnv, ABC):
+    """
+    Interface for robot manipulation tasks in Mujoco.
+    """
+
     metadata = {
         'render_modes': [
             'human',
@@ -32,15 +38,37 @@ class BasePandaBimanualEnv(MujocoEnv):
 
     def __init__(
             self,
-            scene_file="dual_panda_env.xml",
-            control_config_file="dual_panda.yaml",
-            robot_name="DualPanda",
-            render_mode='human',
-            width=480,
-            height=360,
-            frame_skip=MUJOCO_FRAME_SKIP,
-            store_frames=False
-        ):
+            scene_file : str = None,
+            frame_skip: int = MUJOCO_FRAME_SKIP,
+            observation_space: gym.spaces.Space = None,
+            control_config_file : str = None,
+            robot_name : str = None,
+            render_mode : str = 'human',
+            width : int = 480,
+            height : int = 360,
+
+            store_frames : bool = False
+        ) -> None:
+        """
+        Initialize the environment with the specified scene and control config files.
+
+        :param scene_file: filename of to the mujoco scene file in $SCENES_DIR.
+               This is the mujoco model_file.
+        :param frame_skip: number of simulation steps to skip between each rendered frame
+        :param observation_space: observation space of the environment, default is None.
+               If None is passed, the observation space is set to the joint positions and velocities
+               of the robot joints
+        :param control_config_file: filename of the control config file in $CONTROL_CONFIGS_DIR
+        :param robot_name: name of the robot in the control config file
+        :param render_mode: mujoco render mode
+        :param width: width of the render window
+        :param height: height of the render window
+        :param store_frames: boolean value indicating if **all** the rendered frames should be stored
+        """
+
+        assert scene_file is not None, "Scene file must be specified!"
+        assert control_config_file is not None, "Control config file must be specified!"
+        assert robot_name is not None, "Robot name must be specified!"
 
         full_scene_path = os.path.join(SCENES_DIR, scene_file)
         assert os.path.exists(full_scene_path), \
@@ -51,20 +79,17 @@ class BasePandaBimanualEnv(MujocoEnv):
             f"Control config file {full_control_config_path} does not exist!"
 
         MujocoEnv.__init__(
-            self,
-            model_path=full_scene_path,
-            frame_skip=frame_skip,
-            observation_space=None, #is set directly after __init__
+            self, full_scene_path, frame_skip, observation_space,
             render_mode=render_mode,
             width=width,
             height=height,
         )
 
-        # set observation space
-        obs_size = self.data.qpos.size + self.data.qvel.size
-        self.observation_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float64
-        )
+        if observation_space is None:
+            obs_size = self.data.qpos.size + self.data.qvel.size
+            self.observation_space = gym.spaces.Box(
+                low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float64
+            )
 
         # setup viewer
         viewer = self.mujoco_renderer._get_viewer(render_mode)
@@ -88,11 +113,12 @@ class BasePandaBimanualEnv(MujocoEnv):
             elif type(device) == Robot:
                 sub_devices += device.sub_devices
 
-
+        self._sub_device_names = [dev.name for dev in sub_devices]
         sub_device_configs = [
             (device.name, self.__get_controller_config(device.controller_type))
             for device in sub_devices
         ]
+
         nullspace_config = self.__get_controller_config("nullspace")
         admittance_gain = self.__get_controller_config("admittance")["gain"]
 
@@ -112,55 +138,17 @@ class BasePandaBimanualEnv(MujocoEnv):
 
     @staticmethod
     def _viewer_setup(viewer) -> None:
+        """
+        Set the initial camera position of the viewer.
+        :param viewer: mujoco viewer
+        :return:
+        """
         viewer.cam.azimuth = 190
         viewer.cam.elevation = -20
         viewer.cam.lookat[0] = 0.0
         viewer.cam.lookat[1] = 0.0
         viewer.cam.lookat[2] = 0.1
         viewer.cam.distance = 2.5
-
-    @property
-    def q_home(self) -> NDArray[np.float64]:
-        """
-        Return the home position of the robot in the joint space
-
-        :return: joint positions
-        """
-        return np.array(
-            [0, 0, 0, -1.57079, 0, 1.57079, -0.7853, 0.04, 0.04]*2,
-            dtype=np.float64
-        )
-
-    @property
-    def x_home(self) -> Any:
-        """
-        Return the home position of the robot in the world frame
-        :return: x_home
-        """
-        return [
-            0.55449948,  0.4, 0.68450243, 0, 1/np.sqrt(2), 1/np.sqrt(2), 0, GripperState.OPEN,
-            0.55449948, -0.4, 0.68450243, 0, 1/np.sqrt(2), 1/np.sqrt(2), 0, GripperState.OPEN
-        ]
-
-    @property
-    def x_home_targets(self) -> Dict[str, Target]:
-        """
-        Return the home position of the robot in the world frame as targets
-        :return: x_home_target
-        """
-        targets = {
-            "panda_01": Target(),
-            "panda_02": Target(),
-        }
-
-        targets["panda_01"].set_xyz(self.x_home[:3])
-        targets["panda_01"].set_quat(self.x_home[3:7])
-        targets["panda_01"].set_gripper_state(self.x_home[7])
-
-        targets["panda_02"].set_xyz(self.x_home[8:11])
-        targets["panda_02"].set_quat(self.x_home[11:15])
-        targets["panda_02"].set_gripper_state(self.x_home[15])
-        return targets
 
     def set_robot_joint_pos(self, joint_pos : np.ndarray) -> None:
         """
@@ -194,6 +182,14 @@ class BasePandaBimanualEnv(MujocoEnv):
 
     @staticmethod
     def __get_devices(mj_model, mj_data, cfg, use_sim=True) -> Any:
+        """
+        Create the devices and robots from the configuration file.
+        :param mj_model: the mujoco model
+        :param mj_data: the mujoco data
+        :param cfg: the configuration file as a dictionary
+        :param use_sim: boolean value indicating if the simulation is being used
+        :return: devices
+        """
         all_devices = np.array(
             [Device(dev, mj_model, mj_data, use_sim) for dev in cfg["devices"]]
         )
@@ -213,18 +209,34 @@ class BasePandaBimanualEnv(MujocoEnv):
         return devices
 
     def __get_robot(self, robot_name) -> Robot:
+        """
+        Get the robot with the specified name.
+        :param robot_name: name of the desired robot
+        :return: instance of the robot
+        """
         for device in self._devices:
             if type(device) == Robot:
                 if device.name == robot_name:
                     return device
 
     def __get_controller_config(self, name) -> dict:
+        """
+        Get the controller configuration with the specified name.
+        :param name: name of the controller
+        :return: configuration dictionary
+        """
         ctrlr_conf = self._control_config["controller_configs"]
         for entry in ctrlr_conf:
             if entry["name"] == name:
                 return entry
 
     def _generate_control(self, targets : Dict[str, Target], relative_targets : bool = False) -> NDArray[np.float64]:
+        """
+        Generate the control signal (joint torques) for the robot.
+        :param targets: target positions and orientations in the world frame
+        :param relative_targets: boolean value indicating if the targets are relative to the current position
+        :return: control array
+        """
         controller_output = self.controller.generate(targets, relative_targets)
         ctrl_array = np.zeros_like(self.data.ctrl)
         for ctrl_idx, ctrl in zip(*controller_output):
@@ -232,6 +244,11 @@ class BasePandaBimanualEnv(MujocoEnv):
         return ctrl_array
 
     def visualize_static(self, duration=5) -> None:
+        """
+        Visualize the robot in the home position for the specified duration.
+        :param duration: duration of the visualization
+        :return:
+        """
         self.reset()
 
         targets = self.x_home_targets
@@ -241,17 +258,6 @@ class BasePandaBimanualEnv(MujocoEnv):
             self.do_simulation(ctrl, self.frame_skip)
 
             self.render()
-
-    @property
-    def default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
-        """
-        Return the default positions of the free joints.
-        The value of a specific joint is a tuple of the quaternion and the position.
-        :return: key-value pairs of free joint names and their positions
-        """
-
-        # the base environment does not have any free joints
-        return { }
 
     @property
     def render_fps(self) -> int:
@@ -278,20 +284,13 @@ class BasePandaBimanualEnv(MujocoEnv):
         """
         mujoco.mj_forward(self.model, self.data)
         self.set_robot_joint_pos(self.q_home)
-        for joint_name, pos in self.default_free_joint_positions.items():
+        for joint_name, pos in self._default_free_joint_positions.items():
             self.set_free_joint_pos(joint_name, *pos)
-
-    def _get_obs(self) -> NDArray[np.float64]:
-        """
-        Return the observation of the environment.
-        :return: observation
-        """
-        return np.concatenate([self.data.qpos, self.data.qvel])
 
     def get_mujoco_renders(self):
         """
         Return the rendered frames.
-        :return:
+        :return: all rendered frames
         """
         return self._rendered_frames
 
@@ -299,7 +298,7 @@ class BasePandaBimanualEnv(MujocoEnv):
     def render(self) -> Any:
         """
         Render the environment.
-        :return:
+        :return: the rendering output of the mujoco renderer
         """
         rendering = self.mujoco_renderer.render(
             self.render_mode, self.camera_id, self.camera_name
@@ -310,9 +309,40 @@ class BasePandaBimanualEnv(MujocoEnv):
 
         return rendering
 
-if __name__ == "__main__":
-    env = BasePandaBimanualEnv()
-    env.visualize_static()
-    env.close()
+    @property
+    @abstractmethod
+    def q_home(self) -> NDArray[np.float64]:
+        """
+        Return the home position of the robot in the joint space
 
+        :return: joint positions
+        """
+        pass
 
+    @property
+    @abstractmethod
+    def x_home_targets(self) -> Dict[str, Target]:
+        """
+        Return the home position of the robot in the world frame as targets
+        :return: x_home_target
+        """
+        pass
+
+    @abstractmethod
+    def _get_obs(self) -> NDArray[np.float64]:
+        """
+        Return the observation of the environment.
+        Must be compatible with the observation space.
+        :return: observation
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        """
+        Return the default positions of the free joints.
+        The value of a specific joint is a tuple of the quaternion and the position.
+        :return: key-value pairs of free joint names and their positions
+        """
+        pass

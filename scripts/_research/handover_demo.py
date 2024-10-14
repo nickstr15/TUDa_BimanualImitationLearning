@@ -9,11 +9,11 @@ from src.utils.record_video import export_video
 
 from src.control.utils.enums import GripperState
 from src.control.utils.target import Target
-from src.environments import PandaBimanualHandoverEnv
+from src.environments import PandaHandoverEnv
 
 from src.utils.paths import RECORDING_DIR
 
-class PandaBimanualHandoverDemo(PandaBimanualHandoverEnv):
+class PandaBimanualHandoverDemo(PandaHandoverEnv):
     """
     Panda bimanual handover demo environment.
     The robot arms follow a hardcoded trajectory to perform a handover task.
