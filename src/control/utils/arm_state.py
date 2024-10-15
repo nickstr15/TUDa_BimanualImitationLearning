@@ -15,22 +15,22 @@ class ArmState:
 
     def __init__(
             self,
-            xyz_abg: np.ndarray = np.zeros(6),
-            xyz_abg_vel: np.ndarray = np.zeros(6),
+            xyz_rot: np.ndarray = np.zeros(6),
+            xyz_rot_vel: np.ndarray = np.zeros(6),
             grip: GripperState = GripperState.OPEN
     ):
         """
-        :param xyz_abg: xyz position and euler angles
-        :param xyz_abg_vel: xyz velocity and euler angles velocity o
+        :param xyz_rot: xyz position and euler angles
+        :param xyz_rot_vel: xyz velocity and euler angles velocity o
         :param grip: gripper state (open or closed)
         """
 
-        assert len(xyz_abg) == 6 and len(xyz_abg_vel) == 6
-        assert np.all([isinstance(x, float) or isinstance(x, int) for x in xyz_abg])
-        self.__xyz = np.array(xyz_abg)[:3]
-        self.__xyz_vel = np.array(xyz_abg_vel)[:3]
-        self.__quat = np.array(euler2quat(*xyz_abg[3:]))
-        self.__quat_vel = np.array(euler2quat(*xyz_abg_vel[3:]))
+        assert (len(xyz_rot) == 6 or len(xyz_rot) == 7) and (len(xyz_rot_vel) == 6 or len(xyz_rot_vel) == 7)
+        assert np.all([isinstance(x, float) or isinstance(x, int) for x in xyz_rot])
+        self.__xyz = np.array(xyz_rot)[:3]
+        self.__xyz_vel = np.array(xyz_rot_vel)[:3]
+        self.__quat = np.array(euler2quat(*xyz_rot[3:])) if len(xyz_rot) == 6 else np.array(xyz_rot[3:])
+        self.__quat_vel = np.array(euler2quat(*xyz_rot_vel[3:])) if len(xyz_rot_vel) == 6 else np.array(xyz_rot_vel[3:])
 
         self.__gripper_state = grip
         self.active = True
