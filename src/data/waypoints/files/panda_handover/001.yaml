@@ -1,0 +1,130 @@
+initial_configuration:
+  seed: 0
+  bodies:
+    - name: "cuboid"
+      pos: [0.4, -0.4, 0.15]
+      quat: [0, 0, 0, 1]
+    - name: "cuboid_target"
+      pos: [0.4, 0.4, 0.08]
+      quat: [0, 0, 0, 1]
+
+waypoints:
+  - id: 1
+    name: "start position"
+    targets:
+      - device: "panda_01"
+        position: [0.55, 0.4, 0.58]  #this is the home position of the robot
+        orientation: [0, 0, 0]       #this is the home orientation of the robot
+        gripper: 255
+      - device: "panda_02"
+        position: [0.55, -0.4, 0.58] #this is the home position of the robot
+        orientation: [0, 0, 0]       #this is the home orientation of the robot
+        gripper: 255
+    min_duration: 0.0
+  - id: 2
+    name: "move panda_02 to cuboid"
+    targets:
+      - device: "panda_01"
+        position: [0.55, 0.4, 0.58]
+        orientation: [0, 0, 0]
+        gripper: 255
+      - device: "panda_02"
+        position: [0.4, -0.43, 0.08]
+        orientation: [0, 0, 0]
+        gripper: 255
+  - id: 3
+    name: "close gripper of panda_02"
+    targets:
+      - device: "panda_01"
+        position: [ 0.55, 0.4, 0.58 ]
+        orientation: [0, 0, 0]
+        gripper: 255
+      - device: "panda_02"
+        position: [ 0.4, -0.43, 0.08 ]
+        orientation: [0, 0, 0]
+        gripper: 0
+    min_duration: 1.0
+    max_duration: 1.0
+  - id: 4
+    name: "move panda_02 up"
+    targets:
+      - device: "panda_01"
+        position: [ 0.55, 0.4, 0.58 ]
+        orientation: [0, 0, 0]
+        gripper: 255
+      - device: "panda_02"
+        position: [ 0.4, -0.43, 0.15 ]
+        orientation: [0, 0, 0]
+        gripper: 0
+  - id: 4
+    name: "move panda_02 to handover position and panda_01 close"
+    targets:
+      - device: "panda_01"
+        position: [ 0.36, 0.1, 0.4 ]
+        orientation: [-1.57079632679, 1.57079632679, 0]
+        gripper: 255
+      - device: "panda_02"
+        position: [ 0.3, 0, 0.4 ]
+        orientation: [1.57079632679, 1.57079632679, 0]
+        gripper: 0
+  - id: 5
+    name: "move panda_01 to handover position"
+    targets:
+      - device: "panda_01"
+        position: [ 0.36, 0, 0.4 ]
+        orientation: [ -1.57079632679, 1.57079632679, 0 ]
+        gripper: 255
+      - device: "panda_02"
+        position: [ 0.3, 0, 0.4 ]
+        orientation: [ 1.57079632679, 1.57079632679, 0 ]
+        gripper: 0
+  - id: 6
+    name: "close gripper panda_01"
+    targets:
+      - device: "panda_01"
+        position: [ 0.36, 0, 0.4 ]
+        orientation: [ -1.57079632679, 1.57079632679, 0 ]
+        gripper: 0
+      - device: "panda_02"
+        position: [ 0.3, 0, 0.4 ]
+        orientation: [ 1.57079632679, 1.57079632679, 0 ]
+        gripper: 0
+    min_duration: 1.0
+    max_duration: 1.0
+  - id: 7
+    name: "open gripper panda_02"
+    targets:
+      - device: "panda_01"
+        position: [ 0.36, 0, 0.4 ]
+        orientation: [ -1.57079632679, 1.57079632679, 0 ]
+        gripper: 0
+      - device: "panda_02"
+        position: [ 0.3, 0, 0.4 ]
+        orientation: [ 1.57079632679, 1.57079632679, 0 ]
+        gripper: 255
+    min_duration: 1.0
+    max_duration: 1.0
+  - id: 8
+    name: "move back panda_02 and panda_01"
+    targets:
+      - device: "panda_01"
+        position: [ 0.36, 0.05, 0.4 ]
+        orientation: [ -1.57079632679, 1.57079632679, 0 ]
+        gripper: 0
+      - device: "panda_02"
+        position: [ 0.3, -0.05, 0.4 ]
+        orientation: [ 1.57079632679, 1.57079632679, 0 ]
+        gripper: 255
+  - id: 8
+    name: "move to target position (1/2)"
+    targets:
+      - device: "panda_01"
+        position: [ 0.4, 0.4, 0.1 ]
+        orientation: [ 0, 1.57079632679, 0 ]
+        gripper: 0
+      - device: "panda_02"
+        position: [ 0.55, -0.4, 0.58 ]  #this is the home position of the robot
+        orientation: [ 0, 0, 0 ]        #this is the home orientation of the robot
+        gripper: 255
+
+

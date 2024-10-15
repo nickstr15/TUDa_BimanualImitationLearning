@@ -7,3 +7,5 @@ SCENES_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "environments", "scenes")
 CONTROL_CONFIGS_DIR = os.path.join(SOURCE_DIR, "control", "control_configs")
 
 RECORDING_DIR = os.path.join(PROJECT_ROOT_DIR, "recordings")
+
+WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "data", "waypoints", "files")

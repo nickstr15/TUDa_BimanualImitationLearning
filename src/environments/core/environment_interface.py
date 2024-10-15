@@ -339,6 +339,43 @@ class IEnvironment(MujocoEnv, ABC):
 
         return rendering
 
+    def set_initial_config(self, bodies: list) -> None:
+        """
+        Set the initial configuration of the environment.
+        :param bodies: list containing the initial configuration for bodies
+        :return:
+        """
+        for body in bodies:
+            name = body["name"]
+            pos = body["pos"]
+            quat = body["quat"]
+            self._move_body(name, pos, quat)
+
+    def _move_body(self, name: str, pos: np.ndarray, quat: np.ndarray) -> None:
+        """
+        Move the body to the specified position and orientation.
+        :param name: name of the body
+        :param pos: position of the body
+        :param quat: orientation of the body
+        :return:
+        """
+        body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
+        self.data.xpos[body_id] = pos
+        self.data.xquat[body_id] = quat
+
+        # apply the changes
+        mujoco.mj_forward(self.model, self.data)
+
+    def get_device_states(self) -> Dict[str, ArmState]:
+        """
+        Return the state of the robot as a dictionary.
+        :return: dictionary of the robot state
+        """
+        state = {}
+        for device in self.robot.sub_devices:
+            state[device.name] = device.get_arm_state()
+        return state
+
     @property
     @abstractmethod
     def q_home(self) -> NDArray[np.float64]:
@@ -351,7 +388,7 @@ class IEnvironment(MujocoEnv, ABC):
 
     @property
     @abstractmethod
-    def x_home_targets(self) -> Dict[str, Target]:
+    def x_home_targets(self) -> Dict[str, ArmState]:
         """
         Return the home position of the robot in the world frame as targets
         :return: x_home_target
