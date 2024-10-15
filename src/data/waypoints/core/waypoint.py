@@ -5,7 +5,7 @@ from src.control.utils.arm_state import ArmState
 from src.control.utils.enums import GripperState
 
 DEFAULT_POSITION_TOLERANCE = 0.01
-DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(2)
+DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
 DEFAULT_MIN_DURATION = 1.0
 DEFAULT_MAX_DURATION = 10.0
 
@@ -56,7 +56,8 @@ class ArmStateTarget(ArmState):
         position_diff = np.linalg.norm(target_xyz - current_xyz)
 
         #TODO this is not working correctly
-        orientation_diff = quat2axangle(qmult(current_quat, qinverse(target_quat))),
+        orientation_diff = quat2axangle(qmult(current_quat, qinverse(target_quat)))[1]
+        print(f"Position diff: {position_diff}, Orientation diff: {orientation_diff}")
 
         return position_diff <= self._position_tolerance \
             and orientation_diff <= self._orientation_tolerance \

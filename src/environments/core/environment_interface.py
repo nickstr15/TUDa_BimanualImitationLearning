@@ -41,6 +41,7 @@ class IEnvironment(MujocoEnv, ABC):
             scene_file : str = None,
             frame_skip: int = MUJOCO_FRAME_SKIP,
             observation_space: gym.spaces.Space = None,
+            action_space: gym.spaces.Space = None,
             control_config_file : str = None,
             robot_name : str = None,
             render_mode : str = 'human',
@@ -57,6 +58,7 @@ class IEnvironment(MujocoEnv, ABC):
         :param observation_space: observation space of the environment, default is None.
                If None is passed, the observation space is set to the joint positions and velocities
                of the robot joints
+        :param action_space: action space of the environment, default is None.
         :param control_config_file: filename of the control config file in $CONTROL_CONFIGS_DIR
         :param robot_name: name of the robot in the control config file
         :param render_mode: mujoco render mode
@@ -122,7 +124,7 @@ class IEnvironment(MujocoEnv, ABC):
 
         # set action space
         self.ctrl_action_space = self.action_space
-        self.action_space = None #TODO: set action space
+        self.action_space = action_space
 
         self.controller = OSCGripperController(
             robot=self.robot,

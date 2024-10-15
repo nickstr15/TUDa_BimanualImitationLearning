@@ -65,7 +65,7 @@ waypoints:
         gripper: 255
       - device: "panda_02"
         position: [ 0.3, 0, 0.4 ]
-        orientation: [ -1, 1, 0, 0 ]
+        orientation: [ 0, 1, 0, 0 ]
         gripper: 0
   - id: 5
     name: "move panda_01 to handover position"
@@ -76,7 +76,7 @@ waypoints:
         gripper: 255
       - device: "panda_02"
         position: [ 0.3, 0, 0.4 ]
-        orientation: [ -1, 1, 0, 0 ]
+        orientation: [ 0, 1, 0, 0 ]
         gripper: 0
   - id: 6
     name: "close gripper panda_01"
@@ -87,7 +87,7 @@ waypoints:
         gripper: 0
       - device: "panda_02"
         position: [ 0.3, 0, 0.4 ]
-        orientation: [ -1, 1, 0, 0 ]
+        orientation: [ 0, 1, 0, 0 ]
         gripper: 0
     min_duration: 1.0
     max_duration: 1.0
@@ -100,23 +100,24 @@ waypoints:
         gripper: 0
       - device: "panda_02"
         position: [ 0.3, 0, 0.4 ]
-        orientation: [ -1, 1, 0, 0 ]
+        orientation: [ 0, 1, 0, 0 ]
         gripper: 255
     min_duration: 1.0
     max_duration: 1.0
   - id: 8
-    name: "move back panda_02 and panda_01"
+    name: "move up panda_02"
     targets:
       - device: "panda_01"
-        position: [ 0.36, 0.05, 0.4 ]
+        position: [ 0.36, 0, 0.4 ]
         orientation: [ 1, 1, 0, 0 ]
         gripper: 0
       - device: "panda_02"
-        position: [ 0.3, -0.05, 0.4 ]
-        orientation: [ -1, 1, 0, 0 ]
+        position: [ 0.3, 0, 0.48 ]
+        orientation: [ 0, 1, 0, 0 ]
         gripper: 255
+    min_duration: 0.0
   - id: 8
-    name: "move to target position (1/2)"
+    name: "move to target position"
     targets:
       - device: "panda_01"
         position: [ 0.4, 0.4, 0.2 ]
