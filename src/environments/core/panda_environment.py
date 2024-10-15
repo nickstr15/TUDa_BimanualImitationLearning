@@ -40,11 +40,11 @@ class PandaEnvBase(IEnvironment, ABC):
             "panda_02": ArmState(),
         }
 
-        targets["panda_01"].set_xyz(np.array([0.55449948, 0.4, 0.68450243]))
+        targets["panda_01"].set_xyz(np.array([0.55, 0.4, 0.58]))
         targets["panda_01"].set_quat(np.array([0, 1 / np.sqrt(2), 1 / np.sqrt(2), 0]))
         targets["panda_01"].set_gripper_state(GripperState.OPEN)
 
-        targets["panda_02"].set_xyz(np.array([0.55449948, -0.4, 0.68450243]))
+        targets["panda_02"].set_xyz(np.array([0.55, -0.4, 0.58]))
         targets["panda_02"].set_quat(np.array([0, 1 / np.sqrt(2), 1 / np.sqrt(2), 0]))
         targets["panda_02"].set_gripper_state(GripperState.OPEN)
         return targets

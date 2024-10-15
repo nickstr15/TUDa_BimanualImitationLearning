@@ -32,7 +32,7 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         targets_traj += [(copy(targets), 1.0)]
 
         # (2) Move panda_02 to cuboid
-        targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.18]))
+        targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.08])) # cuboid at 0.4, -0.4, 0.15
         targets_traj += [(copy(targets), 4.0)]
 
 
@@ -74,8 +74,8 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         targets_traj += [(copy(targets), 1.0)]
 
         # (11) Move panda_01 to table surface
-        targets["panda_01"].set_xyz(np.array([0.39, 0.45, 0.22]))
-        targets_traj += [(copy(targets), 4.0)]
+        targets["panda_01"].set_xyz(np.array([0.41, 0.46, 0.08]))
+        targets_traj += [(copy(targets), 5.0)]
 
         # (12) Open gripper of panda_01
         targets["panda_01"].set_gripper_state(GripperState.OPEN)

@@ -43,6 +43,7 @@
     <material class="panda" name="black" rgba="0.25 0.25 0.25 1"/>
     <material class="panda" name="green" rgba="0 1 0 1"/>
     <material class="panda" name="light_blue" rgba="0.039216 0.541176 0.780392 1"/>
+    <material class="panda" name="tcp" rgba="0 0.82 0 0.8"/>
 
     <!-- Collision meshes -->
     <mesh name="link0_c" file="assets/link0.stl"/>
@@ -248,6 +249,10 @@
                         <geom class="fingertip_pad_collision_4"/>
                         <geom class="fingertip_pad_collision_5"/>
                       </body>
+                      <body name="tcp_panda_01" pos="0 0 0.10375">
+                         <geom type="sphere" size="0.001" material="tcp" contype="4" conaffinity="4"/>
+                         <inertial mass="0.0" pos="0 0 0" diaginertia="0 0 0"/>
+                      </body>
                     </body>
                   </body>
                 </body>
@@ -383,6 +388,10 @@
                         <geom class="fingertip_pad_collision_3"/>
                         <geom class="fingertip_pad_collision_4"/>
                         <geom class="fingertip_pad_collision_5"/>
+                      </body>
+                      <body name="tcp_panda_02" pos="0 0 0.10375">
+                         <geom type="sphere" size="0.001" material="tcp" contype="4" conaffinity="4"/>
+                         <inertial mass="0.0" pos="0 0 0" diaginertia="0 0 0"/>
                       </body>
                     </body>
                   </body>

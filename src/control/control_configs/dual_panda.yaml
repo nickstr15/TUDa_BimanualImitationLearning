@@ -2,7 +2,7 @@ devices:
   - id: 0                               # unique device id
     name: "panda_01"                    # device name
     max_vel: [0.15, 5]                  # max linear (idx 0) and angular velocity (idx 1)
-    EE: "hand_panda_01"                 # name of the end-effector body
+    EE: "tcp_panda_01"                  # name of the end-effector body
     num_gripper_joints: 2               # number of gripper joints
     gripper_range_q: [0.0, 0.04]        # gripper joint range
     controller: "osc"                   # see controller_configs
@@ -13,7 +13,7 @@ devices:
   - id: 1
     name: "panda_02"
     max_vel: [0.15, 5]
-    EE: "hand_panda_02"
+    EE: "tcp_panda_02"
     num_gripper_joints: 2
     gripper_range_q: [0.0, 0.04]
     controller: "osc"

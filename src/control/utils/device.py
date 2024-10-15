@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict
 import mujoco
 import numpy as np
 
+from src.control.utils.arm_state import ArmState
 from src.control.utils.enums import GripperState, DeviceState
 
 
@@ -168,7 +169,8 @@ class Device:
         Get the state of the gripper joints
         """
         q_gripper = self._data.qpos[self._gripper_ids]
-        return GripperState.OPEN if np.all(q_gripper > 0) else GripperState.CLOSED
+        eps = 0.001 #1mm tolerance for open gripper
+        return GripperState.OPEN if np.all(q_gripper >= self._gripper_range_q[1] - eps) else GripperState.CLOSED
 
     def __get_force(self):
         """
@@ -250,5 +252,22 @@ class Device:
         assert self.__use_sim is False
         for var in DeviceState:
             self.__set_state(var)
+
+    def get_arm_state(self) -> ArmState:
+        """
+        Get the state of the arm
+        :return:
+        """
+        pos = self.get_state(DeviceState.EE_XYZ)
+        quat = self.get_state(DeviceState.EE_QUAT)
+        grip = self.get_state(DeviceState.GRIPPER)
+
+        arm_state = ArmState()
+        arm_state.set_xyz(pos)
+        arm_state.set_quat(quat)
+        arm_state.set_gripper_state(grip)
+
+        return arm_state
+
 
 
