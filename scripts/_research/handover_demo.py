@@ -46,14 +46,14 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
 
         # (5) Move panda_02 to handover position
         # and panda_01 close to handover position
-        targets["panda_01"].set_xyz(np.array([0.3, 0.2, 0.5]))
+        targets["panda_01"].set_xyz(np.array([0.3, 0.05, 0.5]))
         targets["panda_01"].set_quat(np.array([1, 1, 0, 0]))
-        targets["panda_02"].set_xyz(np.array([0.2, -0.1, 0.5]))
+        targets["panda_02"].set_xyz(np.array([0.25, 0, 0.5]))
         targets["panda_02"].set_quat(np.array([-1, 1, 0, 0]))
         targets_traj += [(copy(targets), 5.0)]
 
         # (6) Move panda_01 to cuboid in handover position
-        targets["panda_01"].set_xyz(np.array([0.27, 0.11, 0.49]))
+        targets["panda_01"].set_xyz(np.array([0.3, 0.0, 0.5]))
         targets_traj += [(copy(targets), 1.0)]
 
         # (7) Close gripper of panda_01
@@ -65,7 +65,7 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         targets_traj += [(copy(targets), 1.0)]
 
         # (9) Move panda_02 back
-        targets["panda_02"].set_xyz(np.array([0.3, -0.3, 0.5]))
+        targets["panda_02"].set_xyz(np.array([0.3, -0.1, 0.5]))
         targets_traj += [(copy(targets), 1.0)]
 
         # (10) Move to home position
