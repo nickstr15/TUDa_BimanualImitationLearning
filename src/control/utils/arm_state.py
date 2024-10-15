@@ -3,9 +3,9 @@ from transforms3d.euler import euler2quat, quat2euler
 
 from src.control.utils.enums import GripperState
 
-class Target:
+class ArmState:
     """
-    The Target class holds a target vector for
+    The ArmState class holds a vector for
         - orientation (quaternion)
         - position (xyz)
         - gripper state (open or closed)
@@ -20,9 +20,9 @@ class Target:
             grip: GripperState = GripperState.OPEN
     ):
         """
-        :param xyz_abg: xyz position and euler angles of the target
-        :param xyz_abg_vel: xyz velocity and euler angles velocity of the target
-        :param grip: gripper state of the target (open or closed)
+        :param xyz_abg: xyz position and euler angles
+        :param xyz_abg_vel: xyz velocity and euler angles velocity o
+        :param grip: gripper state (open or closed)
         """
 
         assert len(xyz_abg) == 6 and len(xyz_abg_vel) == 6
@@ -37,56 +37,56 @@ class Target:
 
     def get_xyz(self) -> np.ndarray:
         """
-        :return: xyz position of the target
+        :return: xyz position
         """
         return self.__xyz
 
     def get_xyz_vel(self) -> np.ndarray:
         """
-        :return: xyz velocity of the target
+        :return: xyz velocity
         """
         return self.__xyz_vel
 
     def get_quat(self) -> np.ndarray:
         """
-        :return: quaternion orientation of the target
+        :return: quaternion orientation
         """
         return self.__quat
 
     def get_quat_vel(self) -> np.ndarray:
         """
-        :return: quaternion velocity of the target
+        :return: quaternion velocity
         """
         return np.asarray(self.__quat_vel)
 
     def get_abg(self) -> np.ndarray:
         """
-        :return: euler angles of the target
+        :return: euler angles
         """
         return np.asarray(quat2euler(self.__quat))
 
     def get_abg_vel(self) -> np.ndarray:
         """
-        :return: euler angles velocity of the target
+        :return: euler angles
         """
         return np.asarray(quat2euler(self.__quat_vel))
 
     def get_gripper_state(self) -> GripperState:
         """
-        :return: gripper state of the target
+        :return: gripper state
         """
         return self.__gripper_state
 
     def set_xyz(self, xyz: np.ndarray) -> None:
         """
-        :param xyz: xyz position of the target
+        :param xyz: xyz position
         """
         assert len(xyz) == 3
         self.__xyz = np.asarray(xyz)
 
     def set_xyz_vel(self, xyz_vel: np.ndarray) -> None:
         """
-        :param xyz_vel: xyz velocity of the target
+        :param xyz_vel: xyz velocity
         """
         assert len(xyz_vel) == 3
         self.__xyz_vel = np.asarray(xyz_vel)
@@ -94,14 +94,14 @@ class Target:
 
     def set_quat(self, quat: np.ndarray) -> None:
         """
-        :param quat: quaternion orientation of the target
+        :param quat: quaternion orientation
         """
         assert len(quat) == 4
         self.__quat = np.asarray(quat)
 
     def update_quat(self, quat: np.ndarray) -> None:
         """
-        :param quat: quaternion orientation of the target
+        :param quat: quaternion orientation
         """
         assert len(quat) == 4
         self.__quat += np.asarray(quat)
@@ -158,14 +158,14 @@ class Target:
     @property
     def x(self) -> np.ndarray:
         """
-        :return: x position of the target
+        :return: x position
         """
         return self.__xyz[1]
 
     @x.setter
     def x(self, val: float) -> None:
         """
-        :param val: x position of the target
+        :param val: x position
         """
         tmp = self.get_xyz()
         tmp[0] = val
@@ -174,14 +174,14 @@ class Target:
     @property
     def y(self) -> np.ndarray:
         """
-        :return: y position of the target
+        :return: y position
         """
         return self.__xyz[1]
 
     @y.setter
     def y(self, val: float) -> None:
         """
-        :param val: y position of the target
+        :param val: y position
         """
         tmp = self.get_xyz()
         tmp[1] = val
@@ -190,14 +190,14 @@ class Target:
     @property
     def z(self) -> np.ndarray:
         """
-        :return: z position of the target
+        :return: z position
         """
         return self.__xyz[2]
 
     @z.setter
     def z(self, val: float) -> None:
         """
-        :param val: z position of the target
+        :param val: z position
         """
         tmp = self.get_xyz()
         tmp[2] = val
@@ -206,61 +206,16 @@ class Target:
     @property
     def gripper_state(self) -> GripperState:
         """
-        :return: gripper state of the target
+        :return: gripper state
         """
         return self.__gripper_state
 
     @gripper_state.setter
     def gripper_state(self, val: GripperState) -> None:
         """
-        :param val: gripper state of the target
+        :param val: gripper state
         """
         self.__gripper_state = val
-
-    def check_ob(self, x_bounds, y_bounds, z_bounds, clip=False) -> bool:
-        """
-        Check if the target is out of bounds and clip it if necessary.
-        Only positions and not orientations or velocities are checked.
-
-        :param x_bounds:
-        :param y_bounds:
-        :param z_bounds:
-        :param clip: whether to clip the target or not
-
-        :return: True if the target is out of bounds, False otherwise
-        """
-        ob = False
-        if self.x < x_bounds[0]:
-            if clip:
-                self.x = x_bounds[0]
-            ob = True
-
-        if self.x > x_bounds[1]:
-            if clip:
-                self.x = x_bounds[1]
-            ob = True
-
-        if self.y < y_bounds[0]:
-            if clip:
-                self.y = y_bounds[0]
-            ob = True
-
-        if self.y > y_bounds[1]:
-            if clip:
-                self.y = y_bounds[1]
-            ob = True
-
-        if self.z < z_bounds[0]:
-            if clip:
-                self.z = z_bounds[0]
-            ob = True
-
-        if self.z > z_bounds[1]:
-            if clip:
-                self.z = z_bounds[1]
-            ob = True
-
-        return ob
 
 
 

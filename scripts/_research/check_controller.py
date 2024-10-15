@@ -2,7 +2,6 @@ import time
 import numpy as np
 
 from src.control.utils.enums import GripperState
-from src.control.utils.target import Target
 from src.environments import EmptyPandaEnv
 
 class PandaMoveToPointEnv(EmptyPandaEnv):

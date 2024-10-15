@@ -17,7 +17,7 @@ from typing_extensions import override
 from src.control.controller import OSCGripperController
 from src.control.utils.device import Device
 from src.control.utils.robot import Robot
-from src.control.utils.target import Target
+from src.control.utils.arm_state import ArmState
 from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS, DEFAULT_WIDTH, DEFAULT_HEIGHT
 from src.utils.paths import SCENES_DIR, CONTROL_CONFIGS_DIR
 
@@ -233,7 +233,7 @@ class IEnvironment(MujocoEnv, ABC):
             if entry["name"] == name:
                 return entry
 
-    def _generate_control(self, targets : Dict[str, Target], relative_targets : bool = False) -> NDArray[np.float64]:
+    def _generate_control(self, targets : Dict[str, ArmState], relative_targets : bool = False) -> NDArray[np.float64]:
         """
         Generate the control signal (joint torques) for the robot.
         :param targets: target positions and orientations in the world frame
@@ -247,7 +247,7 @@ class IEnvironment(MujocoEnv, ABC):
         return ctrl_array
 
     @override
-    def step(self, action: Dict[str, Target]) -> Tuple[Any, float, bool, bool, Dict]:
+    def step(self, action: Dict[str, ArmState]) -> Tuple[Any, float, bool, bool, Dict]:
         """
         Step function of the environment.
         :param action: dictionary of targets for the devices
@@ -261,7 +261,7 @@ class IEnvironment(MujocoEnv, ABC):
         truncated = self._get_truncated()
         return obs, reward, terminated, truncated, info
 
-    def _step_impl(self, action: Dict[str, Target]) -> None:
+    def _step_impl(self, action: Dict[str, ArmState]) -> None:
         """
         Execute a step in the environment.
         :param action: action to be executed, a dictionary of targets
