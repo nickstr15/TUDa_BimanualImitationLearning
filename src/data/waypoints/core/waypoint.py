@@ -5,7 +5,7 @@ from src.control.utils.arm_state import ArmState
 from src.control.utils.enums import GripperState
 
 DEFAULT_POSITION_TOLERANCE = 0.01
-DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
+DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(2)
 DEFAULT_MIN_DURATION = 1.0
 DEFAULT_MAX_DURATION = 10.0
 
@@ -17,13 +17,13 @@ class ArmStateTarget(ArmState):
 
     def __init__(
         self,
-        xyz_abg: np.ndarray = np.zeros(6),
-        xyz_abg_vel: np.ndarray = np.zeros(6),
+        xyz_rot: np.ndarray = np.zeros(6),
+        xyz_rot_vel: np.ndarray = np.zeros(6),
         grip: GripperState = GripperState.OPEN,
         position_tolerance: float = DEFAULT_POSITION_TOLERANCE,
         orientation_tolerance: float = DEFAULT_ORIENTATION_TOLERANCE
     ):
-        super().__init__(xyz_abg, xyz_abg_vel, grip)
+        super().__init__(xyz_rot, xyz_rot_vel, grip)
         self._position_tolerance = position_tolerance
         self._orientation_tolerance = orientation_tolerance
 
@@ -54,8 +54,10 @@ class ArmStateTarget(ArmState):
         target_grip = self.get_gripper_state()
 
         position_diff = np.linalg.norm(target_xyz - current_xyz)
-        orientation_diff = quat2axangle(qmult(current_quat, qinverse(target_quat)))[0][1],
-        print(position_diff, orientation_diff, current_grip, target_grip)
+
+        #TODO this is not working correctly
+        orientation_diff = quat2axangle(qmult(current_quat, qinverse(target_quat))),
+
         return position_diff <= self._position_tolerance \
             and orientation_diff <= self._orientation_tolerance \
             and current_grip == target_grip
@@ -85,8 +87,8 @@ class Waypoint:
         self._targets = {}
         for target in waypoint_dict["targets"]:
             self._targets[target["device"]] = ArmStateTarget(
-                xyz_abg=target["position"] + target["orientation"],
-                xyz_abg_vel=target.get("velocity", [0, 0, 0]) + target.get("angular_velocity", [0, 0, 0]),
+                xyz_rot=target["position"] + target["orientation"],
+                xyz_rot_vel=target.get("velocity", [0, 0, 0]) + target.get("angular_velocity", [1, 0, 0, 0]),
                 grip=target["gripper"],
                 position_tolerance=target.get("position_tolerance", DEFAULT_POSITION_TOLERANCE),
                 orientation_tolerance=target.get("orientation_tolerance", DEFAULT_ORIENTATION_TOLERANCE)
@@ -113,6 +115,7 @@ class Waypoint:
 
         is_reached = True
         for device, target in self._targets.items():
+            print(f"Checking device {device}")
             is_reached = is_reached and target.is_reached_by(current_robot_state[device])
 
         return is_reached

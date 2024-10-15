@@ -80,6 +80,7 @@ class WaypointExpert:
         }
         return action
 
+        # TODO this is not working correctly
         for name, target in action.items():
             current = current_state[name]
             pos_target = target.get_xyz()

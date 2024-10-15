@@ -38,8 +38,6 @@ waypoints:
       - device: <device_name>             # mujoco name of the device
         position: [x, y, z]               # desired position
         orientation: [x, y, z]            # desired orientation
-        velocity: [vx, vy, vz]            # desired velocity (default: [0, 0, 0])
-        angular_velocity: [wx, wy, wz]    # desired angular velocity (default: [0, 0, 0])
         gripper: <gripper_state>          # desired gripper state (0: closed, 255: open)
         tolerance_position: <tol>         # position tolerance (default: 0.01)
         tolerance_orientation: <tol>      # orientation tolerance in degrees (default: 2°)
