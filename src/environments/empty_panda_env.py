@@ -15,15 +15,6 @@ class EmptyPandaEnv(PandaEnvBase):
         )
 
     @property
-    def _free_joints(self) -> List[str]:
-        """
-        List of free joints in the environment.
-        The empty environment has no free joints and therefor returns an empty list.
-        :return:
-        """
-        return []
-
-    @property
     def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         """
         Default free joint positions for the environment.

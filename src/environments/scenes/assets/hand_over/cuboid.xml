@@ -1,13 +1,19 @@
 <mujocoimport model="cuboid">
     <asset>
-        <material name="red" specular="1" shininess="0.5" reflectance="1" emission="0.25" rgba="0.82 0 0 1"/>
+        <material name="cuboid" specular="1"  reflectance="1" emission="0.25" rgba="0.86 0.20 0.1 1"/>
     </asset>
 
     <worldbody>
-        <body name="cuboid" pos="0 0 0.5">
-            <freejoint name="free_joint_cuboid"/>
-            <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-            <geom type="box" size="0.02 0.1 0.02" material="red" condim="3"/>
+        <body name="cuboid" pos="0.4 -0.4 0">
+            <freejoint name="cuboid_position"/>
+            <inertial pos="0 0 0.025" mass="0.001"/>
+
+            <geom type="box" material="cuboid" friction="2 1 1"
+                  pos="0 0 0.025" size="0.025 0.1 0.025"/>
+
+            <body name="cuboid_center" pos="0 0 0.025">
+                <geom type="sphere" size="0.001" rgba="0 0 0 0" contype="4" conaffinity="4"/>
+            </body>
         </body>
     </worldbody>
 

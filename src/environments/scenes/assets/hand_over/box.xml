@@ -1,0 +1,34 @@
+<!--
+Box with a hole in the middle, used for the hand-over task
+Hole size: 10x25x5cm
+-->
+<mujocoimport model="box">
+    <asset>
+        <material name="box" specular="1" shininess="0.5" emission="0.25" rgba="0.35 0.15 0 1"/>
+    </asset>
+
+    <worldbody>
+        <body name="box" pos="0.4 0.4 0">
+            <freejoint name="box_position"/>
+
+            <!-- base: 10x25x1cm-->
+            <geom type="box" material="box"
+                  pos="0 0 0.005" size="0.05 0.125 0.005"/>
+
+            <!-- walls: thickness 1cm, height 6cm -->
+            <geom type="box" material="box"
+                  pos="-0.055 0 0.03" size="0.005 0.135 0.03"/>
+            <geom type="box" material="box"
+                  pos="0.055 0 0.03" size="0.005 0.135 0.03"/>
+            <geom type="box" material="box"
+                  pos="0 0.13 0.03" size="0.05 0.005 0.03"/>
+            <geom type="box" material="box"
+                  pos="0 -0.13 0.03" size="0.05 0.005 0.03"/>
+
+            <body name="box_center" pos="0 0 0.035">
+                <geom type="sphere" size="0.001" rgba="0 0 0 0" contype="4" conaffinity="4"/>
+            </body>
+        </body>
+    </worldbody>
+
+</mujocoimport>

@@ -1,7 +1,7 @@
 import os.path
 import time
+from copy import copy
 
-import numpy as np
 import yaml
 from transforms3d.quaternions import qmult, qinverse
 
@@ -75,33 +75,33 @@ class WaypointExpert:
         assert current_state.keys() == waypoint.targets.keys(), "Current state and waypoint targets do not match"
 
         action = {
-            name : target
+            name : copy(target)
             for name, target in waypoint.targets.items()
         }
-        return action
 
-        # TODO this is not working correctly
         for name, target in action.items():
             current = current_state[name]
-            pos_target = target.get_xyz()
-            pos_current = current.get_xyz()
-            quat_target = target.get_quat()
-            quat_current = current.get_quat()
 
             # Clip the translation
+            pos_target = target.get_xyz()
+            pos_current = current.get_xyz()
             pos_delta = clip_translation(pos_target - pos_current, self._max_delta_translation)
             action[name].set_xyz(pos_current + pos_delta)
 
-            # Clip the rotation
+            quat_target = target.get_quat()
+            quat_current = current.get_quat()
             quat_delta = clip_quat(
-                qmult(quat_current, qinverse(quat_target)),
+                qmult(quat_target, qinverse(quat_current)),
                 self._max_delta_rotation
             )
             action[name].set_quat(qmult(quat_delta, quat_current))
 
         return action
 
-    def _run(self, render=False) -> None:
+    def _run(
+        self,
+        render : bool = False
+    ) -> None:
         """
         Run the expert agent in the environment.
         :param render: Whether to render the environment
@@ -110,9 +110,8 @@ class WaypointExpert:
         self._env.reset(
             seed=self._initial_config.get("seed", 0)
         )
-        self._env.set_initial_config(
-            self._initial_config.get("bodies", [])
-        )
+        positions = self._initial_config.get("positions", [])
+        self._env.set_initial_config(positions)
 
         if render:
             self._env.render()
@@ -127,7 +126,7 @@ class WaypointExpert:
             while not reached:
                 start_time = time.time()
                 action = self._get_action(current_state, waypoint)
-                self._env.step(action)
+                observation, _, terminated, _, _ = self._env.step(action)
                 if render:
                     self._env.render()
                 dt += 1
@@ -135,6 +134,10 @@ class WaypointExpert:
                 reached = waypoint.is_reached_by(
                     current_state, dt * dt_render
                 )
+
+                if terminated:
+                    print("Terminated.")
+                    return
 
                 if target_real_time:
                     elapsed_time = time.time() - start_time
@@ -152,12 +155,5 @@ class WaypointExpert:
         """
         self._run(render=True)
 
-
-if __name__ == "__main__":
-    from src.environments import PandaHandoverEnv
-    env = PandaHandoverEnv()
-    expert = WaypointExpert(env, os.path.join("panda_handover", "001.yaml"))
-    expert.visualize()
-    expert.dispose()
 
 

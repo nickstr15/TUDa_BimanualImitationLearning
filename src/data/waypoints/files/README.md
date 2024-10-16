@@ -11,13 +11,13 @@ waypoints:
 ```
 
 The `initial_configuration` key contains 
-the initial configuration of the environment that is passed to 
-`env.setup()` after `env.reset()` is called. The structure is as follows:
+the initial configuration of the environment 
+(position of movable objects) after `env.reset()` is called. The structure is as follows:
 
 ```
 initial_configuration:
     seed: <seed>              # seed for the environment (default: 0)
-    bodies:                   # if empty, the bodies are not moved
+    positions:                # if empty, the objects are not moved
         - name: <name>        # name of the target body
           pos: [x, y, z]      # desired position
           quat: [w, x, y, z]  # desired orientation

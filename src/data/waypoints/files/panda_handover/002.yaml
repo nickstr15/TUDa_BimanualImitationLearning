@@ -3,10 +3,10 @@ initial_configuration:
   positions:
     - name: "cuboid_position"
       pos: [0.4, -0.4, 0.0]
-      quat: [0, 0, 0, 1]
+      quat: [0.9238795, 0, 0, 0.3826834]
     - name: "box_position"
       pos: [0.4, 0.4, 0]
-      quat: [0, 0, 0, 1]
+      quat: [0.9238795, 0, 0, -0.3826834]
 
 waypoints:
   - id: 1
@@ -33,8 +33,8 @@ waypoints:
         orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
         gripper: 255
       - device: "panda_02"
-        position: [0.4, -0.43, 0.025]
-        orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
+        position: [0.42, -0.42, 0.025]
+        orientation: [0, 0.2865739, 0.9580582, 0]
         gripper: 255
   - id: 3
     name: "close gripper of panda_02"
@@ -44,8 +44,8 @@ waypoints:
         orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
         gripper: 255
       - device: "panda_02"
-        position: [ 0.4, -0.43, 0.025 ]
-        orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
+        position: [ 0.42, -0.42, 0.025 ]
+        orientation: [0, 0.2865739, 0.9580582, 0]
         gripper: 0
     min_duration: 1.0
     max_duration: 1.0
@@ -57,8 +57,8 @@ waypoints:
         orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
         gripper: 255
       - device: "panda_02"
-        position: [ 0.4, -0.43, 0.1 ]
-        orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
+        position: [ 0.42, -0.42, 0.1 ]
+        orientation: [0, 0.2865739, 0.9580582, 0]
         gripper: 0
   #############################################################
   # END PICK-UP ###############################################
@@ -132,8 +132,8 @@ waypoints:
     name: "move panda_01 above target position (1/2)"
     targets:
       - device: "panda_01"
-        position: [ 0.4, 0.43, 0.2 ]
-        orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
+        position: [ 0.42, 0.42, 0.2 ]
+        orientation: [0, 0.9580582, 0.2865739, 0]
         gripper: 0
         tolerance_position: 0.001
         tolerance_orientation: 0.0174533
@@ -145,8 +145,8 @@ waypoints:
     name: "move panda_01 above target position (2/2)"
     targets:
       - device: "panda_01"
-        position: [ 0.4, 0.43, 0.08 ]
-        orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
+        position: [ 0.42, 0.42, 0.08 ]
+        orientation: [0, 0.9580582, 0.2865739, 0]
         gripper: 0
         tolerance_position: 0.001
         tolerance_orientation: 0.0174533
@@ -158,8 +158,8 @@ waypoints:
     name: "open gripper panda_01"
     targets:
       - device: "panda_01"
-        position: [ 0.4, 0.43, 0.08 ]
-        orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
+        position: [ 0.42, 0.42, 0.08 ]
+        orientation: [0, 0.9580582, 0.2865739, 0]
         gripper: 255
       - device: "panda_02"
         position: [0.55449948, -0.4, 0.52075243]

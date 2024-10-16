@@ -32,7 +32,7 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         targets_traj += [(copy(targets), 1.0)]
 
         # (2) Move panda_02 to cuboid
-        targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.08])) # cuboid at 0.4, -0.4, 0.15
+        targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.025])) # cuboid at 0.4, -0.4
         targets_traj += [(copy(targets), 4.0)]
 
 
@@ -42,7 +42,7 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
 
         # (4) Move panda_02 up
         targets["panda_02"].set_xyz(np.array([0.4, -0.43, 0.3]))
-        targets_traj += [(copy(targets), 2.0)]
+        targets_traj += [(copy(targets), 3.0)]
 
         # (5) Move panda_02 to handover position
         # and panda_01 close to handover position
@@ -73,17 +73,14 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         targets["panda_01"].set_gripper_state(GripperState.CLOSED)
         targets_traj += [(copy(targets), 1.0)]
 
-        # (11) Move panda_01 to table surface
-        targets["panda_01"].set_xyz(np.array([0.41, 0.46, 0.08]))
+        # (11) Move panda_01 to box
+        targets["panda_01"].set_xyz(np.array([0.4, 0.42, 0.08]))
+        #targets["panda_01"].set_quat(np.array([0, 0.4472136, 0.8944272, 0]))
         targets_traj += [(copy(targets), 5.0)]
 
         # (12) Open gripper of panda_01
         targets["panda_01"].set_gripper_state(GripperState.OPEN)
-        targets_traj += [(copy(targets), 1.0)]
-
-        # (13) Move to home position
-        targets = self.x_home_targets
-        targets_traj += [(copy(targets), 4.0)]
+        targets_traj += [(copy(targets), 5.0)]
 
         total_duration = sum([duration for _, duration in targets_traj])
         print(f"Trajectory with total (real-time) duration: {total_duration}sec")
@@ -97,6 +94,11 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         :param logging: boolean value indicating if progress is logged to the console.
         :return:
         """
+
+        #minimum number of steps in done state
+        min_steps_terminated = int(1.0 * self.render_fps)
+        steps_terminated = 0
+
         trajectory = self._build_targets_traj()
         _warning = False
         for i, (targets, duration) in enumerate(trajectory):
@@ -110,9 +112,18 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
 
                 #################################
                 # Actual simulation step ########
-                self.step(targets)              #
+                _, _, terminated, _, _ = self.step(targets)              #
                 self.render()                   #
                 #################################
+
+                if terminated:
+                    steps_terminated += 1
+                    if steps_terminated >= min_steps_terminated:
+                        print("Done.")
+                        return
+                else:
+                    steps_terminated = 0
+
 
                 if self.render_mode == "human":
                     elapsed_time = time.time() - start_time

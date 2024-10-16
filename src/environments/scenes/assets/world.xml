@@ -1,4 +1,16 @@
 <mujocoimport>
+    <compiler angle="radian" meshdir="meshes"/>
+
+    <!--https://github.com/google-deepmind/mujoco_menagerie/issues/54-->
+    <option timestep="0.001"
+            cone="elliptic" impratio="15"
+            solver="Newton" tolerance="1e-12" iterations="300"
+            noslip_iterations="1"
+            integrator="Euler">
+        <flag autoreset="disable" multiccd="enable"/>
+    </option>
+    <size njmax="5000" nconmax="2500"/>
+
     <asset>
         <texture name="grid" builtin="checker" height="500" rgb1=".1 .2 .3" rgb2=".2 .3 .4" type="2d" width="500"/>
         <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2"/>
@@ -17,21 +29,24 @@
     </visual>
 
     <worldbody>
-        <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" castshadow="true"/>
+        <light name="top" pos="0 0 6"/>
+        <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5" dir="0 0 -1" castshadow="true"/>
         <light directional="true" diffuse=".2 .2 .2" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1" castshadow="true"/>
-        <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="grid" condim="1"/>
-        <body name="table_surface" pos="0.3 0 0.02">
-            <geom type="box" size="0.6 0.9 0.04" material="darkgrey" condim="1"/>
+
+        <geom name="ground" type="plane" size="0 0 1" pos="0 0 -0.04" quat="1 0 0 0" material="grid"/>
+
+        <body name="table_surface" pos="0.3 0 -0.02">
+            <geom type="box" size="0.6 0.9 0.02" material="darkgrey"/>
         </body>
 
-        <body name="x_dir" pos="0.05 0 0.021" mocap="true">
-            <geom type="box" size=".1 .01 .04" rgba="0.82 0 0 1" contype="4" conaffinity="4"/>
+        <body name="x_dir" pos="0.05 0 0" mocap="true">
+            <geom type="box" size="0.05 .005 .005" rgba="0.82 0 0 1" contype="4" conaffinity="4"/>
         </body>
-        <body name="y_dir" pos="0 0.05 0.021" mocap="true">
-            <geom type="box" size=".01 .1 .04" rgba="0 0.82 0 1" contype="4" conaffinity="4"/>
+        <body name="y_dir" pos="0 0.05 0" mocap="true">
+            <geom type="box" size=".005 0.05 .005" rgba="0 0.82 0 1" contype="4" conaffinity="4"/>
         </body>
-        <body name="z_dir" pos="0 0 0.1" mocap="true">
-            <geom type="box" size=".01 .01 .04" rgba="0 0 0.82 1" contype="4" conaffinity="4"/>
+        <body name="z_dir" pos="0 0 0.05" mocap="true">
+            <geom type="box" size=".005 .005 0.05" rgba="0 0 0.82 1" contype="4" conaffinity="4"/>
         </body>
     </worldbody>
 </mujocoimport>

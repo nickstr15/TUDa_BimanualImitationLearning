@@ -1,12 +1,19 @@
 from typing import Dict, Tuple
 import numpy as np
-
+import mujoco
 from src.environments.core.panda_environment import PandaEnvBase
 
 class PandaHandoverEnv(PandaEnvBase):
     """
-    Environment with two Panda robots to perform a handover of a cuboid.
+    Environment with two Panda robots to perform a handover of a cuboid
+    and place the cuboid in a box.
+
+    cuboid size: 5x20x5cm
+    inner box size: 10x25x5cm
     """
+    _target_tolerance = np.array([
+        0.025, 0.025, 1e-3
+    ])
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -15,20 +22,15 @@ class PandaHandoverEnv(PandaEnvBase):
         )
 
     @property
-    def _free_joints(self):
-        return ["free_joint_cuboid"]
-
-    @property
     def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
-        """
-        Default free joint positions for the bimanual handover environment.
-
-        :return: orientation and position of the free joint cuboid
-        """
         return {
-            "free_joint_cuboid" : (
+            "cuboid_position" : (
                 np.array([1.0, 0.0, 0.0, 0.0]),
-                np.array([0.4, -0.4, 0.15])
+                np.array([0.4, -0.4, 0])
+            ),
+            "box_position" : (
+                np.array([1.0, 0.0, 0.0, 0.0]),
+                np.array([0.4, 0.4, 0])
             )
         }
 
@@ -38,6 +40,21 @@ class PandaHandoverEnv(PandaEnvBase):
             "qvel": self.data.qvel,
         }
 
+    def _get_object_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        """
+        Get the current positions of the cuboid and the box.
+        :return: dict with positions and quaternion of the cuboid and the box
+        """
+        body_names = ["cuboid_center", "box_center"]
+        positions = {}
+        for name in body_names:
+            body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
+            xpos = self.data.xpos[body_id]
+            xquat = self.data.xquat[body_id]
+            positions[name] = (xpos, xquat)
+
+        return positions
+
     def _get_info(self) -> Dict:
         return {}
 
@@ -45,7 +62,14 @@ class PandaHandoverEnv(PandaEnvBase):
         return 0.0
 
     def _get_terminated(self) -> bool:
-        return False
+        object_positions = self._get_object_positions()
+        cuboid_position = object_positions["cuboid_center"][0]
+        box_position = object_positions["box_center"][0]
+
+        # Check if the cuboid is in the box by using target tolerance
+        is_done = np.all(np.abs(cuboid_position - box_position) <= self._target_tolerance)
+
+        return is_done
 
     def _get_truncated(self) -> bool:
         return False
@@ -53,7 +77,7 @@ class PandaHandoverEnv(PandaEnvBase):
 
 if __name__ == "__main__":
     env = PandaHandoverEnv()
-    env.visualize_static(3)
+    env.visualize_static()
     env.close()
 
 

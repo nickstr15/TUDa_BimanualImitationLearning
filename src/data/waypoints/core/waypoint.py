@@ -54,10 +54,7 @@ class ArmStateTarget(ArmState):
         target_grip = self.get_gripper_state()
 
         position_diff = np.linalg.norm(target_xyz - current_xyz)
-
-        #TODO this is not working correctly
         orientation_diff = quat2axangle(qmult(current_quat, qinverse(target_quat)))[1]
-        print(f"Position diff: {position_diff}, Orientation diff: {orientation_diff}")
 
         return position_diff <= self._position_tolerance \
             and orientation_diff <= self._orientation_tolerance \
@@ -116,7 +113,6 @@ class Waypoint:
 
         is_reached = True
         for device, target in self._targets.items():
-            print(f"Checking device {device}")
             is_reached = is_reached and target.is_reached_by(current_robot_state[device])
 
         return is_reached

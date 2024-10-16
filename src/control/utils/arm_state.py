@@ -217,5 +217,8 @@ class ArmState:
         """
         self.__gripper_state = val
 
+    def __str__(self):
+        return f"xyz: {self.__xyz}, quat: {self.__quat}, grip: {self.__gripper_state}"
+
 
 

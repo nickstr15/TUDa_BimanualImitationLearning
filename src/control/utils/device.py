@@ -242,8 +242,16 @@ class Device:
             self.__state_locks[state_var].release()
         return state
 
-    def get_all_states(self):
+    def get_all_states(self) -> Dict:
+        """
+        Get all the states of the device
+        :return: dictionary containing all the states
+        """
         return dict([(key, self.get_state(key)) for key in self._concise_state_vars])
+
+    def __str__(self):
+        all_states = self.get_all_states()
+        return str(all_states)
 
     def update_state(self):
         """

@@ -1,9 +1,6 @@
 <mujoco model="panda">
   <compiler angle="radian" meshdir="assets" autolimits="true"/>
 
-  <!--https://github.com/google-deepmind/mujoco_menagerie/issues/54-->
-  <option integrator="implicitfast" impratio="10" cone="elliptic" noslip_iterations="3"/>
-
   <default>
     <default class="panda">
       <material specular="0.5" shininess="0.25"/>
@@ -118,15 +115,13 @@
   </asset>
 
   <worldbody>
-    <light name="top" pos="0 0 2" mode="trackcom"/>
-
     <!-- ########################################################################################################## -->
     <!-- # bodies ################################################################################################# -->
     <!-- ########################################################################################################## -->
     <!-- ########################################################################################################## -->
     <!-- # arm panda_01 ########################################################################################### -->
     <!-- ########################################################################################################## -->
-    <body name="link0_panda_01" childclass="panda" pos="0 0.4 0.06" euler="0 0 0">
+    <body name="link0_panda_01" childclass="panda" pos="0 0.4 0" euler="0 0 0">
       <inertial mass="0.629769" pos="-0.041018 -0.00014 0.049974"
         fullinertia="0.00315 0.00388 0.004285 8.2904e-7 0.00015 8.2299e-6"/>
       <geom mesh="link0_0" material="off_white" class="visual"/>
@@ -266,7 +261,7 @@
     <!-- ########################################################################################################## -->
     <!-- # arm panda_02 ########################################################################################### -->
     <!-- ########################################################################################################## -->
-    <body name="link0_panda_02" childclass="panda" pos="0 -0.4 0.06" euler="0 0 0">
+    <body name="link0_panda_02" childclass="panda" pos="0 -0.4 0" euler="0 0 0">
       <inertial mass="0.629769" pos="-0.041018 -0.00014 0.049974"
         fullinertia="0.00315 0.00388 0.004285 8.2904e-7 0.00015 8.2299e-6"/>
       <geom mesh="link0_0" material="off_white" class="visual"/>
@@ -436,8 +431,8 @@
     <general name="actuator8_panda_01" tendon="split_panda_01"
              dyntype="none" biastype="affine"
              forcerange="-100 100" ctrlrange="0 255"
-             gear="5 0 0 0 0 0"
-             gainprm="0.078431375 0 0" biasprm="0 -100 -10"/>
+             gear="1 0 0 0 0 0"
+             gainprm="0.01568627451 0 0" biasprm="0 -100 -10"/>
 
     <motor name="actuator1_panda_02" joint="joint1_panda_02" forcerange="-87 87" forcelimited="true"/>
     <motor name="actuator2_panda_02" joint="joint2_panda_02" forcerange="-87 87" forcelimited="true"/>
@@ -450,8 +445,8 @@
     <general name="actuator8_panda_02" tendon="split_panda_02"
              dyntype="none" biastype="affine"
              forcerange="-100 100" ctrlrange="0 255"
-             gear="5 0 0 0 0 0"
-             gainprm="0.078431375 0 0" biasprm="0 -100 -10"/>
+             gear="1 0 0 0 0 0"
+             gainprm="0.01568627451 0 0" biasprm="0 -100 -10"/>
   </actuator>
 
   <sensor>

@@ -148,11 +148,11 @@ class IEnvironment(MujocoEnv, ABC):
         """
         viewer.cam.fixedcamid = -1
         viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
-        viewer.cam.azimuth = 190
+        viewer.cam.azimuth = 200
         viewer.cam.elevation = -20
-        viewer.cam.lookat[0] = 0.0
-        viewer.cam.lookat[1] = 0.0
-        viewer.cam.lookat[2] = 0.1
+        viewer.cam.lookat[0] = 0
+        viewer.cam.lookat[1] = 0
+        viewer.cam.lookat[2] = 0
         viewer.cam.distance = 2.5
 
     def set_robot_joint_pos(self, joint_pos : np.ndarray) -> None:
@@ -164,6 +164,14 @@ class IEnvironment(MujocoEnv, ABC):
         """
         assert len(joint_pos) == self.robot.num_joints_total, "Joint positions must have the same length as the number of joints"
         self.data.qpos[:len(joint_pos)] = joint_pos
+        mujoco.mj_forward(self.model, self.data)
+
+    def get_robot_joint_pos(self) -> NDArray[np.float64]:
+        """
+        Get the joint positions of the robot.
+        :return: joint positions
+        """
+        return self.data.qpos[:self.robot.num_joints_total]
 
     def set_free_joint_pos(self, free_joint_name : str , quat : np.ndarray = None, pos : np.ndarray = None):
         """
@@ -184,6 +192,8 @@ class IEnvironment(MujocoEnv, ABC):
         if pos is not None:
             pos_idxs = np.arange(offset, offset + 3)  # Position indices
             self.data.qpos[pos_idxs] = pos
+
+        mujoco.mj_forward(self.model, self.data)
 
     @staticmethod
     def __get_devices(mj_model, mj_data, cfg, use_sim=True) -> Any:
@@ -341,32 +351,18 @@ class IEnvironment(MujocoEnv, ABC):
 
         return rendering
 
-    def set_initial_config(self, bodies: list) -> None:
+    def set_initial_config(self, positions: list) -> None:
         """
         Set the initial configuration of the environment.
-        :param bodies: list containing the initial configuration for bodies
+        :param positions: list containing the initial configuration for bodies
         :return:
         """
-        for body in bodies:
-            name = body["name"]
+        for body in positions:
+            pos_name = body["name"]
             pos = body["pos"]
             quat = body["quat"]
-            self._move_body(name, pos, quat)
+            self.set_free_joint_pos(pos_name, quat, pos)
 
-    def _move_body(self, name: str, pos: np.ndarray, quat: np.ndarray) -> None:
-        """
-        Move the body to the specified position and orientation.
-        :param name: name of the body
-        :param pos: position of the body
-        :param quat: orientation of the body
-        :return:
-        """
-        body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
-        self.data.xpos[body_id] = pos
-        self.data.xquat[body_id] = quat
-
-        # apply the changes
-        mujoco.mj_forward(self.model, self.data)
 
     def get_device_states(self) -> Dict[str, ArmState]:
         """
