@@ -41,6 +41,9 @@ class EmptyPandaEnv(PandaEnvBase):
     def _get_truncated(self) -> bool:
         return False
 
+    def _check_success(self) -> bool:
+        return False
+
 if __name__ == "__main__":
     env = EmptyPandaEnv()
     env.visualize_static()

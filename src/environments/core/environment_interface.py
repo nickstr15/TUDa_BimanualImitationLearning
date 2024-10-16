@@ -21,6 +21,8 @@ from src.control.utils.arm_state import ArmState
 from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS, DEFAULT_WIDTH, DEFAULT_HEIGHT
 from src.utils.paths import SCENES_DIR, CONTROL_CONFIGS_DIR
 
+from robosuite.utils.binding_utils import MjSimState
+
 
 class IEnvironment(MujocoEnv, ABC):
     """
@@ -262,6 +264,25 @@ class IEnvironment(MujocoEnv, ABC):
             ctrl_array[ctrl_idx] = ctrl
         return ctrl_array
 
+    def get_state(self) -> MjSimState:
+        """
+        Get MjSimState instance for current state.
+        :return: current state
+        """
+        return MjSimState(
+            time=self.data.time,
+            qpos=np.copy(self.data.qpos),
+            qvel=np.copy(self.data.qvel),
+        )
+
+    def rs_set_state(self, state: MjSimState) -> None:
+        """
+        Set the state of the environment (RoboSuite version).
+        :param state: state to be set
+        """
+        self.data.time = state.time
+        self.set_state(qpos=state.qpos, qvel=state.qvel)
+
     @override
     def step(self, action: Dict[str, ArmState]) -> Tuple[Any, float, bool, bool, Dict]:
         """
@@ -472,5 +493,13 @@ class IEnvironment(MujocoEnv, ABC):
         This is used to update the target indicators
         :param name: name of the mocap object
         :return: id of the mocap object, -1 if not found
+        """
+        pass
+
+    @abstractmethod
+    def _check_success(self) -> bool:
+        """
+        Check if the task is successful.
+        :return: boolean value indicating if the task is completed successfully
         """
         pass

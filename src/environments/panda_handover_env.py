@@ -62,6 +62,12 @@ class PandaHandoverEnv(PandaEnvBase):
         return 0.0
 
     def _get_terminated(self) -> bool:
+        return self._check_success()
+
+    def _get_truncated(self) -> bool:
+        return False
+
+    def _check_success(self) -> bool:
         object_positions = self._get_object_positions()
         cuboid_position = object_positions["cuboid_center"][0]
         box_position = object_positions["box_center"][0]
@@ -70,9 +76,6 @@ class PandaHandoverEnv(PandaEnvBase):
         is_done = np.all(np.abs(cuboid_position - box_position) <= self._target_tolerance)
 
         return is_done
-
-    def _get_truncated(self) -> bool:
-        return False
 
 
 if __name__ == "__main__":
