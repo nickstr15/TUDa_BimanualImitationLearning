@@ -48,5 +48,7 @@
         <body name="z_dir" pos="0 0 0.05" mocap="true">
             <geom type="box" size=".005 .005 0.05" rgba="0 0 0.82 1" contype="4" conaffinity="4"/>
         </body>
+
+
     </worldbody>
 </mujocoimport>

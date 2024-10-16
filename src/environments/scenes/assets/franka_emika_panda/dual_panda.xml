@@ -40,7 +40,6 @@
     <material class="panda" name="black" rgba="0.25 0.25 0.25 1"/>
     <material class="panda" name="green" rgba="0 1 0 1"/>
     <material class="panda" name="light_blue" rgba="0.039216 0.541176 0.780392 1"/>
-    <material class="panda" name="tcp" rgba="0 0.82 0 0.8"/>
 
     <!-- Collision meshes -->
     <mesh name="link0_c" file="assets/link0.stl"/>
@@ -245,7 +244,7 @@
                         <geom class="fingertip_pad_collision_5"/>
                       </body>
                       <body name="tcp_panda_01" pos="0 0 0.10375">
-                         <geom type="sphere" size="0.001" material="tcp" contype="4" conaffinity="4"/>
+                         <geom class="visual" type="sphere" size="0.001" rgba="0.9 0 0 0.8"/>/>
                          <inertial mass="0.0" pos="0 0 0" diaginertia="0 0 0"/>
                       </body>
                     </body>
@@ -385,7 +384,7 @@
                         <geom class="fingertip_pad_collision_5"/>
                       </body>
                       <body name="tcp_panda_02" pos="0 0 0.10375">
-                         <geom type="sphere" size="0.001" material="tcp" contype="4" conaffinity="4"/>
+                         <geom class="visual" type="sphere" size="0.001" rgba="0 0 0.9 0.8"/>
                          <inertial mass="0.0" pos="0 0 0" diaginertia="0 0 0"/>
                       </body>
                     </body>
@@ -400,7 +399,51 @@
     <!-- ########################################################################################################## -->
     <!-- # end bodies ############################################################################################# -->
     <!-- ########################################################################################################## -->
+
+
+    <body name="target_panda_01" pos="0 0 -1" mocap="true">
+      <geom class="visual" type="sphere" size="0.01" rgba=".9 0 0 .3"/>
+      <body pos="0 0 -0.10375">
+        <geom mesh="hand_0" material="off_white" class="visual" rgba=".9 0 0 .3"/>
+        <geom mesh="hand_1" material="black" class="visual" rgba=".9 0 0 .3"/>
+        <geom mesh="hand_2" material="black" class="visual" rgba=".9 0 0 .3"/>
+        <geom mesh="hand_3" material="white" class="visual" rgba=".9 0 0 .3"/>
+        <geom mesh="hand_4" material="off_white" class="visual" rgba=".9 0 0 .3"/>
+        <body pos="0 0.04 0.0584">
+          <geom mesh="finger_0" material="off_white" class="visual" rgba=".9 0 0 .3"/>
+          <geom mesh="finger_1" material="black" class="visual" rgba=".9 0 0 .3"/>
+        </body>
+        <body pos="0 -0.04 0.0584" quat="0 0 0 1">
+          <geom mesh="finger_0" material="off_white" class="visual" rgba=".9 0 0 .3"/>
+          <geom mesh="finger_1" material="black" class="visual" rgba=".9 0 0 .3"/>
+        </body>
+      </body>
+    </body>
+
+    <body name="target_panda_02" pos="0 0 -1" mocap="true">
+      <geom class="visual" type="sphere" size="0.01" rgba="0 0 0.9 .3"/>
+      <body pos="0 0 -0.10375">
+        <geom mesh="hand_0" material="off_white" class="visual" rgba="0 0 0.9 .3"/>
+        <geom mesh="hand_1" material="black" class="visual" rgba="0 0 0.9 .3"/>
+        <geom mesh="hand_2" material="black" class="visual" rgba="0 0 0.9 .3"/>
+        <geom mesh="hand_3" material="white" class="visual" rgba="0 0 0.9 .3"/>
+        <geom mesh="hand_4" material="off_white" class="visual" rgba="0 0 0.9 .3"/>
+        <body pos="0 0.04 0.0584">
+          <geom mesh="finger_0" material="off_white" class="visual" rgba="0 0 0.9 .3"/>
+          <geom mesh="finger_1" material="black" class="visual" rgba="0 0 0.9 .3"/>
+        </body>
+        <body pos="0 -0.04 0.0584" quat="0 0 0 1">
+          <geom mesh="finger_0" material="off_white" class="visual" rgba="0 0 0.9 .3"/>
+          <geom mesh="finger_1" material="black" class="visual" rgba="0 0 0.9 .3"/>
+        </body>
+      </body>
+    </body>
   </worldbody>
+
+  <contact>
+    <exclude body1="link0_panda_01" body2="target_panda_01"/>
+    <exclude body1="link0_panda_02" body2="target_panda_02"/>
+  </contact>
 
   <tendon>
     <fixed name="split_panda_01">
@@ -455,5 +498,5 @@
 
         <force name="force_ee_panda_02" site="ft_frame_panda_02"/>
         <torque name="torque_ee_panda_02" site="ft_frame_panda_02"/>
-    </sensor>
+  </sensor>
 </mujoco>

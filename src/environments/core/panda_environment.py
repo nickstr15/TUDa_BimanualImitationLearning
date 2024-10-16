@@ -48,3 +48,10 @@ class PandaEnvBase(IEnvironment, ABC):
         targets["panda_02"].set_quat(np.array([0, 1 / np.sqrt(2), 1 / np.sqrt(2), 0]))
         targets["panda_02"].set_gripper_state(GripperState.OPEN)
         return targets
+
+    def get_mocap_idx(self, name) -> int:
+        _map = {
+            "target_panda_01": 3,
+            "target_panda_02": 4
+        }
+        return _map.get(name, -1)

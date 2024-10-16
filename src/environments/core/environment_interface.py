@@ -48,6 +48,7 @@ class IEnvironment(MujocoEnv, ABC):
             width : int = DEFAULT_WIDTH,
             height : int = DEFAULT_HEIGHT,
             store_frames : bool = False,
+            visualize_targets : bool = False
         ) -> None:
         """
         Initialize the environment with the specified scene and control config files.
@@ -66,6 +67,7 @@ class IEnvironment(MujocoEnv, ABC):
         :param height: height of the render window
         :param store_frames: boolean value indicating if **all** the rendered frames
                (of the main viewer) should be stored
+        :param visualize_targets: boolean value indicating if the targets should be visualized
         """
 
 
@@ -138,6 +140,8 @@ class IEnvironment(MujocoEnv, ABC):
         if self._store_frames:
             assert render_mode == 'rgb_array', "Frames can only be stored when render_mode is 'rgb_array'"
         self._rendered_frames = [] if self._store_frames else None
+
+        self._visualize_targets = visualize_targets
 
     @staticmethod
     def __viewer_setup(viewer) -> None:
@@ -265,6 +269,9 @@ class IEnvironment(MujocoEnv, ABC):
         :param action: dictionary of targets for the devices
         :return: observation, reward, terminated, truncated, info
         """
+        if self._visualize_targets:
+            self._update_targets(action)
+
         self._step_impl(action)
         obs = self._get_obs()
         info = self._get_info()
@@ -282,6 +289,19 @@ class IEnvironment(MujocoEnv, ABC):
         ctrl = self._generate_control(action)
         self.do_simulation(ctrl, self.frame_skip)
 
+    def _update_targets(self, action: Dict[str, ArmState]) -> None:
+        """
+        Update the visualization of the targets.
+        :param action: dictionary of targets for the devices
+        :return:
+        """
+        for device_name, target in action.items():
+            target_name = f"target_{device_name}"
+            idx = self.get_mocap_idx(target_name)
+            if idx > -1:
+                self.data.mocap_pos[idx] = target.get_xyz()
+                self.data.mocap_quat[idx] = target.get_quat()
+
     def visualize_static(self, duration=5) -> None:
         """
         Visualize the robot in the home position for the specified duration.
@@ -290,11 +310,10 @@ class IEnvironment(MujocoEnv, ABC):
         """
         self.reset()
 
-        targets = self.x_home_targets
+        action = self.x_home_targets
         start_time = time.time()
         while time.time() - start_time < duration:
-            ctrl = self._generate_control(targets)
-            self.do_simulation(ctrl, self.frame_skip)
+            self.step(action)
 
             self.render()
 
@@ -443,5 +462,15 @@ class IEnvironment(MujocoEnv, ABC):
         """
         Return a boolean value indicating if the episode is truncated.
         :return: boolean indicating if the episode is truncated
+        """
+        pass
+
+    @abstractmethod
+    def get_mocap_idx(self, name) -> int:
+        """
+        Return the id of the mocap object with the specified name.
+        This is used to update the target indicators
+        :param name: name of the mocap object
+        :return: id of the mocap object, -1 if not found
         """
         pass
