@@ -3,6 +3,8 @@ import numpy as np
 
 from src.control.utils.enums import GripperState
 from src.environments import EmptyPandaEnv
+from src.environments.core.action import OSAction
+
 
 class PandaMoveToPointEnv(EmptyPandaEnv):
     """
@@ -25,11 +27,12 @@ class PandaMoveToPointEnv(EmptyPandaEnv):
 
         targets["panda_01"].set_gripper_state(GripperState.CLOSED)
 
+        action = OSAction(targets)
+
         num_render_frames = int(duration * self.render_fps)
         for _ in range(num_render_frames):
             start_time = time.time()
-            ctrl = self._generate_control(targets)
-            self.do_simulation(ctrl, self.frame_skip)
+            self.step(action)
 
             self.render()
 

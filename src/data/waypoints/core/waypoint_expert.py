@@ -1,18 +1,22 @@
 import os.path
 import time
+from argparse import Action
 from copy import copy
 
 import yaml
 from transforms3d.quaternions import qmult, qinverse
 
+from src.control.utils.arm_state import ArmState
 from src.data.waypoints.core.waypoint import Waypoint
+from src.environments.core.action import OSAction
+from src.environments.core.enums import ActionMode
 from src.environments.core.environment_interface import IEnvironment
 from src.utils.clipping import clip_translation, clip_quat
 from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
 
 
-class WaypointExpert:
+class WaypointExpertBase:
     """
     Class for an expert agent that acts in the environment
     by following a predefined trajectory of waypoints.
@@ -45,6 +49,8 @@ class WaypointExpert:
         self._initial_config = self._load_initial_config()
         self._waypoints = self._load_waypoints()
 
+        self._action_mode = self._env.action_mode
+
     def _load_initial_config(self) -> dict:
         """
         Load the initial configuration from the control config.
@@ -63,7 +69,7 @@ class WaypointExpert:
 
         return waypoints_list
 
-    def _get_action(self, current_state: dict, waypoint: Waypoint) -> dict:
+    def _get_action(self, current_state: dict, waypoint: Waypoint) -> OSAction:
         """
         Get the action to reach the waypoint.
         The output is a clipped version of the Waypoint state to
@@ -74,29 +80,39 @@ class WaypointExpert:
         """
         assert current_state.keys() == waypoint.targets.keys(), "Current state and waypoint targets do not match"
 
-        action = {
-            name : copy(target)
-            for name, target in waypoint.targets.items()
+        targets = {
+            name : ArmState()
+            for name in waypoint.targets.keys()
         }
 
-        for name, target in action.items():
+        for name, target in waypoint.targets.items():
             current = current_state[name]
 
             # Clip the translation
             pos_target = target.get_xyz()
             pos_current = current.get_xyz()
             pos_delta = clip_translation(pos_target - pos_current, self._max_delta_translation)
-            action[name].set_xyz(pos_current + pos_delta)
+            if self._action_mode == ActionMode.ABSOLUTE:
+                targets[name].set_xyz(pos_delta + pos_current)
+            elif self._action_mode == ActionMode.RELATIVE:
+                targets[name].set_xyz(pos_delta)
 
+            # Clip the rotation
             quat_target = target.get_quat()
             quat_current = current.get_quat()
             quat_delta = clip_quat(
                 qmult(quat_target, qinverse(quat_current)),
                 self._max_delta_rotation
             )
-            action[name].set_quat(qmult(quat_delta, quat_current))
+            if self._action_mode == ActionMode.ABSOLUTE:
+                targets[name].set_quat(qmult(quat_delta, quat_current))
+            else:
+                targets[name].set_quat(quat_delta)
 
-        return action
+            # Set GripperState
+            targets[name].set_gripper_state(target.get_gripper_state())
+
+        return OSAction(targets)
 
     def _run(
         self,
@@ -106,6 +122,10 @@ class WaypointExpert:
         Run the expert agent in the environment.
         :param render: Whether to render the environment
         """
+        # minimum number of steps in done state
+        min_steps_terminated = int(1.0 * self._env.render_fps)
+        steps_terminated = 0
+
         # set the initial configuration
         self._env.reset(
             seed=self._initial_config.get("seed", 0)
@@ -136,8 +156,12 @@ class WaypointExpert:
                 )
 
                 if terminated:
-                    print("Terminated.")
-                    return
+                    steps_terminated += 1
+                    if steps_terminated >= min_steps_terminated:
+                        print("Done.")
+                        return
+                else:
+                    steps_terminated = 0
 
                 if target_real_time:
                     elapsed_time = time.time() - start_time

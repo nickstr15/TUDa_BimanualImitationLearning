@@ -5,6 +5,7 @@ import numpy as np
 from copy import deepcopy as copy
 import argparse
 
+from src.environments.core.action import OSAction
 from src.utils.record_video import export_video
 
 from src.control.utils.enums import GripperState
@@ -110,11 +111,11 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
             for _ in range(steps):
                 start_time = time.time()
 
-                #################################
-                # Actual simulation step ########
-                _, _, terminated, _, _ = self.step(targets)              #
-                self.render()                   #
-                #################################
+                #######################################################
+                # Actual simulation step ##############################
+                _, _, terminated, _, _ = self.step(OSAction(targets)) #
+                self.render()                                         #
+                #######################################################
 
                 if terminated:
                     steps_terminated += 1

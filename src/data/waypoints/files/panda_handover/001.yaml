@@ -145,7 +145,7 @@ waypoints:
     name: "move panda_01 above target position (2/2)"
     targets:
       - device: "panda_01"
-        position: [ 0.4, 0.43, 0.08 ]
+        position: [ 0.4, 0.43, 0.085 ]
         orientation: [ 0, 0.70710678118, 0.70710678118, 0 ]
         gripper: 0
         tolerance_position: 0.001

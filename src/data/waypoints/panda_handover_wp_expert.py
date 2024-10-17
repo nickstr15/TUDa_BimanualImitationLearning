@@ -1,10 +1,11 @@
 import os
 
-from src.data.waypoints.core.waypoint_expert import WaypointExpert
+from src.data.waypoints.core.waypoint_expert import WaypointExpertBase
 from src.environments import PandaHandoverEnv
+from src.environments.core.enums import ActionMode
 
 
-class PandaHandoverWpExpert(WaypointExpert):
+class PandaHandoverWpExpert(WaypointExpertBase):
     """
     Panda handover expert agent that follows a predefined trajectory of waypoints.
     """
@@ -28,6 +29,7 @@ class PandaHandoverWpExpert(WaypointExpert):
 if __name__ == "__main__":
     env_args = dict(
         visualize_targets=True,
+        action_mode = ActionMode.RELATIVE
     )
 
     expert = PandaHandoverWpExpert(dual_panda_env_args=env_args)

@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy as np
 from transforms3d.quaternions import qmult, qinverse, quat2axangle
 
@@ -17,13 +19,20 @@ class ArmStateTarget(ArmState):
 
     def __init__(
         self,
-        xyz_rot: np.ndarray = np.zeros(6),
-        xyz_rot_vel: np.ndarray = np.zeros(6),
+        xyz: np.ndarray = np.zeros(3),
+        rot: np.ndarray = np.zeros(3),
         grip: GripperState = GripperState.OPEN,
         position_tolerance: float = DEFAULT_POSITION_TOLERANCE,
         orientation_tolerance: float = DEFAULT_ORIENTATION_TOLERANCE
-    ):
-        super().__init__(xyz_rot, xyz_rot_vel, grip)
+    ) -> None:
+        """
+        :param xyz: xyz position
+        :param rot: euler angles or quaternion
+        :param grip: gripper state (open or closed)
+        :param position_tolerance: threshold quantifying if pos_target is reached
+        :param orientation_tolerance: threshold quantifying if tor_target is reached
+        """
+        super().__init__(xyz, rot, grip)
         self._position_tolerance = position_tolerance
         self._orientation_tolerance = orientation_tolerance
 
@@ -85,15 +94,15 @@ class Waypoint:
         self._targets = {}
         for target in waypoint_dict["targets"]:
             self._targets[target["device"]] = ArmStateTarget(
-                xyz_rot=target["position"] + target["orientation"],
-                xyz_rot_vel=target.get("velocity", [0, 0, 0]) + target.get("angular_velocity", [1, 0, 0, 0]),
+                xyz=target["position"],
+                rot=target["orientation"],
                 grip=target["gripper"],
                 position_tolerance=target.get("position_tolerance", DEFAULT_POSITION_TOLERANCE),
                 orientation_tolerance=target.get("orientation_tolerance", DEFAULT_ORIENTATION_TOLERANCE)
             )
 
     @property
-    def targets(self) -> dict:
+    def targets(self) -> Dict[str, ArmStateTarget]:
         """
         :return: Targets
         """

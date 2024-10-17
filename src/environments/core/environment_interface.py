@@ -1,6 +1,7 @@
 import os
 
 from abc import ABC, abstractmethod
+from copy import copy
 from typing import Any, Dict, Tuple, List, Optional
 import time
 
@@ -11,13 +12,19 @@ import numpy as np
 import gymnasium as gym
 import yaml
 from gymnasium.envs.mujoco import MujocoEnv
+from gymnasium.envs.mujoco.mujoco_rendering import BaseRender
 from numpy.typing import NDArray
+from transforms3d.quaternions import qmult
 from typing_extensions import override
 
 from src.control.controller import OSCGripperController
 from src.control.utils.device import Device
+from src.control.utils.enums import GripperState
 from src.control.utils.robot import Robot
 from src.control.utils.arm_state import ArmState
+from src.environments.core.action import OSAction
+from src.environments.core.enums import ActionMode
+from src.environments.core.viewer_config import CamConfig
 from src.utils.constants import MUJOCO_FRAME_SKIP, MUJOCO_RENDER_FPS, DEFAULT_WIDTH, DEFAULT_HEIGHT
 from src.utils.paths import SCENES_DIR, CONTROL_CONFIGS_DIR
 
@@ -43,17 +50,33 @@ class IEnvironment(MujocoEnv, ABC):
             scene_file : str = None,
             frame_skip: int = MUJOCO_FRAME_SKIP,
             observation_space: gym.spaces.Space = None,
-            action_space: gym.spaces.Space = None,
+            action_mode : ActionMode = ActionMode.ABSOLUTE,
             control_config_file : str = None,
             robot_name : str = None,
             render_mode : str = 'human',
             width : int = DEFAULT_WIDTH,
             height : int = DEFAULT_HEIGHT,
             store_frames : bool = False,
-            visualize_targets : bool = False
+            visualize_targets : bool = False,
+            cam_config: CamConfig = CamConfig()
         ) -> None:
         """
         Initialize the environment with the specified scene and control config files.
+
+        ---------------
+        Details on the action mode:
+        For a single arm (device) the action updates the target
+
+        ABSOLUTE
+            - pos_target <- pos_action
+            - quat_target <- quat_action
+            - grip_target <- grip_action
+
+        RELATIVE
+            - pos_target <- pos_action + pos_current
+            - quat_target <- quat_action * quat_current
+            - grip_target <- grip_action (always override the target)
+
 
         :param scene_file: filename of to the mujoco scene file in $SCENES_DIR.
                This is the mujoco model_file.
@@ -61,7 +84,9 @@ class IEnvironment(MujocoEnv, ABC):
         :param observation_space: observation space of the environment, default is None.
                If None is passed, the observation space is set to the joint positions and velocities
                of the robot joints
-        :param action_space: action space of the environment, default is None.
+        :param action_mode: action mode of the environment.
+               ABSOLUTE: action input = absolute target position(s)
+               RELATIVE: action input = relative target position(s) => target = action + current
         :param control_config_file: filename of the control config file in $CONTROL_CONFIGS_DIR
         :param robot_name: name of the robot in the control config file
         :param render_mode: mujoco render mode
@@ -70,9 +95,8 @@ class IEnvironment(MujocoEnv, ABC):
         :param store_frames: boolean value indicating if **all** the rendered frames
                (of the main viewer) should be stored
         :param visualize_targets: boolean value indicating if the targets should be visualized
+        :param cam_config: Configuration for the camera position and orientation
         """
-
-
         assert scene_file is not None, "Scene file must be specified!"
         assert control_config_file is not None, "Control config file must be specified!"
         assert robot_name is not None, "Robot name must be specified!"
@@ -101,7 +125,7 @@ class IEnvironment(MujocoEnv, ABC):
         # setup main viewer
         viewer = self.mujoco_renderer._get_viewer(render_mode)
         viewer._create_overlay = lambda: None
-        self.__viewer_setup(viewer)
+        self.__viewer_setup(viewer, cam_config)
 
         # set control
         with open(full_control_config_path, 'r') as f:
@@ -128,7 +152,13 @@ class IEnvironment(MujocoEnv, ABC):
 
         # set action space
         self.ctrl_action_space = self.action_space
-        self.action_space = action_space
+        self.action_space = gym.spaces.Dict({
+            device_name: gym.spaces.Dict({
+                "pos": gym.spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
+                "quat": gym.spaces.Box(-np.inf, np.inf, shape=(4,), dtype=np.float64),
+                "grip": gym.spaces.Discrete(GripperState.OPEN + 1)
+            }) for device_name in self._sub_device_names
+        })
 
         self.controller = OSCGripperController(
             robot=self.robot,
@@ -145,21 +175,24 @@ class IEnvironment(MujocoEnv, ABC):
 
         self._visualize_targets = visualize_targets
 
+        self._targets = self.x_home_targets
+
+        self._action_mode = action_mode
+
     @staticmethod
-    def __viewer_setup(viewer) -> None:
+    def __viewer_setup(viewer : BaseRender, cam_config : CamConfig) -> None:
         """
         Set the initial camera position of the main viewer.
         :param viewer: mujoco viewer
+        :param cam_config: configuration for the camera
         :return:
         """
         viewer.cam.fixedcamid = -1
         viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
-        viewer.cam.azimuth = 200
-        viewer.cam.elevation = -20
-        viewer.cam.lookat[0] = 0
-        viewer.cam.lookat[1] = 0
-        viewer.cam.lookat[2] = 0
-        viewer.cam.distance = 2.5
+        viewer.cam.azimuth = cam_config.azimuth
+        viewer.cam.elevation = cam_config.elevation
+        viewer.cam.lookat = cam_config.lookat
+        viewer.cam.distance = cam_config.distance
 
     def set_robot_joint_pos(self, joint_pos : np.ndarray) -> None:
         """
@@ -251,15 +284,14 @@ class IEnvironment(MujocoEnv, ABC):
             if entry["name"] == name:
                 return entry
 
-    def _generate_control(self, targets : Dict[str, ArmState], relative_targets : bool = False) -> NDArray[np.float64]:
+    def _generate_control(self, targets : Dict[str, ArmState]) -> NDArray[np.float64]:
         """
         Generate the control signal (joint torques) for the robot.
         :param targets: target positions and orientations in the world frame
-        :param relative_targets: boolean value indicating if the targets are relative to the current position
         :return: control array
         """
-        controller_output = self.controller.generate(targets, relative_targets)
-        ctrl_array = np.zeros_like(self.data.ctrl)
+        controller_output = self.controller.generate(targets)
+        ctrl_array = copy(self.data.ctrl)
         for ctrl_idx, ctrl in zip(*controller_output):
             ctrl_array[ctrl_idx] = ctrl
         return ctrl_array
@@ -284,16 +316,19 @@ class IEnvironment(MujocoEnv, ABC):
         self.set_state(qpos=state.qpos, qvel=state.qvel)
 
     @override
-    def step(self, action: Dict[str, ArmState]) -> Tuple[Any, float, bool, bool, Dict]:
+    def step(self, action: OSAction | np.ndarray) -> Tuple[Any, float, bool, bool, Dict]:
         """
         Step function of the environment.
-        :param action: dictionary of targets for the devices
+        :param action: dictionary of (relative) targets for the devices
         :return: observation, reward, terminated, truncated, info
         """
-        if self._visualize_targets:
-            self._update_targets(action)
+        if not isinstance(action, OSAction):
+            action = OSAction.from_flattened(action, self._sub_device_names)
 
-        self._step_impl(action)
+        self._update_targets(action)
+
+        self._internal_step()
+
         obs = self._get_obs()
         info = self._get_info()
         reward = self._get_reward()
@@ -301,27 +336,54 @@ class IEnvironment(MujocoEnv, ABC):
         truncated = self._get_truncated()
         return obs, reward, terminated, truncated, info
 
-    def _step_impl(self, action: Dict[str, ArmState]) -> None:
+    def empty_step(self)  -> Tuple[Any, float, bool, bool, Dict]:
         """
-        Execute a step in the environment.
-        :param action: action to be executed, a dictionary of targets
+        Do step without action input.
         :return: observation, reward, terminated, truncated, info
         """
-        ctrl = self._generate_control(action)
+        self._internal_step()
+
+        obs = self._get_obs()
+        info = self._get_info()
+        reward = self._get_reward()
+        terminated = self._get_terminated()
+        truncated = self._get_truncated()
+        return obs, reward, terminated, truncated, info
+
+    def _internal_step(self) -> None:
+        """
+        Execute a step in the environment with targets as goal positions.
+        :return: observation, reward, terminated, truncated, info
+        """
+        ctrl = self._generate_control(self._targets)
         self.do_simulation(ctrl, self.frame_skip)
 
-    def _update_targets(self, action: Dict[str, ArmState]) -> None:
+    def _update_targets(self, action: OSAction) -> None:
         """
         Update the visualization of the targets.
         :param action: dictionary of targets for the devices
         :return:
         """
-        for device_name, target in action.items():
-            target_name = f"target_{device_name}"
-            idx = self.get_mocap_idx(target_name)
-            if idx > -1:
-                self.data.mocap_pos[idx] = target.get_xyz()
-                self.data.mocap_quat[idx] = target.get_quat()
+        if self._action_mode == ActionMode.ABSOLUTE:
+            self._targets = action.get()
+        elif self._action_mode == ActionMode.RELATIVE:
+            self._targets = self.get_device_states()
+            for device_name, delta in action.items():
+                self._targets[device_name].set_xyz(
+                    delta.get_xyz() + self._targets[device_name].get_xyz()
+                )
+                self._targets[device_name].set_quat(
+                    qmult(delta.get_quat(), self._targets[device_name].get_quat())
+                )
+                self._targets[device_name].set_gripper_state(delta.get_gripper_state())
+
+        if self._visualize_targets:
+            for device_name, target in self._targets.items():
+                target_name = f"target_{device_name}"
+                idx = self.get_mocap_idx(target_name)
+                if idx > -1: #only if visual target mocap exists
+                    self.data.mocap_pos[idx] = target.get_xyz()
+                    self.data.mocap_quat[idx] = target.get_quat()
 
     def visualize_static(self, duration=5) -> None:
         """
@@ -331,11 +393,10 @@ class IEnvironment(MujocoEnv, ABC):
         """
         self.reset()
 
-        action = self.x_home_targets
+        action = OSAction(self.x_home_targets)
         start_time = time.time()
         while time.time() - start_time < duration:
             self.step(action)
-
             self.render()
 
     @property
@@ -361,7 +422,7 @@ class IEnvironment(MujocoEnv, ABC):
         Initialize the simulation with the robot at the home position
         and the free joints to the default positions.
 
-        :param options: additional options for the reset
+        :param options: additional options for the reset (not used)
         :return:
         """
         mujoco.mj_forward(self.model, self.data)
@@ -413,6 +474,10 @@ class IEnvironment(MujocoEnv, ABC):
         for device in self.robot.sub_devices:
             state[device.name] = device.get_arm_state()
         return state
+
+    @property
+    def action_mode(self):
+        return self._action_mode
 
     @property
     @abstractmethod

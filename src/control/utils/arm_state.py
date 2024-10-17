@@ -1,5 +1,6 @@
 import numpy as np
 from transforms3d.euler import euler2quat, quat2euler
+from transforms3d.quaternions import qmult
 
 from src.control.utils.enums import GripperState
 
@@ -15,22 +16,20 @@ class ArmState:
 
     def __init__(
             self,
-            xyz_rot: np.ndarray = np.zeros(6),
-            xyz_rot_vel: np.ndarray = np.zeros(6),
+            xyz: np.ndarray = np.zeros(3),
+            rot : np.ndarray = np.zeros(3),
             grip: GripperState = GripperState.OPEN
     ):
         """
-        :param xyz_rot: xyz position and euler angles
-        :param xyz_rot_vel: xyz velocity and euler angles velocity o
+        :param xyz: xyz position
+        :param rot: euler angles or quaternion
         :param grip: gripper state (open or closed)
         """
 
-        assert (len(xyz_rot) == 6 or len(xyz_rot) == 7) and (len(xyz_rot_vel) == 6 or len(xyz_rot_vel) == 7)
-        assert np.all([isinstance(x, float) or isinstance(x, int) for x in xyz_rot])
-        self.__xyz = np.array(xyz_rot)[:3]
-        self.__xyz_vel = np.array(xyz_rot_vel)[:3]
-        self.__quat = np.array(euler2quat(*xyz_rot[3:])) if len(xyz_rot) == 6 else np.array(xyz_rot[3:])
-        self.__quat_vel = np.array(euler2quat(*xyz_rot_vel[3:])) if len(xyz_rot_vel) == 6 else np.array(xyz_rot_vel[3:])
+        assert len(xyz) == 3
+        assert len(rot) == 3 or len(rot) == 4
+        self.__xyz = np.array(xyz)
+        self.__quat = np.array(rot) if len(rot) == 4 else np.asarray(euler2quat(*rot))
 
         self.__gripper_state = grip
         self.active = True
@@ -41,35 +40,17 @@ class ArmState:
         """
         return self.__xyz
 
-    def get_xyz_vel(self) -> np.ndarray:
-        """
-        :return: xyz velocity
-        """
-        return self.__xyz_vel
-
     def get_quat(self) -> np.ndarray:
         """
         :return: quaternion orientation
         """
         return self.__quat
 
-    def get_quat_vel(self) -> np.ndarray:
-        """
-        :return: quaternion velocity
-        """
-        return np.asarray(self.__quat_vel)
-
     def get_abg(self) -> np.ndarray:
         """
         :return: euler angles
         """
         return np.asarray(quat2euler(self.__quat))
-
-    def get_abg_vel(self) -> np.ndarray:
-        """
-        :return: euler angles
-        """
-        return np.asarray(quat2euler(self.__quat_vel))
 
     def get_gripper_state(self) -> GripperState:
         """
@@ -83,14 +64,6 @@ class ArmState:
         """
         assert len(xyz) == 3
         self.__xyz = np.asarray(xyz)
-
-    def set_xyz_vel(self, xyz_vel: np.ndarray) -> None:
-        """
-        :param xyz_vel: xyz velocity
-        """
-        assert len(xyz_vel) == 3
-        self.__xyz_vel = np.asarray(xyz_vel)
-
 
     def set_quat(self, quat: np.ndarray) -> None:
         """
@@ -106,26 +79,12 @@ class ArmState:
         assert len(quat) == 4
         self.__quat += np.asarray(quat)
 
-    def set_quat_vel(self, quat_vel: np.ndarray) -> None:
-        """
-        :param quat_vel:
-        """
-        assert len(quat_vel) == 4
-        self.__quat_vel = np.asarray(quat_vel)
-
     def set_abg(self, abg: np.ndarray) -> None:
         """
         :param abg:
         """
         assert len(abg) == 3
         self.__quat = np.asarray(euler2quat(*abg))
-
-    def set_abg_vel(self, abg_vel: np.ndarray) -> None:
-        """
-        :param abg_vel:
-        """
-        assert len(abg_vel) == 3
-        self.__quat_vel = np.asarray(euler2quat(*abg_vel))
 
     def set_gripper_state(self, gripper_state: GripperState) -> None:
         """
@@ -219,6 +178,19 @@ class ArmState:
 
     def __str__(self):
         return f"xyz: {self.__xyz}, quat: {self.__quat}, grip: {self.__gripper_state}"
+
+    def flatten(self) -> np.ndarray:
+        return np.concatenate([self.__xyz, self.__quat, [self.__gripper_state]], axis=0)
+
+    @classmethod
+    def from_flattened(cls, array : np.ndarray):
+        # euler angles or quaternion
+        assert len(array) == 3 + 3 + 1 or len(array) == 3 + 4 + 1
+        return cls(
+            array[:3],
+            array[3:-1],
+            GripperState(array[-1])
+        )
 
 
 
