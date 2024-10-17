@@ -1,4 +1,5 @@
 import numpy as np
+from gymnasium import Wrapper
 from robosuite.wrappers.data_collection_wrapper import DataCollectionWrapper as RSDataCollectionWrapper
 from typing_extensions import override
 
@@ -7,11 +8,37 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
     """
     Custom data collection wrapper to handle non-flattened actions.
     """
+    @override
+    def _start_new_episode(self):
+        """
+        Bookkeeping to do at the start of each new episode.
 
-    @override(RSDataCollectionWrapper)
+        Like the robosuite version, but drop the MjSim interface.
+        """
+
+        # flush any data left over from the previous episode if any interactions have happened
+        if self.has_interaction:
+            self._flush()
+
+        # time steps in current episode
+        self.t = 0
+        self.has_interaction = False
+
+        # save the task instance (will be saved on the first env interaction)
+        self._current_task_instance_xml = self.env.get_xml()
+        self._current_task_instance_state = np.array(self.env.get_state().flatten())
+
+        self.env.reset()
+        self.env.set_state_from_flattened(self._current_task_instance_state)
+
+
+    @override
     def step(self, action):
         """
         Extends vanilla step() function call to accommodate data collection
+
+        Like the robosuite version, but drop the MjSim interface
+        and ensures that action is flattened before saving it.
 
         Args:
             action (np.array): Action to take in environment
@@ -24,7 +51,8 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
                 - (bool) whether the current episode is completed or not
                 - (dict) misc information
         """
-        ret = super().step(action)
+        ret = Wrapper.step(self, action)
+        self.env.render()
         self.t += 1
 
         # on the first time step, make directories for logging
@@ -33,7 +61,7 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
 
         # collect the current simulation state if necessary
         if self.t % self.collect_freq == 0:
-            state = self.env.sim.get_state().flatten()
+            state = self.env.get_state().flatten()
             self.states.append(state)
 
             ###########################################

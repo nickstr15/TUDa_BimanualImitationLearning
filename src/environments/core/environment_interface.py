@@ -13,7 +13,9 @@ import gymnasium as gym
 import yaml
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import BaseRender
+from gymnasium.utils import seeding
 from numpy.typing import NDArray
+from robosuite.models.base import MujocoXML
 from transforms3d.quaternions import qmult
 from typing_extensions import override
 
@@ -307,13 +309,25 @@ class IEnvironment(MujocoEnv, ABC):
             qvel=np.copy(self.data.qvel),
         )
 
-    def rs_set_state(self, state: MjSimState) -> None:
+    def rs_set_sim_state(self, state: MjSimState) -> None:
         """
-        Set the state of the environment (RoboSuite version).
+        Set the state of the simulation (RoboSuite version).
         :param state: state to be set
         """
         self.data.time = state.time
         self.set_state(qpos=state.qpos, qvel=state.qvel)
+
+    def set_state_from_flattened(self, state: np.ndarray) -> None:
+        """
+        Set the state of the simulation from a flattened state.
+        :param state: flattened state
+        """
+        state = MjSimState.from_flattened(state, self)
+
+        # do this instead of @set_state to avoid extra copy of qpos and qvel
+        self.data.time = state.time
+        self.data.qpos[:] = state.qpos
+        self.data.qvel[:] = state.qvel
 
     @override
     def step(self, action: OSAction | np.ndarray) -> Tuple[Any, float, bool, bool, Dict]:
@@ -335,6 +349,18 @@ class IEnvironment(MujocoEnv, ABC):
         terminated = self._get_terminated()
         truncated = self._get_truncated()
         return obs, reward, terminated, truncated, info
+
+    def set_seed(self, seed):
+        self._np_random, seed = seeding.np_random(seed)
+
+    def get_xml(self) -> str:
+        """
+        Reads a string of the MJCF XML file.
+
+        :return: XML tree read in from file as a string
+        """
+        xml = MujocoXML(self.fullpath)
+        return xml.get_xml()
 
     def empty_step(self)  -> Tuple[Any, float, bool, bool, Dict]:
         """
@@ -568,3 +594,4 @@ class IEnvironment(MujocoEnv, ABC):
         :return: boolean value indicating if the task is completed successfully
         """
         pass
+

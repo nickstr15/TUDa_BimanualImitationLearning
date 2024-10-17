@@ -38,7 +38,7 @@ class OSAction:
         return self.state_dict
 
     def flatten(self) -> np.ndarray:
-        return np.concatenate([v.flatten() for v in self.values()], axis=1)
+        return np.concatenate([v.flatten() for v in self.values()])
 
     @classmethod
     def from_flattened(cls, array : np.ndarray, device_names : List[str]):

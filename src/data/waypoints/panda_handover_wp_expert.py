@@ -32,6 +32,7 @@ if __name__ == "__main__":
         action_mode = ActionMode.RELATIVE
     )
 
-    expert = PandaHandoverWpExpert(dual_panda_env_args=env_args)
+    expert_id = 1
+    expert = PandaHandoverWpExpert(expert_id, env_args)
     expert.visualize()
     expert.dispose()

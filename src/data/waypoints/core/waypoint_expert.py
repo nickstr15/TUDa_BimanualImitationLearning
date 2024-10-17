@@ -1,12 +1,12 @@
 import os.path
 import time
-from argparse import Action
-from copy import copy
 
 import yaml
 from transforms3d.quaternions import qmult, qinverse
 
 from src.control.utils.arm_state import ArmState
+from src.data.data_collection.data_collection_wrapper import DataCollectionWrapper
+from src.data.data_collection.hdf5 import gather_demonstrations_as_hdf5
 from src.data.waypoints.core.waypoint import Waypoint
 from src.environments.core.action import OSAction
 from src.environments.core.enums import ActionMode
@@ -14,6 +14,7 @@ from src.environments.core.environment_interface import IEnvironment
 from src.utils.clipping import clip_translation, clip_quat
 from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
+
 
 
 class WaypointExpertBase:
@@ -127,7 +128,8 @@ class WaypointExpertBase:
         steps_terminated = 0
 
         # set the initial configuration
-        self._env.reset(
+        self._env.reset()
+        self._env.set_seed(
             seed=self._initial_config.get("seed", 0)
         )
         positions = self._initial_config.get("positions", [])
@@ -178,6 +180,23 @@ class WaypointExpertBase:
         Visualize the expert agent in the environment.
         """
         self._run(render=True)
+
+    def collect_data(self, out_dir : str, render: bool = False) -> None:
+        """
+        Collect data from the expert agent in the environment.
+
+        :param out_dir: Output directory for the data
+        :param render: Whether to render the environment
+        """
+        tmp_directory = "/tmp/bil/{}".format(str(time.time()).replace(".", "_"))
+        self._env = DataCollectionWrapper(self._env, tmp_directory)
+        self._run(render=render)
+        self._env.close()
+        gather_demonstrations_as_hdf5(tmp_directory, out_dir)
+
+        # clean up tmp directory
+        os.system("rm -r {}".format(tmp_directory))
+
 
 
 
