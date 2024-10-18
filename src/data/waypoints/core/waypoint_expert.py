@@ -14,7 +14,7 @@ from src.environments.core.environment_interface import IEnvironment
 from src.utils.clipping import clip_translation, clip_quat
 from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
-
+from src.utils.real_time import RealTimeHandler
 
 
 class WaypointExpertBase:
@@ -117,12 +117,18 @@ class WaypointExpertBase:
 
     def _run(
         self,
-        render : bool = False
+        render : bool = False,
+        target_real_time : bool = False
     ) -> None:
         """
         Run the expert agent in the environment.
         :param render: Whether to render the environment
+        :param target_real_time: Whether to render in real time
         """
+        if target_real_time and not (render and self._env.render_mode == "human"):
+            print("[Warning] Real time rendering requires rendering in human mode, ignoring real time rendering.")
+            target_real_time = False
+
         # minimum number of steps in done state
         min_steps_terminated = int(1.0 * self._env.render_fps)
         steps_terminated = 0
@@ -138,23 +144,25 @@ class WaypointExpertBase:
         if render:
             self._env.render()
 
-        target_real_time = render and self._env.render_mode == "human"
-        dt_render = 1.0 / self._env.render_fps
+
+        dt = 1.0 / self._env.render_fps
+
+        rt = RealTimeHandler(self._env.render_fps)
 
         current_state = self._env.get_device_states()
         for waypoint in self._waypoints:
-            dt = 0
+            step = 0
             reached = False
+            rt.reset()
             while not reached:
-                start_time = time.time()
                 action = self._get_action(current_state, waypoint)
                 observation, _, terminated, _, _ = self._env.step(action)
                 if render:
                     self._env.render()
-                dt += 1
+                step += 1
                 current_state = self._env.get_device_states()
                 reached = waypoint.is_reached_by(
-                    current_state, dt * dt_render
+                    current_state, step * dt
                 )
 
                 if terminated:
@@ -166,8 +174,7 @@ class WaypointExpertBase:
                     steps_terminated = 0
 
                 if target_real_time:
-                    elapsed_time = time.time() - start_time
-                    time.sleep(max(dt_render - elapsed_time, 0))
+                    rt.sleep()
 
     def dispose(self) -> None:
         """
@@ -181,21 +188,26 @@ class WaypointExpertBase:
         """
         self._run(render=True)
 
-    def collect_data(self, out_dir : str, render: bool = False) -> None:
+    def collect_data(self,
+        out_dir : str,
+        render: bool = False,
+        target_real_time: bool = False
+    ) -> None:
         """
         Collect data from the expert agent in the environment.
 
         :param out_dir: Output directory for the data
         :param render: Whether to render the environment
+        :param target_real_time: Whether to render in real time
         """
         tmp_directory = "/tmp/bil/{}".format(str(time.time()).replace(".", "_"))
         self._env = DataCollectionWrapper(self._env, tmp_directory)
-        self._run(render=render)
+        self._run(render=render, target_real_time=target_real_time)
         self._env.close()
-        gather_demonstrations_as_hdf5(tmp_directory, out_dir)
 
-        # clean up tmp directory
-        os.system("rm -r {}".format(tmp_directory))
+        gather_demonstrations_as_hdf5(tmp_directory, out_dir, self._env.args)
+
+        self._env.clean_up()
 
 
 

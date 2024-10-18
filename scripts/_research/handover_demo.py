@@ -6,6 +6,7 @@ from copy import deepcopy as copy
 import argparse
 
 from src.environments.core.action import OSAction
+from src.utils.real_time import RealTimeHandler
 from src.utils.record_video import export_video
 
 from src.control.utils.enums import GripperState
@@ -101,7 +102,9 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
         steps_terminated = 0
 
         trajectory = self._build_targets_traj()
-        _warning = False
+
+        rt = RealTimeHandler(self.render_fps)
+        rt.reset()
         for i, (targets, duration) in enumerate(trajectory):
 
             if logging:
@@ -109,8 +112,6 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
             steps = int(duration * self.render_fps)
 
             for _ in range(steps):
-                start_time = time.time()
-
                 #######################################################
                 # Actual simulation step ##############################
                 _, _, terminated, _, _ = self.step(OSAction(targets)) #
@@ -125,19 +126,9 @@ class PandaBimanualHandoverDemo(PandaHandoverEnv):
                 else:
                     steps_terminated = 0
 
-
                 if self.render_mode == "human":
-                    elapsed_time = time.time() - start_time
-                    sleep_time = 1/self.render_fps - elapsed_time
-                    if sleep_time < 0 and not _warning:
-                        print("Simulation running slower than real time.")
-                        _warning = True
-                    elif sleep_time >= 0 and _warning:
-                        print("Running at real-time speed.")
-                        _warning = False
+                    rt.sleep()
 
-                    sleep_time = max(0.0, sleep_time)
-                    time.sleep(sleep_time)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Handover demo")

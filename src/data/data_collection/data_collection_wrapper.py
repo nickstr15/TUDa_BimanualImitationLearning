@@ -1,3 +1,6 @@
+import os
+import time
+
 import numpy as np
 from gymnasium import Wrapper
 from robosuite.wrappers.data_collection_wrapper import DataCollectionWrapper as RSDataCollectionWrapper
@@ -82,3 +85,11 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
             self._flush()
 
         return ret
+
+    def clean_up(self):
+        """
+        Clean up the directory
+        """
+        os.system("rm -r {}".format(self.directory))
+        self.has_interaction = False
+        print("DataCollectionWrapper: Deleted directory at {}".format(self.directory))

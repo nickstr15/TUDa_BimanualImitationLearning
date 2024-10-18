@@ -11,6 +11,7 @@ data (group)
     date (attribute) - date of collection
     time (attribute) - time of collection
     env (attribute) - environment name on which demos were collected
+    env_args (attribute) - environment arguments as encoded json string
 
     demo1 (group) - every demonstration has a group
         model_file (attribute) - model xml string for demonstration

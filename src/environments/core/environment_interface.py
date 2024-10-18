@@ -11,8 +11,10 @@ import numpy as np
 
 import gymnasium as gym
 import yaml
+from gymnasium import Env
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import BaseRender
+from gymnasium.envs.registration import EnvSpec
 from gymnasium.utils import seeding
 from numpy.typing import NDArray
 from robosuite.models.base import MujocoXML
@@ -50,8 +52,8 @@ class IEnvironment(MujocoEnv, ABC):
     def __init__(
             self,
             scene_file : str = None,
-            frame_skip: int = MUJOCO_FRAME_SKIP,
-            observation_space: gym.spaces.Space = None,
+            frame_skip : int = MUJOCO_FRAME_SKIP,
+            observation_space : gym.spaces.Space = None,
             action_mode : ActionMode = ActionMode.ABSOLUTE,
             control_config_file : str = None,
             robot_name : str = None,
@@ -181,6 +183,31 @@ class IEnvironment(MujocoEnv, ABC):
 
         self._action_mode = action_mode
 
+        self._seed = None
+
+        self._register_args(
+            action_mode=action_mode
+        )
+
+    def _register_args(self, **args) -> None:
+        """
+        Register all arguments for the environment,
+        that are relevant to reinitialize the environment in such a way
+        that the same simulation is created.
+        :param args: dictionary of arguments
+        """
+        if not hasattr(self, "_args"):
+            self._args = dict()
+        self._args.update(args)
+
+    @property
+    def args(self) -> Dict:
+        """
+        Return all important arguments for reinitializing the environment.
+        :return: dictionary of arguments
+        """
+        return self._args if hasattr(self, "_args") else dict()
+
     @staticmethod
     def __viewer_setup(viewer : BaseRender, cam_config : CamConfig) -> None:
         """
@@ -309,7 +336,7 @@ class IEnvironment(MujocoEnv, ABC):
             qvel=np.copy(self.data.qvel),
         )
 
-    def rs_set_sim_state(self, state: MjSimState) -> None:
+    def set_sim_state(self, state: MjSimState) -> None:
         """
         Set the state of the simulation (RoboSuite version).
         :param state: state to be set
@@ -323,11 +350,8 @@ class IEnvironment(MujocoEnv, ABC):
         :param state: flattened state
         """
         state = MjSimState.from_flattened(state, self)
+        self.set_sim_state(state)
 
-        # do this instead of @set_state to avoid extra copy of qpos and qvel
-        self.data.time = state.time
-        self.data.qpos[:] = state.qpos
-        self.data.qvel[:] = state.qvel
 
     @override
     def step(self, action: OSAction | np.ndarray) -> Tuple[Any, float, bool, bool, Dict]:
@@ -351,7 +375,11 @@ class IEnvironment(MujocoEnv, ABC):
         return obs, reward, terminated, truncated, info
 
     def set_seed(self, seed):
-        self._np_random, seed = seeding.np_random(seed)
+        self._np_random, self._seed = seeding.np_random(seed)
+
+    @property
+    def seed(self) -> int | None:
+        return self._seed
 
     def get_xml(self) -> str:
         """
@@ -594,4 +622,3 @@ class IEnvironment(MujocoEnv, ABC):
         :return: boolean value indicating if the task is completed successfully
         """
         pass
-
