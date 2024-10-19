@@ -5,6 +5,7 @@ from transforms3d.quaternions import qmult, qinverse, quat2axangle
 
 from src.control.utils.arm_state import ArmState
 from src.control.utils.enums import GripperState
+from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 
 DEFAULT_POSITION_TOLERANCE = 0.01
 DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
@@ -23,7 +24,7 @@ class ArmStateTarget(ArmState):
         rot: np.ndarray = np.zeros(3),
         grip: GripperState = GripperState.OPEN,
         position_tolerance: float = DEFAULT_POSITION_TOLERANCE,
-        orientation_tolerance: float = DEFAULT_ORIENTATION_TOLERANCE
+        orientation_tolerance: float = DEFAULT_ORIENTATION_TOLERANCE,
     ) -> None:
         """
         :param xyz: xyz position
@@ -35,6 +36,7 @@ class ArmStateTarget(ArmState):
         super().__init__(xyz, rot, grip)
         self._position_tolerance = position_tolerance
         self._orientation_tolerance = orientation_tolerance
+
 
     def get_position_tolerance(self) -> float:
         """
@@ -91,6 +93,8 @@ class Waypoint:
         self._name = waypoint_dict["name"]
         self._min_duration = waypoint_dict.get("min_duration", DEFAULT_MIN_DURATION)
         self._max_duration = waypoint_dict.get("max_duration", DEFAULT_MAX_DURATION)
+        self._max_delta_translation = waypoint_dict.get("max_delta_translation", None)
+        self._max_delta_rotation = waypoint_dict.get("max_delta_rotation", None)
         self._targets = {}
         for target in waypoint_dict["targets"]:
             self._targets[target["device"]] = ArmStateTarget(
@@ -125,5 +129,47 @@ class Waypoint:
             is_reached = is_reached and target.is_reached_by(current_robot_state[device])
 
         return is_reached
+
+    @property
+    def id(self) -> int:
+        """
+        :return: ID
+        """
+        return self._id
+
+    @property
+    def name(self) -> str:
+        """
+        :return: Name
+        """
+        return self._name
+
+    @property
+    def min_duration(self) -> float:
+        """
+        :return: Minimum duration
+        """
+        return self._min_duration
+
+    @property
+    def max_duration(self) -> float:
+        """
+        :return: Maximum duration
+        """
+        return self._max_duration
+
+    @property
+    def max_delta_translation(self) -> float | None:
+        """
+        :return: Maximum delta translation
+        """
+        return self._max_delta_translation
+
+    @property
+    def max_delta_rotation(self) -> float | None:
+        """
+        :return: Maximum delta rotation
+        """
+        return self._max_delta_rotation
 
 

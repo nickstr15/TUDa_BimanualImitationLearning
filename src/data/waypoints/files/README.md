@@ -45,6 +45,8 @@ waypoints:
         ...
     min_duration: <time>                  # minimum time in seconds before moving to the next waypoint (default: 1.0)
     max_duration: 10.0                    # maximum time in seconds before moving to the next waypoint (default: 10.0)
+    max_delta_translation: <delta>        # maximum translation in action output (default: None)
+    max_delta_orientation: <delta>        # maximum orientation in action output (default: None)
   - id: 1
     ...
 ```

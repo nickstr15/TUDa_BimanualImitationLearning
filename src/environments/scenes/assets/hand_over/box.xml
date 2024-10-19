@@ -8,7 +8,7 @@ Hole size: 10x25x5cm
     </asset>
 
     <worldbody>
-        <body name="box" pos="0.4 0.4 0">
+        <body name="box">
             <freejoint name="box_position"/>
 
             <!-- base: 10x25x1cm-->

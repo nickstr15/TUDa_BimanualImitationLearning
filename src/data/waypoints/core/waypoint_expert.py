@@ -86,13 +86,18 @@ class WaypointExpertBase:
             for name in waypoint.targets.keys()
         }
 
+        max_delta_translation = waypoint.max_delta_translation if waypoint.max_delta_translation is not None  \
+            else self._max_delta_translation
+        max_delta_rotation = waypoint.max_delta_rotation if waypoint.max_delta_rotation is not None \
+            else self._max_delta_rotation
+
         for name, target in waypoint.targets.items():
             current = current_state[name]
 
             # Clip the translation
             pos_target = target.get_xyz()
             pos_current = current.get_xyz()
-            pos_delta = clip_translation(pos_target - pos_current, self._max_delta_translation)
+            pos_delta = clip_translation(pos_target - pos_current, max_delta_translation)
             if self._action_mode == ActionMode.ABSOLUTE:
                 targets[name].set_xyz(pos_delta + pos_current)
             elif self._action_mode == ActionMode.RELATIVE:
@@ -103,7 +108,7 @@ class WaypointExpertBase:
             quat_current = current.get_quat()
             quat_delta = clip_quat(
                 qmult(quat_target, qinverse(quat_current)),
-                self._max_delta_rotation
+                max_delta_rotation
             )
             if self._action_mode == ActionMode.ABSOLUTE:
                 targets[name].set_quat(qmult(quat_delta, quat_current))

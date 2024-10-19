@@ -4,7 +4,7 @@
     </asset>
 
     <worldbody>
-        <body name="cuboid" pos="0.4 -0.4 0">
+        <body name="cuboid">
             <freejoint name="cuboid_position"/>
             <inertial pos="0 0 0.025" mass="0.001"/>
 

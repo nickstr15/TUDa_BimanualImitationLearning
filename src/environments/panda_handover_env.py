@@ -17,7 +17,7 @@ class PandaHandoverEnv(PandaEnvBase):
 
     def __init__(self, **kwargs):
         super().__init__(
-            scene_file="dual_panda_handover_env.xml",
+            scene_file="dual_panda_handover.xml",
             **kwargs
         )
 
@@ -35,10 +35,7 @@ class PandaHandoverEnv(PandaEnvBase):
         }
 
     def _get_obs(self) -> Dict:
-        return {
-            "qpos": self.data.qpos,
-            "qvel": self.data.qvel,
-        }
+        return { }
 
     def _get_object_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         """
