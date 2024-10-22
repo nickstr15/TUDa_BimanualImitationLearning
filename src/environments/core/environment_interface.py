@@ -497,9 +497,7 @@ class IEnvironment(MujocoEnv, ABC):
         Render the environment.
         :return: the rendering output of the mujoco renderer
         """
-        rendering = self.mujoco_renderer.render(
-            self.render_mode, self.camera_id, self.camera_name
-        )
+        rendering = self.mujoco_renderer.render(self.render_mode)
 
         if self._store_frames:
             self._rendered_frames.append(rendering)
