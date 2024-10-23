@@ -1,4 +1,4 @@
-psmove_api_path: "/home/nick/psmoveapi_prebuild/"
+psmove_api_path: "/home/nick/psmoveapi/build"
 
 left_controller_address: "00:06:f5:86:7c:39"
 right_controller_address: "00:06:f5:e0:34:3d"
