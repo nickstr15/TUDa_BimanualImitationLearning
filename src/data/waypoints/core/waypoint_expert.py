@@ -45,7 +45,7 @@ class WaypointExpertBase:
 
         # set control
         with open(full_waypoints_path, 'r') as f:
-            self._control_config = yaml.safe_load(f)
+            self._waypoint_data = yaml.safe_load(f)
 
         self._initial_config = self._load_initial_config()
         self._waypoints = self._load_waypoints()
@@ -57,7 +57,7 @@ class WaypointExpertBase:
         Load the initial configuration from the control config.
         :return: Initial configuration
         """
-        return self._control_config["initial_configuration"]
+        return self._waypoint_data["initial_configuration"]
 
     def _load_waypoints(self) -> list[Waypoint]:
         """
@@ -65,7 +65,7 @@ class WaypointExpertBase:
         :return: List of waypoints
         """
         waypoints_list = []
-        for waypoint_data in self._control_config["waypoints"]:
+        for waypoint_data in self._waypoint_data["waypoints"]:
             waypoints_list.append(Waypoint(waypoint_data))
 
         return waypoints_list
