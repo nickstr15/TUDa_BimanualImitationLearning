@@ -8,6 +8,7 @@ import yaml
 from transforms3d.euler import quat2euler, euler2quat
 
 from src.data.teleoperation.core.psmove_state import PsMoveState, PSMoveTarget, PSMoveButtonState
+from src.utils.real_time import RealTimeHandler
 
 ######################################################################################
 # Setup PSMove #######################################################################
@@ -54,7 +55,7 @@ class PSMoveInterface:
         Initialize the PSMoveInterface.
         :param frequency: frequency of the data collection in Hz
         """
-        self._dt = 1.0 / frequency
+        self._frequency = frequency
         self._controllers = {}
         self._controller_workers = {}
         self._controller_states = {}
@@ -142,7 +143,6 @@ class PSMoveInterface:
             worker.start()
 
     def _collect_state(self, controller : psmove.PSMove, state : PsMoveState) -> None:
-
         controller.reset_orientation()
 
         while self._running:
@@ -167,6 +167,10 @@ class PSMoveInterface:
             if self._tracker.get_status(controller) == psmove.Tracker_TRACKING:
                 x, y, radius = self._tracker.get_position(controller)
                 state.pos = np.array([x, y, radius])
+            else:
+                print("[WARNING]\tTracker lost controller: ", controller.get_serial())
+                # try to re-enable tracking
+                self._tracker.enable_with_color(controller, *state.color)
 
             quat = controller.get_orientation()
             eul0, eul1, eul2 = quat2euler(quat)
@@ -177,11 +181,9 @@ class PSMoveInterface:
             trigger_value = controller.get_trigger()
             state.trigger = trigger_value
 
-
-
             self._on_update(state)
 
-            time.sleep(self._dt)
+            time.sleep(1/self._frequency)
 
     def _on_update(self, state : PsMoveState) -> None:
         if state.btn_ps == PSMoveButtonState.NOW_PRESSED or state.btn_ps == PSMoveButtonState.STILL_PRESSED:
