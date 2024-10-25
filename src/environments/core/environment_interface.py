@@ -25,7 +25,7 @@ from src.control.controller import OSCGripperController
 from src.control.utils.device import Device
 from src.control.utils.enums import GripperState
 from src.control.utils.robot import Robot
-from src.control.utils.arm_state import ArmState
+from src.control.utils.ee_state import EEState
 from src.environments.core.action import OSAction
 from src.environments.core.enums import ActionMode
 from src.environments.core.viewer_config import CamConfig
@@ -53,7 +53,6 @@ class IEnvironment(MujocoEnv, ABC):
             self,
             scene_file : str = None,
             frame_skip : int = MUJOCO_FRAME_SKIP,
-            observation_space : gym.spaces.Space = None,
             action_mode : ActionMode = ActionMode.ABSOLUTE,
             control_config_file : str = None,
             robot_name : str = None,
@@ -81,13 +80,9 @@ class IEnvironment(MujocoEnv, ABC):
             - quat_target <- quat_action * quat_current
             - grip_target <- grip_action (always override the target)
 
-
         :param scene_file: filename of to the mujoco scene file in $SCENES_DIR.
                This is the mujoco model_file.
         :param frame_skip: number of simulation steps to skip between each rendered frame
-        :param observation_space: observation space of the environment, default is None.
-               If None is passed, the observation space is set to the joint positions and velocities
-               of the robot joints
         :param action_mode: action mode of the environment.
                ABSOLUTE: action input = absolute target position(s)
                RELATIVE: action input = relative target position(s) => target = action + current
@@ -114,17 +109,11 @@ class IEnvironment(MujocoEnv, ABC):
             f"Control config file {full_control_config_path} does not exist!"
 
         MujocoEnv.__init__(
-            self, full_scene_path, frame_skip, observation_space,
+            self, full_scene_path, frame_skip, None,
             render_mode=render_mode,
             width=width,
             height=height,
         )
-
-        if observation_space is None:
-            obs_size = self.data.qpos.size + self.data.qvel.size
-            self.observation_space = gym.spaces.Box(
-                low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float64
-            )
 
         # setup main viewer
         viewer = self.mujoco_renderer._get_viewer(render_mode)
@@ -154,15 +143,8 @@ class IEnvironment(MujocoEnv, ABC):
         nullspace_config = self.__get_controller_config("nullspace")
         admittance_gain = self.__get_controller_config("admittance")["gain"]
 
-        # set action space
+        # save the original action space
         self.ctrl_action_space = self.action_space
-        self.action_space = gym.spaces.Dict({
-            device_name: gym.spaces.Dict({
-                "pos": gym.spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
-                "quat": gym.spaces.Box(-np.inf, np.inf, shape=(4,), dtype=np.float64),
-                "grip": gym.spaces.Discrete(GripperState.OPEN + 1)
-            }) for device_name in self._sub_device_names
-        })
 
         self.controller = OSCGripperController(
             robot=self.robot,
@@ -313,7 +295,7 @@ class IEnvironment(MujocoEnv, ABC):
             if entry["name"] == name:
                 return entry
 
-    def _generate_control(self, targets : Dict[str, ArmState]) -> NDArray[np.float64]:
+    def _generate_control(self, targets : Dict[str, EEState]) -> NDArray[np.float64]:
         """
         Generate the control signal (joint torques) for the robot.
         :param targets: target positions and orientations in the world frame
@@ -414,14 +396,14 @@ class IEnvironment(MujocoEnv, ABC):
 
     def _update_targets(self, action: OSAction) -> None:
         """
-        Update the visualization of the targets.
+        Update the end effector targets.
         :param action: dictionary of targets for the devices
         :return:
         """
         if self._action_mode == ActionMode.ABSOLUTE:
             self._targets = action.get()
         elif self._action_mode == ActionMode.RELATIVE:
-            self._targets = self.get_device_states()
+            self._targets = self.get_robot_ee_states()
             for device_name, delta in action.items():
                 self._targets[device_name].set_xyz(
                     delta.get_xyz() + self._targets[device_name].get_xyz()
@@ -461,11 +443,38 @@ class IEnvironment(MujocoEnv, ABC):
         """
         return self.metadata['render_fps']
 
+    @override
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
+    ):
+        """
+        Reset the environment to the initial state.
+        Adapted from MujocoEnv.reset() to make use of the options' parameter.
+        :param seed:
+        :param options: dictionary of additional options for the reset,
+            currently only options[randomize] and options[render] are used
+        :return:
+        """
+        super().reset(seed=seed)
+
+        mujoco.mj_resetData(self.model, self.data)
+
+        ob = self.reset_model(options)
+        info = self._get_reset_info()
+
+        if self.render_mode == "human" and options.get("render", False):
+            self.render()
+        return ob, info
+
+    @override
     def reset_model(self, options : Optional[dict] = None) -> Dict:
         """
         Reset the model to the initial state.
 
-        :param options: additional parameters for device state and free joint positions
+        :param options: (not used)
         :return: observation of the environment as a dictionary
         """
         self._reset_model(options)
@@ -481,7 +490,15 @@ class IEnvironment(MujocoEnv, ABC):
         """
         mujoco.mj_forward(self.model, self.data)
         self.set_robot_joint_pos(self.q_home)
-        for joint_name, pos in self._default_free_joint_positions.items():
+
+        randomize = options.get("randomize", False) if options is not None else False
+
+        if randomize:
+            free_joint_positions = self._get_random_free_joints_quat_pos()
+        else:
+            free_joint_positions = self._default_free_joints_quat_pos
+
+        for joint_name, pos in free_joint_positions.items():
             self.set_free_joint_pos(joint_name, *pos)
 
     def get_mujoco_renders(self):
@@ -517,7 +534,7 @@ class IEnvironment(MujocoEnv, ABC):
             self.set_free_joint_pos(pos_name, quat, pos)
 
 
-    def get_device_states(self) -> Dict[str, ArmState]:
+    def get_robot_ee_states(self) -> Dict[str, EEState]:
         """
         Return the state of the robot as a dictionary.
         :return: dictionary of the robot state
@@ -539,26 +556,35 @@ class IEnvironment(MujocoEnv, ABC):
 
         :return: joint positions
         """
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
-    def x_home_targets(self) -> Dict[str, ArmState]:
+    def x_home_targets(self) -> Dict[str, EEState]:
         """
         Return the home position of the robot in the world frame as targets
         :return: x_home_target
         """
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
-    def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+    def _default_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         """
-        Return the default positions of the free joints.
+        Return the default positions and orientations of the free joints.
         The value of a specific joint is a tuple of the quaternion and the position.
-        :return: key-value pairs of free joint names and their positions
+        :return: key-value pairs of free joint names and their position and quaternion as tuples
         """
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def _get_random_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        """
+        Return random positions and orientations of the free joints (at the start of an episode).
+        The value of a specific joint is a tuple of the quaternion and the position.
+        :return: key-value pairs of free joint names and their position and quaternion as tuples
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def _get_obs(self) -> Dict:
@@ -567,7 +593,7 @@ class IEnvironment(MujocoEnv, ABC):
         Must be compatible with the observation space.
         :return: observation
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _get_info(self) -> Dict:
@@ -575,9 +601,7 @@ class IEnvironment(MujocoEnv, ABC):
         Return additional information about the environment state as a dictionary.
         :return: additional state information
         """
-        pass
-
-
+        raise NotImplementedError
 
     @abstractmethod
     def _get_reward(self) -> float:
@@ -585,7 +609,7 @@ class IEnvironment(MujocoEnv, ABC):
         Return the reward for the current state.
         :return: reward
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _get_terminated(self) -> bool:
@@ -593,7 +617,7 @@ class IEnvironment(MujocoEnv, ABC):
         Return a boolean value indicating if the episode is terminated.
         :return: boolean indicating if the episode is terminated
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _get_truncated(self) -> bool:
@@ -601,7 +625,7 @@ class IEnvironment(MujocoEnv, ABC):
         Return a boolean value indicating if the episode is truncated.
         :return: boolean indicating if the episode is truncated
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_mocap_idx(self, name) -> int:
@@ -611,7 +635,7 @@ class IEnvironment(MujocoEnv, ABC):
         :param name: name of the mocap object
         :return: id of the mocap object, -1 if not found
         """
-        pass
+        return -1
 
     @abstractmethod
     def _check_success(self) -> bool:
@@ -619,4 +643,6 @@ class IEnvironment(MujocoEnv, ABC):
         Check if the task is successful.
         :return: boolean value indicating if the task is completed successfully
         """
-        pass
+        raise NotImplementedError
+
+

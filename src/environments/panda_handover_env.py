@@ -22,7 +22,7 @@ class PandaHandoverEnv(PandaEnvBase):
         )
 
     @property
-    def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+    def _default_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         return {
             "cuboid_position" : (
                 np.array([1.0, 0.0, 0.0, 0.0]),
@@ -34,8 +34,13 @@ class PandaHandoverEnv(PandaEnvBase):
             )
         }
 
+    def _get_random_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        raise NotImplementedError # TODO
+
+
+
     def _get_obs(self) -> Dict:
-        return { }
+        return {}
 
     def _get_object_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         """

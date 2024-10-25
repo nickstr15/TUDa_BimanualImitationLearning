@@ -3,18 +3,17 @@ from typing import Dict
 import numpy as np
 from transforms3d.quaternions import qmult, qinverse, quat2axangle
 
-from src.control.utils.arm_state import ArmState
+from src.control.utils.ee_state import EEState
 from src.control.utils.enums import GripperState
-from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 
 DEFAULT_POSITION_TOLERANCE = 0.01
 DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
-DEFAULT_MIN_DURATION = 1.0
-DEFAULT_MAX_DURATION = 10.0
+DEFAULT_MIN_DURATION = 0.5 # before this time, the waypoint is not considered reached
+DEFAULT_MAX_DURATION = 30.0 # after this time, the waypoint is considered as unreachable
 
-class ArmStateTarget(ArmState):
+class EEStateTarget(EEState):
     """
-    The ArmStateTarget class extends the ArmState class
+    The EEStateTarget class extends the ArmState class
     by adding tolerance values for the position and orientation.
     """
 
@@ -50,7 +49,7 @@ class ArmStateTarget(ArmState):
         """
         return self._orientation_tolerance
 
-    def is_reached_by(self, current_state: ArmState) -> bool:
+    def is_reached_by(self, current_state: EEState) -> bool:
         """
         Check if the target state is reached by the current state.
         :param current_state: Current state
@@ -90,14 +89,12 @@ class Waypoint:
         :return:
         """
         self._id = waypoint_dict["id"]
-        self._name = waypoint_dict["name"]
+        self._des = waypoint_dict["description"]
         self._min_duration = waypoint_dict.get("min_duration", DEFAULT_MIN_DURATION)
         self._max_duration = waypoint_dict.get("max_duration", DEFAULT_MAX_DURATION)
-        self._max_delta_translation = waypoint_dict.get("max_delta_translation", None)
-        self._max_delta_rotation = waypoint_dict.get("max_delta_rotation", None)
         self._targets = {}
         for target in waypoint_dict["targets"]:
-            self._targets[target["device"]] = ArmStateTarget(
+            self._targets[target["device"]] = EEStateTarget(
                 xyz=target["position"],
                 rot=target["orientation"],
                 grip=target["gripper"],
@@ -106,29 +103,30 @@ class Waypoint:
             )
 
     @property
-    def targets(self) -> Dict[str, ArmStateTarget]:
+    def targets(self) -> Dict[str, EEStateTarget]:
         """
         :return: Targets
         """
         return self._targets
 
-    def is_reached_by(self, current_robot_state: dict[str, ArmState], dt : float) -> bool:
+    def is_reached_by(self, current_robot_state: dict[str, EEState], dt : float) -> tuple[bool, bool]:
         """
         Check if the waypoint is reached by the current state.
         :param current_robot_state: Current state
         :param dt: elapsed time in seconds
         :return: True if the waypoint is reached by the current state
         """
+        unreachable = False
         if dt < self._min_duration:
-            return False
+            return False, False
         if dt > self._max_duration:
-            return True
+            unreachable = True
 
         is_reached = True
         for device, target in self._targets.items():
             is_reached = is_reached and target.is_reached_by(current_robot_state[device])
 
-        return is_reached
+        return is_reached, unreachable
 
     @property
     def id(self) -> int:
@@ -138,38 +136,27 @@ class Waypoint:
         return self._id
 
     @property
-    def name(self) -> str:
+    def description(self) -> str:
         """
         :return: Name
         """
-        return self._name
+        return self._des
 
     @property
     def min_duration(self) -> float:
         """
-        :return: Minimum duration
+        :return: Minimum duration before the waypoint is considered reached
         """
         return self._min_duration
 
     @property
     def max_duration(self) -> float:
         """
-        :return: Maximum duration
+        :return: Maximum duration, after which the waypoint is considered unreachable
         """
         return self._max_duration
 
-    @property
-    def max_delta_translation(self) -> float | None:
-        """
-        :return: Maximum delta translation
-        """
-        return self._max_delta_translation
 
-    @property
-    def max_delta_rotation(self) -> float | None:
-        """
-        :return: Maximum delta rotation
-        """
-        return self._max_delta_rotation
+
 
 

@@ -15,7 +15,7 @@ class PandaQuadInsertEnv(PandaEnvBase):
         )
 
     @property
-    def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+    def _default_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         return {
             "grommet_position" : (#pos="0.5 0.0 0.0" quat="1.0 0 0 0.2"
                 np.array([1.0, 0.0, 0.0, -0.2]),
@@ -26,6 +26,9 @@ class PandaQuadInsertEnv(PandaEnvBase):
                 np.array([0.35, 0.2, 0])
             )
         }
+
+    def _get_random_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        raise NotImplementedError
 
     def _get_obs(self) -> Dict:
         return {

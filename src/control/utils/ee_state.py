@@ -4,12 +4,14 @@ from transforms3d.quaternions import qmult
 
 from src.control.utils.enums import GripperState
 
-class ArmState:
+class EEState:
     """
-    The ArmState class holds a vector for
+    The EEState class holds a vector for
         - orientation (quaternion)
         - position (xyz)
         - gripper state (open or closed)
+
+    ! currently no velocity or acceleration information is included
 
     NOTE: Quat is stored as w, x, y, z
     """
@@ -29,7 +31,7 @@ class ArmState:
         assert len(xyz) == 3
         assert len(rot) == 3 or len(rot) == 4
         self.__xyz = np.array(xyz)
-        self.__quat = np.array(rot) if len(rot) == 4 else np.asarray(euler2quat(*rot))
+        self.__quat = np.array(rot) if len(rot) == 4 else np.array(euler2quat(*rot))
 
         self.__gripper_state = grip
         self.active = True

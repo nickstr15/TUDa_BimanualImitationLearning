@@ -5,7 +5,7 @@ from src.environments.core.panda_environment import PandaEnvBase
 
 class EmptyPandaEnv(PandaEnvBase):
     """
-    Empty environment with two Panda robots.
+    Empty environment with two Panda robots as bimanual setup.
     """
 
     def __init__(self, **kwargs) -> None:
@@ -15,19 +15,14 @@ class EmptyPandaEnv(PandaEnvBase):
         )
 
     @property
-    def _default_free_joint_positions(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
-        """
-        Default free joint positions for the environment.
-        The empty environment has no free joints and therefor returns an empty dictionary.
-        :return:
-        """
-        return {}
+    def _default_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        return {} # no free objects in the scene
+
+    def _get_random_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        return {} # no free objects in the scene
 
     def _get_obs(self) -> Dict:
-        return {
-            "qpos": self.data.qpos,
-            "qvel": self.data.qvel,
-        }
+        return {}
 
     def _get_info(self) -> Dict:
         return {}

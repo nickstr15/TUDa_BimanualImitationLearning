@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict
 import mujoco
 import numpy as np
 
-from src.control.utils.arm_state import ArmState
+from src.control.utils.ee_state import EEState
 from src.control.utils.enums import GripperState, DeviceState
 
 
@@ -261,7 +261,7 @@ class Device:
         for var in DeviceState:
             self.__set_state(var)
 
-    def get_arm_state(self) -> ArmState:
+    def get_arm_state(self) -> EEState:
         """
         Get the state of the arm
         :return:
@@ -270,7 +270,7 @@ class Device:
         quat = self.get_state(DeviceState.EE_QUAT)
         grip = self.get_state(DeviceState.GRIPPER)
 
-        arm_state = ArmState()
+        arm_state = EEState()
         arm_state.set_xyz(pos)
         arm_state.set_quat(quat)
         arm_state.set_gripper_state(grip)

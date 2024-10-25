@@ -3,7 +3,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Dict
 
-from src.control.utils.arm_state import ArmState
+from src.control.utils.ee_state import EEState
 from src.control.utils.enums import GripperState
 from src.environments.core.environment_interface import IEnvironment
 
@@ -34,10 +34,10 @@ class PandaEnvBase(IEnvironment, ABC):
         )
 
     @property
-    def x_home_targets(self) -> Dict[str, ArmState]:
+    def x_home_targets(self) -> Dict[str, EEState]:
         targets = {
-            "panda_01": ArmState(),
-            "panda_02": ArmState(),
+            "panda_01": EEState(),
+            "panda_02": EEState(),
         }
 
         targets["panda_01"].set_xyz(np.array([0.55449948, 0.4, 0.52075243]))

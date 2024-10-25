@@ -8,7 +8,7 @@ from transforms3d.quaternions import qinverse
 from src.control.utils.enums import RobotState, DeviceState, GripperState
 from src.control.utils.device import Device
 from src.control.utils.robot import Robot
-from src.control.utils.arm_state import ArmState
+from src.control.utils.ee_state import EEState
 from src.control.control_configs.controller_config import ControllerConfig
 
 
@@ -131,7 +131,7 @@ class OSCGripperController:
         return u_task
 
     @staticmethod
-    def calc_task_space_error(target: ArmState, device: Device) -> np.ndarray:
+    def calc_task_space_error(target: EEState, device: Device) -> np.ndarray:
         """
         Compute the difference between the target and device EE
         for the x,y,z and a,b,g components
@@ -153,7 +153,7 @@ class OSCGripperController:
 
         return u_task
 
-    def generate(self, targets: Dict[str, ArmState]) -> Tuple[list, list]:
+    def generate(self, targets: Dict[str, EEState]) -> Tuple[list, list]:
         """
         Generate control signal for the corresponding devices which are in the
         robot's sub-devices. Accepts a dictionary of device names (keys),
@@ -168,7 +168,7 @@ class OSCGripperController:
         """
         return self._generate(targets)
 
-    def _generate(self, targets: Dict[str, ArmState]) -> Tuple[list, list]:
+    def _generate(self, targets: Dict[str, EEState]) -> Tuple[list, list]:
         """
         Generate control signal for the corresponding devices which are in the
         robot's sub-devices. Accepts a dictionary of device names (keys),

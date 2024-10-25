@@ -1,10 +1,12 @@
 import os.path
 import time
+from abc import ABC, abstractmethod
 
 import yaml
+from tornado.options import options
 from transforms3d.quaternions import qmult, qinverse
 
-from src.control.utils.arm_state import ArmState
+from src.control.utils.ee_state import EEState
 from src.data.data_collection.data_collection_wrapper import DataCollectionWrapper
 from src.data.data_collection.hdf5 import gather_demonstrations_as_hdf5
 from src.data.waypoints.core.waypoint import Waypoint
@@ -16,8 +18,7 @@ from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
 from src.utils.real_time import RealTimeHandler
 
-
-class WaypointExpertBase:
+class WaypointExpertBase(ABC):
     """
     Class for an expert agent that acts in the environment
     by following a predefined trajectory of waypoints.
@@ -45,30 +46,23 @@ class WaypointExpertBase:
 
         # set control
         with open(full_waypoints_path, 'r') as f:
-            self._waypoint_data = yaml.safe_load(f)
-
-        self._initial_config = self._load_initial_config()
-        self._waypoints = self._load_waypoints()
+            self._waypoint_cfg = yaml.safe_load(f)
 
         self._action_mode = self._env.action_mode
 
-    def _load_initial_config(self) -> dict:
-        """
-        Load the initial configuration from the control config.
-        :return: Initial configuration
-        """
-        return self._waypoint_data["initial_configuration"]
+        # minimum number of steps in done state (-> 1 second)
+        self._min_steps_terminated = int(1.0 * self._env.render_fps)
+        self._dt = 1.0 / self._env.render_fps
+        self._rt_handler = RealTimeHandler(self._env.render_fps)
 
-    def _load_waypoints(self) -> list[Waypoint]:
+    @abstractmethod
+    def _create_waypoints(self) -> list[Waypoint]:
         """
-        Load the waypoints from the control config.
+        Create the list of waypoints.
+        This method can be dependent on the environments initial state.
         :return: List of waypoints
         """
-        waypoints_list = []
-        for waypoint_data in self._waypoint_data["waypoints"]:
-            waypoints_list.append(Waypoint(waypoint_data))
-
-        return waypoints_list
+        raise NotImplementedError
 
     def _get_action(self, current_state: dict, waypoint: Waypoint) -> OSAction:
         """
@@ -82,14 +76,12 @@ class WaypointExpertBase:
         assert current_state.keys() == waypoint.targets.keys(), "Current state and waypoint targets do not match"
 
         targets = {
-            name : ArmState()
+            name : EEState()
             for name in waypoint.targets.keys()
         }
 
-        max_delta_translation = waypoint.max_delta_translation if waypoint.max_delta_translation is not None  \
-            else self._max_delta_translation
-        max_delta_rotation = waypoint.max_delta_rotation if waypoint.max_delta_rotation is not None \
-            else self._max_delta_rotation
+        max_delta_translation = self._max_delta_translation
+        max_delta_rotation = self._max_delta_rotation
 
         for name, target in waypoint.targets.items():
             current = current_state[name]
@@ -120,66 +112,69 @@ class WaypointExpertBase:
 
         return OSAction(targets)
 
-    def _run(
+    def _run_episode(
         self,
         render : bool = False,
-        target_real_time : bool = False
+        target_real_time : bool = False,
+        random : bool = True,
     ) -> None:
         """
         Run the expert agent in the environment.
         :param render: Whether to render the environment
         :param target_real_time: Whether to render in real time
+        :param random: Whether to randomize the initial configuration of each episode
         """
         if target_real_time and not (render and self._env.render_mode == "human"):
-            print("[Warning] Real time rendering requires rendering in human mode, ignoring real time rendering.")
+            print("[INFO] Real time rendering requires rendering in human mode, ignoring real time rendering.")
             target_real_time = False
 
-        # minimum number of steps in done state
-        min_steps_terminated = int(1.0 * self._env.render_fps)
-        steps_terminated = 0
-
-        # set the initial configuration
-        self._env.reset()
-        self._env.set_seed(
-            seed=self._initial_config.get("seed", 0)
+        # reset the environment
+        reset_options = dict(
+            randomize=random,
         )
-        positions = self._initial_config.get("positions", [])
-        self._env.set_initial_config(positions)
+        self._env.reset(options=reset_options)
+        current_ee_states = self._env.get_robot_ee_states()
 
-        if render:
-            self._env.render()
+        waypoints = self._create_waypoints()
 
-
-        dt = 1.0 / self._env.render_fps
-
-        rt = RealTimeHandler(self._env.render_fps)
-
-        current_state = self._env.get_device_states()
-        for waypoint in self._waypoints:
-            step = 0
-            reached = False
-            rt.reset()
-            while not reached:
-                action = self._get_action(current_state, waypoint)
+        steps_terminated = 0
+        success = False
+        for waypoint in waypoints:
+            wp_step = 0
+            reached, unreachable = False, False
+            self._rt_handler.reset()
+            while (not reached) and (not unreachable):
+                action = self._get_action(current_ee_states, waypoint)
                 observation, _, terminated, _, _ = self._env.step(action)
                 if render:
                     self._env.render()
-                step += 1
-                current_state = self._env.get_device_states()
-                reached = waypoint.is_reached_by(
-                    current_state, step * dt
+                wp_step += 1
+                current_ee_states = self._env.get_robot_ee_states()
+                reached, unreachable = waypoint.is_reached_by(
+                    current_ee_states, wp_step * self._dt
                 )
+
+                if unreachable:
+                    break
+
 
                 if terminated:
                     steps_terminated += 1
-                    if steps_terminated >= min_steps_terminated:
-                        print("Done.")
-                        return
+                    if steps_terminated >= self._min_steps_terminated:
+                        success = True
+                        break
                 else:
                     steps_terminated = 0
 
                 if target_real_time:
-                    rt.sleep()
+                    self._rt_handler.sleep()
+
+            if success:
+                print(f"[INFO] Episode finished successful.")
+
+            if unreachable:
+                print(f"[INFO] Waypoint {waypoint.id} ({waypoint.description}) could not be reached. Aborting this episode.")
+                break
 
     def dispose(self) -> None:
         """
@@ -191,7 +186,7 @@ class WaypointExpertBase:
         """
         Visualize the expert agent in the environment.
         """
-        self._run(render=True)
+        self._run_episode(render=True)
 
     def collect_data(self,
         out_dir : str,
@@ -207,7 +202,7 @@ class WaypointExpertBase:
         """
         tmp_directory = "/tmp/bil/{}".format(str(time.time()).replace(".", "_"))
         self._env = DataCollectionWrapper(self._env, tmp_directory)
-        self._run(render=render, target_real_time=target_real_time)
+        self._run_episode(render=render, target_real_time=target_real_time)
         self._env.close()
 
         gather_demonstrations_as_hdf5(tmp_directory, out_dir, self._env.args)

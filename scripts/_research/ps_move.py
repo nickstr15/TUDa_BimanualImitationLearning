@@ -2,13 +2,13 @@ import threading
 
 from transforms3d.euler import quat2euler
 
-from src.data.teleoperation.core.psmove_state import PsMoveState, PSMoveTarget
+from src.data.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget
 
-from src.data.teleoperation.core.psmove_interface import PSMoveInterface
+from src.data.teleoperation.psmove.core.psmove_interface import PSMoveInterface
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication
 
 NUM_ELEMENTS = 20
 
@@ -120,14 +120,10 @@ class PsMovePlotter(PSMoveInterface):
 
     def _on_update(self, state : PsMoveState) -> None:
         if state.target == PSMoveTarget.LEFT:
-            t = threading.Thread(target=self._update_plots_left, args=(state.pos, state.quat))
-            t.daemon = True
-            t.start()
+            self._update_plots_left, args=(state.pos, state.quat)
 
         elif state.target == PSMoveTarget.RIGHT:
-            t = threading.Thread(target=self._update_plots_right, args=(state.pos, state.quat))
-            t.daemon = True
-            t.start()
+            self._update_plots_right(state.pos, state.quat)
 
 
 

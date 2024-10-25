@@ -1,5 +1,6 @@
 import os
 
+from src.data.waypoints.core.waypoint import Waypoint
 from src.data.waypoints.core.waypoint_expert import WaypointExpertBase
 from src.environments import PandaHandoverEnv
 from src.environments.core.enums import ActionMode
@@ -11,20 +12,21 @@ class PandaHandoverWpExpert(WaypointExpertBase):
     """
     def __init__(
             self,
-            identifier : int = 1,
             dual_panda_env_args : dict = None,
             **kwargs):
         """
-        Constructor for the PandaHandoverWpExpert class.
-        :param identifier: id of the expert agent
+        Constructor for the PandaHandoverWpExpertBase class.
         :param dual_panda_env_args: additional arguments for the environment, default is None
         :param kwargs: additional arguments for the expert, see WaypointExpert (core.waypoint_expert)
         """
         super().__init__(
             environment=PandaHandoverEnv(**dual_panda_env_args if dual_panda_env_args else {}),
-            waypoints_file=os.path.join("panda_handover", f"{str(identifier).zfill(3)}.yaml"),
+            waypoints_file="panda_handover_wp.yaml",
             **kwargs
         )
+
+    def _create_waypoints(self) -> list[Waypoint]:
+        raise NotImplementedError # TODO
 
 if __name__ == "__main__":
     env_args = dict(
@@ -33,6 +35,6 @@ if __name__ == "__main__":
     )
 
     expert_id = 1
-    expert = PandaHandoverWpExpert(expert_id, env_args)
+    expert = PandaHandoverWpExpert(env_args)
     expert.visualize()
     expert.dispose()

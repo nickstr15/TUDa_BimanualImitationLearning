@@ -7,8 +7,7 @@ import numpy as np
 import yaml
 from transforms3d.euler import quat2euler, euler2quat
 
-from src.data.teleoperation.core.psmove_state import PsMoveState, PSMoveTarget, PSMoveButtonState
-from src.utils.real_time import RealTimeHandler
+from src.data.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget, PSMoveButtonState
 
 ######################################################################################
 # Setup PSMove #######################################################################
