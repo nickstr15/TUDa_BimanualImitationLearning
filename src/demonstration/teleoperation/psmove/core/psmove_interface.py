@@ -7,7 +7,7 @@ import numpy as np
 import yaml
 from transforms3d.euler import quat2euler, euler2quat
 
-from src.data.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget, PSMoveButtonState
+from src.demonstration.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget, PSMoveButtonState
 
 ######################################################################################
 # Setup PSMove #######################################################################
@@ -52,7 +52,7 @@ class PSMoveInterface:
     def __init__(self, frequency : float = 20.0):
         """
         Initialize the PSMoveInterface.
-        :param frequency: frequency of the data collection in Hz
+        :param frequency: frequency of the demonstration collection in Hz
         """
         self._frequency = frequency
         self._controllers = {}

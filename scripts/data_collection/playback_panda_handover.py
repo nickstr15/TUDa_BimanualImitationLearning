@@ -10,7 +10,7 @@ Arguments:
 import argparse
 import os
 
-from src.data.data_collection.hdf5 import playback_demonstrations_from_hdf5
+from src.demonstration.data_collection.hdf5 import playback_demonstrations_from_hdf5
 from src.utils.paths import DEMOS_DIR
 
 

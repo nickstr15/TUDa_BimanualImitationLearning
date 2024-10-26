@@ -1,7 +1,7 @@
 import os
 
-from src.data.waypoints.core.waypoint import Waypoint
-from src.data.waypoints.core.waypoint_expert import WaypointExpertBase
+from src.demonstration.waypoints.core.waypoint import Waypoint
+from src.demonstration.waypoints.core.waypoint_expert import WaypointExpertBase
 from src.environments import PandaHandoverEnv
 from src.environments.core.enums import ActionMode
 

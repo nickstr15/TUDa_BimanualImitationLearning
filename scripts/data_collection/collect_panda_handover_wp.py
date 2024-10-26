@@ -13,7 +13,7 @@ import argparse
 import datetime
 import os
 
-from src.data.waypoints.panda_handover_wp_expert import PandaHandoverWpExpert
+from src.demonstration.waypoints.panda_handover_wp_expert import PandaHandoverWpExpert
 from src.environments.core.enums import ActionMode
 from src.utils.paths import DEMOS_DIR
 

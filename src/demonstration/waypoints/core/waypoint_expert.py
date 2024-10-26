@@ -7,9 +7,9 @@ from tornado.options import options
 from transforms3d.quaternions import qmult, qinverse
 
 from src.control.utils.ee_state import EEState
-from src.data.data_collection.data_collection_wrapper import DataCollectionWrapper
-from src.data.data_collection.hdf5 import gather_demonstrations_as_hdf5
-from src.data.waypoints.core.waypoint import Waypoint
+from src.demonstration.data_collection.data_collection_wrapper import DataCollectionWrapper
+from src.demonstration.data_collection.hdf5 import gather_demonstrations_as_hdf5
+from src.demonstration.waypoints.core.waypoint import Waypoint
 from src.environments.core.action import OSAction
 from src.environments.core.enums import ActionMode
 from src.environments.core.environment_interface import IEnvironment
@@ -194,7 +194,7 @@ class WaypointExpertBase(ABC):
         target_real_time: bool = False
     ) -> None:
         """
-        Collect data from the expert agent in the environment.
+        Collect demonstration from the expert agent in the environment.
 
         :param out_dir: Output directory for the data
         :param render: Whether to render the environment

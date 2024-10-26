@@ -1,10 +1,8 @@
-import threading
-
 from transforms3d.euler import quat2euler
 
-from src.data.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget
+from src.demonstration.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget
 
-from src.data.teleoperation.psmove.core.psmove_interface import PSMoveInterface
+from src.demonstration.teleoperation.psmove.core.psmove_interface import PSMoveInterface
 
 import numpy as np
 import pyqtgraph as pg
