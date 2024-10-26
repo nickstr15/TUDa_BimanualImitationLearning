@@ -28,13 +28,11 @@ class PandaQuadInsertEnv(PandaEnvBase):
         }
 
     def _get_random_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
-        raise NotImplementedError
+        # TODO add randomization
+        return self._default_free_joints_quat_pos
 
     def _get_obs(self) -> Dict:
-        return {
-            "qpos": self.data.qpos,
-            "qvel": self.data.qvel,
-        }
+        return {}
 
     def _get_info(self) -> Dict:
         return {}
