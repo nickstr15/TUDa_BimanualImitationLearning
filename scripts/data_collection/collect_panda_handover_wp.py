@@ -36,7 +36,7 @@ def main():
 
     out_dir = os.path.join(DEMOS_DIR, "panda_handover", "wp", str(args.expert_id).zfill(3))
 
-    expert = PandaHandoverWpExpert(args.expert_id, env_args)
+    expert = PandaHandoverWpExpert(env_args)
     expert.collect_data(out_dir, args.visualize, args.real_time)
     expert.dispose()
 

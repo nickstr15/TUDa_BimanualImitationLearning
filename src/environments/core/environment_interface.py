@@ -465,7 +465,8 @@ class IEnvironment(MujocoEnv, ABC):
         ob = self.reset_model(options)
         info = self._get_reset_info()
 
-        if self.render_mode == "human" and options.get("render", False):
+        if self.render_mode == "human" and \
+           (options.get("render", False) if options is not None else False):
             self.render()
         return ob, info
 

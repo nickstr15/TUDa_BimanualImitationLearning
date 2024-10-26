@@ -9,7 +9,7 @@ class PandaHandoverEnv(PandaEnvBase):
     and place the cuboid in a box.
 
     cuboid size: 5x20x5cm
-    inner box size: 10x25x5cm
+    inner box size: 20x40x6cm
     """
     _target_tolerance = np.array([
         0.025, 0.025, 1e-3
