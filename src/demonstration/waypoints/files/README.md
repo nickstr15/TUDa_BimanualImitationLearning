@@ -10,7 +10,9 @@ This folder contains the waypoint files for the different tasks.
 ## Structure of the waypoint files
 ```yaml
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-- description: <description>         # name/description of the waypoint
+
+- id: <id>                           # unique identifier of the waypoint, starting with 0
+  description: <description>         # name/description of the waypoint
   targets:
     - device: <device_name>          # mujoco name of the device
       
@@ -43,7 +45,7 @@ This folder contains the waypoint files for the different tasks.
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-- id: 1
+- id: <id>
   # ...
 ```
 
@@ -60,13 +62,15 @@ def method_name(self):
     }
 ```
 
+A reserved method name is `"wp_<id>"`, where the id count starts with 0 for the first waypoint. 
+This method returns the position, orientation, and gripper state of a **previous** waypoint with the id `<id>`.
+
 ### Details for the position `pos`
 
 The position [`pos`] declaration can be a list of 3 elements `[x, y, z]` 
 or a string with the following options:
-- `"as_before"`: the position is the same as in the previous waypoint, can only be used from the second waypoint onwards
-- `"as_before + [dx, dy, dz]"`: the position is the same as in the previous waypoint plus the offset `[dx, dy, dz]`, can only be used from the second waypoint onwards.
-- `"wp_<id>"`: the position is the same as in the waypoint with the id `<id>`, where the id count starts with 0 for the first waypoint
+- `"wp_<id>"`: the position is the same as in a **previous** waypoint with the id `<id>`.
+- `"wp_<id>" + [dx, dy, dz]`: the position is the same as in a **previous** waypoint with the id `<id>` plus the offset `[dx, dy, dz]`.
 
 ### Details for the orientation `quat`/`euler`/`ax_angle`
 The orientation can be specified in different ways:
@@ -75,18 +79,17 @@ The orientation can be specified in different ways:
 - `ax_angle`: a list of 4 elements `[vx, vy, vz, angle]` representing the axis-angle in radians
 
 Furthermore, the orientation can be a string with the following options:
-- `"as_before"`: the orientation is the same as in the previous waypoint, can only be used from the second waypoint onwards
-- `"as_before + <rot>"`: the orientation is the same as in the previous waypoint plus the offset `<offset>`, can only be used from the second waypoint onwards.
-  In all three cases (`quat`, `euler`, `ax_angle`), the offset is converted to a quaternion and modifies the previous orientation by
+- `"wp_<id>"`: the orientation is the same as in a **previous** waypoint with the id `<id>`
+- `"wp_<id> + <rot>"`: the orientation is the same as in a **previous** waypoint with the id `<id>` plus the offset `<rot>`.
+  In all three cases (`quat`, `euler`, `ax_angle`), the offset is converted to a quaternion and modifies the **previous** orientation by
   ```
-  quat = qmult(quat_before, quat_offset)
+  quat = qmult(quat_id, quat_offset)
   ```
-- `<rot> + "as_before"`: the orientation is the same as in the previous waypoint plus the offset `<offset>`, can only be used from the second waypoint onwards.
-  In all three cases (`quat`, `euler`, `ax_angle`), the offset is converted to a quaternion and modifies the previous orientation by
+- `<rot> + "wp_<id>"`: the orientation is the same as in a **previous** waypoint with the id `<id>` plus the offset `<rot>`.
+  In all three cases (`quat`, `euler`, `ax_angle`), the offset is converted to a quaternion and modifies the **previous** orientation by
   ```
-  quat = qmult(quat_offset, quat_before)
+  quat = qmult(quat_offset, quat_id)
   ```
-- `"wp_<id>"`: the orientation is the same as in the waypoint with the id `<id>`, where the id count starts with 0 for the first waypoint
 
 ### Details for the gripper state `grip`
 The gripper state can be specified as an integer value between 0 (closed) and 255 (open) or as a string with the following options:
