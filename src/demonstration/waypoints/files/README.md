@@ -51,10 +51,11 @@ This folder contains the waypoint files for the different tasks.
 
 ### Details for the `ee_target`
 If the `ee_target` value is specified, the tags `pos`, `quat`, `euler`, `ax_angle`, `grip` are ignored. 
-The WaypointExpert class must provide a method with the name specified in `ee_target` that returns a dictionary with the keys `pos`, `quat`, `grip`:
+The WaypointExpert class must provide a method with the name specified in `ee_target` that returns a dictionary with the keys `pos`, `quat`, `grip`. If for example the `ee_target` is set to `"pick_up_position"`, the WaypointExpert class must provide a method with the following signature:
 
 ```python
-def method_name(self):
+@property
+def __pick_up_position(self):
     return {
         'pos': [0, 0, 0],
         'quat': [1, 0, 0, 0],
@@ -80,12 +81,12 @@ The orientation can be specified in different ways:
 
 Furthermore, the orientation can be a string with the following options:
 - `"wp_<id>"`: the orientation is the same as in a **previous** waypoint with the id `<id>`
-- `"wp_<id> + <rot>"`: the orientation is the same as in a **previous** waypoint with the id `<id>` plus the offset `<rot>`.
+- `"wp_<id> * <rot>"`: the orientation is the same as in a **previous** waypoint with the id `<id>` plus the offset `<rot>`.
   In all three cases (`quat`, `euler`, `ax_angle`), the offset is converted to a quaternion and modifies the **previous** orientation by
   ```
   quat = qmult(quat_id, quat_offset)
   ```
-- `<rot> + "wp_<id>"`: the orientation is the same as in a **previous** waypoint with the id `<id>` plus the offset `<rot>`.
+- `<rot> * "wp_<id>"`: the orientation is the same as in a **previous** waypoint with the id `<id>` plus the offset `<rot>`.
   In all three cases (`quat`, `euler`, `ax_angle`), the offset is converted to a quaternion and modifies the **previous** orientation by
   ```
   quat = qmult(quat_offset, quat_id)

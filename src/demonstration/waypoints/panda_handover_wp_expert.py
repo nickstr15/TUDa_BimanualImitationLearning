@@ -25,16 +25,12 @@ class PandaHandoverWpExpert(WaypointExpertBase):
             **kwargs
         )
 
-    def _create_waypoints(self) -> list[Waypoint]:
-        raise NotImplementedError # TODO
-
 if __name__ == "__main__":
     env_args = dict(
         visualize_targets=True,
         action_mode = ActionMode.RELATIVE
     )
 
-    expert_id = 1
     expert = PandaHandoverWpExpert(env_args)
     expert.visualize()
     expert.dispose()
