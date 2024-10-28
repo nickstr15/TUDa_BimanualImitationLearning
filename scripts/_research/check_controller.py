@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from transforms3d.quaternions import axangle2quat, qmult
 
 from src.control.utils.enums import GripperState
 from src.environments import EmptyPandaEnv
@@ -26,6 +27,14 @@ class PandaMoveToPointEnv(EmptyPandaEnv):
         targets["panda_02"].set_xyz(targets["panda_02"].get_xyz() + np.array([-0.1, -0.1, -0.1]))
 
         targets["panda_01"].set_gripper_state(GripperState.CLOSED)
+
+        quat = targets["panda_02"].get_quat()
+        delta_quat = axangle2quat([0, 0, 1], np.deg2rad(45))
+        targets["panda_02"].set_quat(qmult(delta_quat, quat))
+
+        quat = targets["panda_01"].get_quat()
+        delta_quat = axangle2quat([0, 0, 1], np.deg2rad(-45))
+        targets["panda_01"].set_quat(qmult(delta_quat, quat))
 
         action = OSAction(targets)
 

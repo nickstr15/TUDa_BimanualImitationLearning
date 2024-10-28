@@ -124,11 +124,11 @@ class OSCGripperController:
                 scale[3:] *= scale_abg / norm_abg
 
             u_task = kv * scale * lamb * u_task
-        else:
-            print("Device max_vel must be set in the config file (yaml)!")
-            raise Exception
+            return u_task
 
-        return u_task
+        raise Exception("Device max_vel must be set in the config file (yaml)!")
+
+
 
     @staticmethod
     def calc_task_space_error(target: EEState, device: Device) -> np.ndarray:

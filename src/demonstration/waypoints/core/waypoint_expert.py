@@ -6,13 +6,15 @@ import numpy as np
 import yaml
 import re
 
-from transforms3d.quaternions import qmult, qinverse
+from transforms3d.euler import euler2quat
+from transforms3d.quaternions import qmult, qinverse, axangle2quat
 
 from src.control.utils.ee_state import EEState
 from src.control.utils.enums import GripperState
 from src.demonstration.data_collection.data_collection_wrapper import DataCollectionWrapper
 from src.demonstration.data_collection.hdf5 import gather_demonstrations_as_hdf5
-from src.demonstration.waypoints.core.waypoint import Waypoint
+from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_POSITION_TOLERANCE, \
+    DEFAULT_ORIENTATION_TOLERANCE, DEFAULT_MAX_DURATION, DEFAULT_MIN_DURATION, DEFAULT_MUST_REACH
 from src.environments.core.action import OSAction
 from src.environments.core.enums import ActionMode
 from src.environments.core.environment_interface import IEnvironment
@@ -57,6 +59,8 @@ class WaypointExpertBase(ABC):
         self._dt = 1.0 / self._env.render_fps
         self._rt_handler = RealTimeHandler(self._env.render_fps)
 
+        self._ee_target_methods = self._create_ee_target_methods_dict()
+
     def _create_waypoints(self) -> list[Waypoint]:
         """
         Create the list of waypoints.
@@ -65,7 +69,7 @@ class WaypointExpertBase(ABC):
         """
         waypoints : list[Waypoint] = []
 
-        for waypoint_dict in self._waypoint_cfg["waypoints"]:
+        for waypoint_dict in self._waypoint_cfg:
             waypoints.append(self.__create_waypoint(waypoint_dict, waypoints))
 
         return waypoints
@@ -81,8 +85,9 @@ class WaypointExpertBase(ABC):
         mapped_waypoint = {
             "id": waypoint_dict["id"],
             "description": waypoint_dict["description"],
-            "min_duration": waypoint_dict.get("min_duration", 0.0),
-            "max_duration": waypoint_dict.get("max_duration", 100.0),
+            "min_duration": waypoint_dict.get("min_duration", DEFAULT_MIN_DURATION),
+            "max_duration": waypoint_dict.get("max_duration", DEFAULT_MAX_DURATION),
+            "must_reach": waypoint_dict.get("must_reach", DEFAULT_MUST_REACH),
             "targets": self.__create_targets(waypoint_dict, previous_waypoints)
         }
 
@@ -100,8 +105,8 @@ class WaypointExpertBase(ABC):
         for raw_target in waypoint_dict["targets"]:
             mapped_target = {
                 "device": raw_target["device"],
-                "position_tolerance": raw_target.get("position_tolerance", 0.001),
-                "orientation_tolerance": raw_target.get("orientation_tolerance", 0.001)
+                "pos_tol": raw_target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
+                "rot_tol": raw_target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
             }
 
             ####################################
@@ -109,13 +114,15 @@ class WaypointExpertBase(ABC):
             ####################################
             ee_target = raw_target.get("ee_target", "")
             if ee_target:
-                if re.compile("^wp_\d+$").match(ee_target):
+                pattern = r"wp_(\d+)"
+                if re.compile(pattern).match(ee_target):
                     previous_wp_id = int(ee_target.split("_")[1])
                     pos_quat_grip = self.__get_pos_quat_grip_from_previous_waypoint(raw_target["device"], previous_waypoints, previous_wp_id)
                 else:
-                    if not hasattr(self, f"__{ee_target}"):
-                        raise ValueError(f"[WP] Invalid ee_target {ee_target}. Method __{ee_target} not found in {self.__class__.__name__}")
-                    ee_target_method = getattr(self, f"__{ee_target}")
+                    ee_target_method = self._ee_target_methods.get(ee_target, None)
+                    if ee_target_method is None:
+                        raise NotImplementedError(f"[WP] Method {ee_target} not implemented in {self.__class__.__name__}")
+
                     pos_quat_grip = ee_target_method()
 
                 mapped_target["pos"] = pos_quat_grip["pos"]
@@ -136,7 +143,7 @@ class WaypointExpertBase(ABC):
             mapped_target["quat"] = self.__map_orientation(
                 raw_target.get("quat", None),
                 raw_target.get("euler", None),
-                raw_target.get("axis_angle", None),
+                raw_target.get("ax_angle", None),
                 raw_target["device"],
                 previous_waypoints,
             )
@@ -178,88 +185,155 @@ class WaypointExpertBase(ABC):
         :return: Target position as a list
         """
         if type(pos) is list:
+            if len(pos) != 3:
+                raise ValueError(f"[WP] Invalid position list {pos}. Expected 3 values for [x, y, z]")
             return np.array(pos)
-        elif type(pos) is str:
-            if re.compile("^wp_\d+$").match(pos):
+
+        if type(pos) is str:
+            # "wp_<id>"
+            pattern = r"^wp_(\d+)$"
+            if re.compile(pattern).match(pos):
                 previous_wp_id = int(pos.split("_")[1])
                 pos_quat_grip = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)
                 return pos_quat_grip["pos"]
-            elif #TODO
-                previous_wp_id = int(pos.split("_")[1])
+
+            # "wp_<id> + [dx, dy, dz]"
+            pattern = r"wp_(\d+)\s*\+\s*\[(-?\d*\.?\d+(?:,\s*-?\d*\.?\d+)*)\]"
+            match = re.match(pattern, pos)
+            if match:
+                previous_wp_id = int(match.group(1))
+                d_xyz = np.array([float(x) for x in match.group(2).split(",")])
+                if len(d_xyz) != 3:
+                    raise ValueError(f"[WP] Invalid position string {pos}. Expected 3 values for [dx, dy, dz]")
                 previous_pos_quat_grip = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)
-                dx, dy, dz = ... #TODO
-                return previous_pos_quat_grip["pos"] + np.array([dx, dy, dz])
-            else:
-                raise ValueError(f"[WP] Invalid position string {pos}. Expected 'wp_<id>' or 'wp_<id> + [dx, dy, dz]'")
-        else:
-            raise ValueError(f"[WP] Invalid position. Either 'pos' must be a list or a string.")
+                return previous_pos_quat_grip["pos"] + d_xyz
+
+            # invalid string
+            raise ValueError(f"[WP] Invalid position string {pos}. Expected 'wp_<id>' or 'wp_<id> + [dx, dy, dz]'")
+
+        raise ValueError(f"[WP] Invalid position. Either 'pos' must be a list or a string.")
 
     def __map_orientation(
             self,
             quat: list | str | None,
             euler: list | str | None,
-            axis_angle: list | str | None,
+            ax_angle: list | str | None,
             device: str, previous_waypoints: list[Waypoint]
-    ) -> list:
+    ) -> np.array:
         """
         Map the orientation from a list to the target orientation.
         :param quat: Orientation as a list [w, y, z, z]
             or string that needs to be mapped ("wp_<id>" or "wp_<id> * [w, x, y, z]" or "[w, x, y, z] * wp_<id>")
         :param euler: Orientation as a list [roll, pitch, yaw]
             or string that needs to be mapped ("wp_<id>" or "wp_<id> * [roll, pitch, yaw] or "[roll, pitch, yaw] * wp_<id>")
-        :param axis_angle: Orientation as a list [vx, vy, vz, angle]
+        :param ax_angle: Orientation as a list [vx, vy, vz, angle]
             or string that needs to be mapped ("wp_<id>" or "wp_<id> * [vx, vy, vz, angle] or "[vx, vy, vz, angle] * wp_<id>")
         :param device: device name that the orientation belongs to
         :param previous_waypoints: List of previous waypoints
         :return: Target quaternion as a list [w, x, y, z]
         """
         if quat is not None:
-            return self.__map_quat(quat, device, previous_waypoints)
+            return self.__map_orientation_fn(quat, device, previous_waypoints)
         elif euler is not None:
-            return self.__map_euler(euler, device, previous_waypoints)
-        elif axis_angle is not None:
-            return self.__map_axis_angle(axis_angle, device, previous_waypoints)
+            return self.__map_orientation_fn(
+                euler, device, previous_waypoints,
+                num_values=3, map_fn=self.__euler_to_quat
+            )
+        elif ax_angle is not None:
+            return self.__map_orientation_fn(
+                ax_angle, device, previous_waypoints,
+                map_fn=self.__ax_angle_to_quat
+            )
         else:
-            raise ValueError(f"[WP] Invalid orientation. Either 'quat', 'euler', or 'axis_angle' must be defined.")
+            raise ValueError(f"[WP] Invalid orientation. Either 'quat', 'euler', or 'ax_angle' must be defined.")
 
-    @staticmethod
-    def __map_quat(quat: list | str, device: str, previous_waypoints: list[Waypoint]) -> list:
+    def __map_orientation_fn(
+            self, rot: list | str,
+            device: str,
+            previous_waypoints: list[Waypoint],
+            num_values: int = 4,
+            map_fn: callable = lambda x: x
+    ) -> np.array:
         """
         Map the quaternion from a list to the target quaternion.
-        :param quat: Orientation as a list [w, y, z, z]
-            or string that needs to be mapped ("wp_<id>" or "wp_<id> * [w, x, y, z]" or "[w, x, y, z] * wp_<id>")
+        :param rot: Orientation as a list
+            or string that needs to be mapped ("wp_<id>" or "wp_<id> * [...]" or "[...] * wp_<id>"),
+            where [...] is a list of num_values floats
         :param device: device name that the orientation belongs to
         :param previous_waypoints: List of previous waypoints
+        :param num_values: Number of values in the strings list
+        :param map_fn: Function to map the values in the list to a quaternion
         :return: Target quaternion as a list [w, x, y, z]
         """
-        # TODO implement this
-        raise NotImplementedError
+        if type(rot) is list:
+            if len(rot) != num_values:
+                raise ValueError(f"[WP] Invalid rotation list {rot}. Expected {num_values} values, got {len(rot)}")
+            quat = map_fn(rot)
+            return np.array(quat)
+
+        if type(rot) is str:
+            # "wp_<id>"
+            pattern = r"^wp_(\d+)$"
+            if re.compile(pattern).match(rot):
+                previous_wp_id = int(rot.split("_")[1])
+                pos_quat_grip = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)
+                return pos_quat_grip["quat"]
+
+            # "wp_<id> * [w, x, y, z]"
+            pattern = r"wp_(\d+)\s*\*\s*\[(-?\d*\.?\d+(?:,\s*-?\d*\.?\d+)*)\]"
+            match = re.match(pattern, rot)
+            if match:
+                previous_wp_id = int(match.group(1))
+                d_rot= np.array([float(x) for x in match.group(2).split(",")])
+                if len(d_rot) != num_values:
+                    raise ValueError(f"[WP] Invalid rotation string {rot}. Expected {num_values} values, got {len(d_rot)}")
+                d_quat = map_fn(d_rot)
+                prev_quat = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)["quat"]
+                return qmult(prev_quat, d_quat)
+
+            # "[w, x, y, z] * wp_<id>"
+            pattern = r"\[(-?\d*\.?\d+(?:,\s*-?\d*\.?\d+)*)\]\s*\*\s*wp_(\d+)"
+            match = re.match(pattern, rot)
+            if match:
+                d_rot = np.array([float(x) for x in match.group(1).split(",")])
+                if len(d_rot) != num_values:
+                    raise ValueError(f"[WP] Invalid rotation string {rot}. Expected {num_values} values, got {len(d_rot)}")
+                previous_wp_id = int(match.group(2))
+                d_quat = map_fn(d_rot)
+                pre_quat = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)["quat"]
+                return qmult(d_quat, pre_quat)
+
+            # invalid string
+            raise ValueError(f"[WP] Invalid rotation string {rot}." + \
+                             f" Expected 'wp_<id>' or 'wp_<id> * [w, x, y, z]' or '[w, x, y, z] * wp_<id>'" + \
+                             f", got {rot}")
+
+        raise ValueError(f"[WP] Invalid quaternion. Either 'quat' must be a list or a string.")
 
     @staticmethod
-    def __map_euler(euler: list | str, device: str, previous_waypoints: list[Waypoint]) -> list:
+    def __euler_to_quat(euler: list) -> np.array:
         """
-        Map the euler angles from a list to the target quaternion.
-        :param euler: Orientation as a list [roll, pitch, yaw]
-            or string that needs to be mapped ("wp_<id>" or "wp_<id> * [roll, pitch, yaw] or "[roll, pitch, yaw] * wp_<id>")
-        :param device: device name that the orientation belongs to
-        :param previous_waypoints: List of previous waypoints
-        :return: Target quaternion as a list [w, x, y, z]
+        Convert euler angles to a quaternion.
+        :param euler: Euler angles as a list [roll, pitch, yaw]
+        :return: Quaternion as array [w, x, y, z]
         """
-        # TODO implement this
-        raise NotImplementedError
+        assert len(euler) == 3, f"[WP] Invalid euler angles {euler}. Expected 3 values for [roll, pitch, yaw]"
+        return euler2quat(*euler)
 
     @staticmethod
-    def __map_axis_angle(axis_angle: list | str, device: str, previous_waypoints: list[Waypoint]) -> list:
+    def __ax_angle_to_quat(ax_angle: list) -> np.array:
         """
-        Map the axis angle from a list to the target quaternion.
-        :param axis_angle: Orientation as a list [vx, vy, vz, angle]
-            or string that needs to be mapped ("wp_<id>" or "wp_<id> * [vx, vy, vz, angle] or "[vx, vy, vz, angle] * wp_<id>")
-        :param device: device name that the orientation belongs to
-        :param previous_waypoints: List of previous waypoints
-        :return: Target quaternion as a list [w, x, y, z]
+        Convert axis angle to a quaternion.
+        :param ax_angle: Axis angle as a list [vx, vy, vz, angle]
+        :return: Quaternion as array [w, x, y, z]
         """
-        # TODO implement this
-        raise NotImplementedError
+        assert len(ax_angle) == 4, f"[WP] Invalid axis angle {ax_angle}. Expected 4 values for [vx, vy, vz, theta]"
+        vx, vy, vz, angle = ax_angle
+        return axangle2quat(
+            vector=[vx, vy, vz],
+            theta=angle,
+            is_normalized=False
+        )
 
     @staticmethod
     def __map_gripper_state(grip: str | int) -> GripperState:
@@ -438,6 +512,14 @@ class WaypointExpertBase(ABC):
         gather_demonstrations_as_hdf5(tmp_directory, out_dir, self._env.args)
 
         self._env.clean_up()
+
+    @abstractmethod
+    def _create_ee_target_methods_dict(self) -> dict:
+        """
+        Create a dictionary of methods that return the position, orientation, and gripper state of a device.
+        :return: Dictionary of methods
+        """
+        return {}
 
 
 

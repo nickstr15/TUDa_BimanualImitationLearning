@@ -36,17 +36,17 @@ class PandaHandoverEnv(PandaEnvBase):
 
     def _get_random_free_joints_quat_pos(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         # random orientation of the cuboid and the box
-        angle_range = np.deg2rad(170)
+        angle_range = [np.deg2rad(-90), np.deg2rad(90)]
         rot_vec = np.array([0, 0, 1])
-        angle_cuboid = np.random.uniform(-angle_range, angle_range)
-        angle_box = np.random.uniform(-angle_range, angle_range)
+        angle_cuboid = np.random.uniform(*angle_range)
+        angle_box = np.random.uniform(*angle_range)
         quat_cuboid = axangle2quat(rot_vec, angle_cuboid, True)
         quat_box = axangle2quat(rot_vec, angle_box, True)
 
         # random position of the cuboid and the box
-        x_range = [0.3, 0.5]
-        y_range_cuboid = [-0.5, -0.3]
-        y_range_box = [0.3, 0.5]
+        x_range = [0.35, 0.5]
+        y_range_cuboid = [-0.6, -0.35]
+        y_range_box = [0.35, 0.6]
         x_cuboid = np.random.uniform(*x_range)
         y_cuboid = np.random.uniform(*y_range_cuboid)
         x_box = np.random.uniform(*x_range)
@@ -94,7 +94,7 @@ class PandaHandoverEnv(PandaEnvBase):
     def _check_success(self) -> bool:
         object_positions = self._get_object_quat_pos()
         cuboid_quat, cuboid_pos = object_positions["cuboid_center"]
-        box_quat, box_pos = object_positions["box_center"][0]
+        box_quat, box_pos = object_positions["box_center"]
 
         # check if the cuboid is in correct height
         if np.abs(cuboid_pos[2] - box_pos[2]) > 0.005:

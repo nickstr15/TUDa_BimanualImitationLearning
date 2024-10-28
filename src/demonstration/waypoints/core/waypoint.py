@@ -10,6 +10,7 @@ DEFAULT_POSITION_TOLERANCE = 0.01
 DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
 DEFAULT_MIN_DURATION = 0.5 # before this time, the waypoint is not considered reached
 DEFAULT_MAX_DURATION = 30.0 # after this time, the waypoint is considered as unreachable
+DEFAULT_MUST_REACH = True
 
 class EEStateTarget(EEState):
     """
@@ -92,14 +93,15 @@ class Waypoint:
         self._des = waypoint_dict["description"]
         self._min_duration = waypoint_dict.get("min_duration", DEFAULT_MIN_DURATION)
         self._max_duration = waypoint_dict.get("max_duration", DEFAULT_MAX_DURATION)
+        self._must_reach = waypoint_dict.get("must_reach", DEFAULT_MUST_REACH)
         self._targets = {}
         for target in waypoint_dict["targets"]:
             self._targets[target["device"]] = EEStateTarget(
-                xyz=target["position"],
-                rot=target["orientation"],
-                grip=target["gripper"],
-                position_tolerance=target.get("position_tolerance", DEFAULT_POSITION_TOLERANCE),
-                orientation_tolerance=target.get("orientation_tolerance", DEFAULT_ORIENTATION_TOLERANCE)
+                xyz=target["pos"],
+                rot=target["quat"],
+                grip=target["grip"],
+                position_tolerance=target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
+                orientation_tolerance=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
             )
 
     @property
@@ -119,8 +121,10 @@ class Waypoint:
         unreachable = False
         if dt < self._min_duration:
             return False, False
-        if dt > self._max_duration:
+        if dt > self._max_duration and self._must_reach:
             unreachable = True
+        if dt >self._max_duration and not self._must_reach:
+            return True, False
 
         is_reached = True
         for device, target in self._targets.items():

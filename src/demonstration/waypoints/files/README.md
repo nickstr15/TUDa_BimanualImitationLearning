@@ -34,14 +34,16 @@ This folder contains the waypoint files for the different tasks.
         
       grip: <gripper_state>          # desired gripper state (0: closed, 255: open)
       
-      tolerance_position: <tol>      # position tolerance (default: 0.01)
-      tolerance_orientation: <tol>   # orientation tolerance in degrees (default: 5°)
+      pos_tol: <tol>                 # position tolerance (default: 0.01)
+      rot_tol: <tol>                 # orientation tolerance in degrees (default: 5°)
     
     - device: <device_name>
       # ...
       
   min_duration: <time>               # time [sec] before status "reached" is possible (default: 1.0)
-  max_duration: <time>               # time [sec] to mark waypoint as "unreachable" (default: 30.0)
+  max_duration: <time>               # time [sec] max_time to reach target (default: 30.0)
+  must_reach: <bool>                 # if True, the waypoint must be reached (default: True)
+                                     # if True the target is marked as "unreachable" after max_duration seconds
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -51,11 +53,23 @@ This folder contains the waypoint files for the different tasks.
 
 ### Details for the `ee_target`
 If the `ee_target` value is specified, the tags `pos`, `quat`, `euler`, `ax_angle`, `grip` are ignored. 
-The WaypointExpert class must provide a method with the name specified in `ee_target` that returns a dictionary with the keys `pos`, `quat`, `grip`. If for example the `ee_target` is set to `"pick_up_position"`, the WaypointExpert class must provide a method with the following signature:
+The WaypointExpert class must provide a method with the name specified in `ee_target` that returns a dictionary with the keys `pos`, `quat`, `grip`. 
+If for example the `ee_target` is set to `"pick_up_position"`, the WaypointExpert class must declare a string-method pair in the 
+`__create_ee_target_methods_dict` method like this:
 
 ```python
-@property
+def _create_ee_target_methods_dict(self) -> dict:
+    """
+    Create a dictionary of methods to get the special end-effector targets.
+    """
+    return {
+        # ...
+        "pick_up_position": self.__pick_up_position,
+        # ...
+    }
+
 def __pick_up_position(self):
+    # The method must return a dictionary with the keys "pos", "quat", "grip"
     return {
         'pos': [0, 0, 0],
         'quat': [1, 0, 0, 0],
