@@ -2,8 +2,8 @@
 Script to play back demonstrations for the Panda handover task.
 
 Arguments:
-    --hdf5_folder -f: path to the hdf5 file containing the demonstrations in root/data/panda_handover.
-        Example: -f "sample" => root/data/panda_handover/sample/demo.hdf5
+    --hdf5_folder -f: path to the hdf5 file containing the demonstrations in root/data/panda_handover,
+        e.g. -f "sample" => root/data/panda_handover/sample/demo.hdf5
     --use_actions -ua: flag to use the actions for playback instead of loading the simulation states one by one
     --target_real_time -rt: flag to play back the demonstrations in real time
     --num_episodes -ne: number of episodes to play back. If None, all episodes are played back.
@@ -14,7 +14,6 @@ import os
 
 from src.demonstration.data_collection.hdf5 import playback_demonstrations_from_hdf5
 from src.utils.paths import DEMOS_DIR
-
 
 def main():
     parser = argparse.ArgumentParser()

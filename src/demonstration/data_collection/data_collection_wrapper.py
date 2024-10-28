@@ -12,7 +12,7 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
     Custom data collection wrapper to handle non-flattened actions.
     """
     @override
-    def _start_new_episode(self):
+    def _start_new_episode(self) -> None:
         """
         Bookkeeping to do at the start of each new episode.
 
@@ -35,7 +35,7 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
         self.env.set_state_from_flattened(self._current_task_instance_state)
 
     @override
-    def step(self, action):
+    def step(self, action) -> tuple:
         """
         Extends vanilla step() function call to accommodate data collection
 
@@ -85,10 +85,19 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
 
         return ret
 
-    def clean_up(self):
+    def clean_up(self) -> None:
         """
         Clean up the directory
         """
         os.system("rm -r {}".format(self.directory))
         self.has_interaction = False
         print("DataCollectionWrapper: Deleted directory at {}".format(self.directory))
+
+    def update_state(self) -> None:
+        """
+        Update the current task instance state.
+        Call this if the environment state has been changed outside the wrapper,
+        e.g. after custom reset.
+        :return:
+        """
+        self._current_task_instance_state = np.array(self.env.get_state().flatten())

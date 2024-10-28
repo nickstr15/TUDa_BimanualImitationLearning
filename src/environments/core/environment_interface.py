@@ -445,7 +445,7 @@ class IEnvironment(MujocoEnv, ABC):
 
     def randomize(self) -> Tuple:
         """
-        Randomize the environment.
+        Reset the environment to randomized state.
 
         :return: observation, info
         """

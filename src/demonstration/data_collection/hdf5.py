@@ -160,6 +160,7 @@ def playback_demonstrations_from_hdf5(
         if use_actions:
             #load initial state
             env.unwrapped.set_state_from_flattened(states[0])
+            env.render()
 
             actions = f["data/{}/actions".format(episode)][()]
 

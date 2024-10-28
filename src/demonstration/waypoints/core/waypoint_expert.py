@@ -423,6 +423,8 @@ class WaypointExpertBase(ABC):
         self._env.reset()
         if random:
             self._env.randomize()
+            if type(self._env) == DataCollectionWrapper:
+                self._env.update_state()
         current_ee_states = self._env.get_robot_ee_states()
 
         waypoints = self._create_waypoints()
@@ -506,7 +508,7 @@ class WaypointExpertBase(ABC):
         success_count = 0
         count = 0
         while success_count < num_successes:
-            success_count += self._run_episode(render=render, target_real_time=target_real_time)
+            success_count += self._run_episode(render=render, target_real_time=target_real_time, random=True)
             count += 1
             print(f"[INFO] Collected {success_count}/{num_successes} successful demonstrations after {count} episodes.")
 
