@@ -113,7 +113,9 @@ def gather_demonstrations_as_hdf5(
 def playback_demonstrations_from_hdf5(
     hdf5_file : str,
     use_actions : bool = False,
-    target_real_time : bool = False) -> None:
+    target_real_time : bool = False,
+    num_episodes : int = None
+) -> None:
     """
     Modified version of the sample code from the robosuite library:
     https://github.com/ARISE-Initiative/robosuite/blob/master/robosuite/scripts/playback_demonstrations_from_hdf5.py
@@ -123,6 +125,7 @@ def playback_demonstrations_from_hdf5(
     :param hdf5_file: Path to the hdf5 file containing the demonstrations.
     :param use_actions: Whether to use the actions for playback instead of loading the simulation states one by one.
     :param target_real_time: Whether to play back the demonstrations in real time.
+    :param num_episodes: Number of episodes to play back. If None, all episodes are played back.
     """
     assert os.path.exists(hdf5_file), "File {} does not exist".format(hdf5_file)
 
@@ -140,9 +143,12 @@ def playback_demonstrations_from_hdf5(
 
     # list of all demonstrations episodes
     demos = list(f["data"].keys())
+    # suffle the list of episodes
+    np.random.shuffle(demos)
 
     rt = RealTimeHandler(env.unwrapped.render_fps)
 
+    count = 0
     for episode in demos:
         print("Playing back episode: {}".format(episode))
 
@@ -174,5 +180,9 @@ def playback_demonstrations_from_hdf5(
 
                 if target_real_time:
                     rt.sleep()
+
+        count += 1
+        if num_episodes is not None and count >= num_episodes:
+            break
 
     env.close()

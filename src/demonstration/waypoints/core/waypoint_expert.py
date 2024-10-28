@@ -420,21 +420,20 @@ class WaypointExpertBase(ABC):
             target_real_time = False
 
         # reset the environment
-        reset_options = dict(
-            randomize=random,
-        )
-        self._env.reset(options=reset_options)
+        self._env.reset()
+        if random:
+            self._env.randomize()
         current_ee_states = self._env.get_robot_ee_states()
 
         waypoints = self._create_waypoints()
 
         steps_terminated = 0
         success = False
-        for waypoint in waypoints:
+        for n, waypoint in enumerate(waypoints):
+            is_last_wp = n == len(waypoints) - 1
             wp_step = 0
-            reached, unreachable = False, False
             self._rt_handler.reset()
-            while (not reached) and (not unreachable):
+            while True:
                 action = self._get_action(current_ee_states, waypoint)
                 observation, _, terminated, _, _ = self._env.step(action)
                 if render:
@@ -445,9 +444,10 @@ class WaypointExpertBase(ABC):
                     current_ee_states, wp_step * self._dt
                 )
 
-                if unreachable:
+                if reached and not is_last_wp:
                     break
-
+                elif unreachable:
+                    break
 
                 if terminated:
                     steps_terminated += 1
@@ -504,8 +504,11 @@ class WaypointExpertBase(ABC):
         self._env = DataCollectionWrapper(self._env, tmp_directory)
 
         success_count = 0
+        count = 0
         while success_count < num_successes:
             success_count += self._run_episode(render=render, target_real_time=target_real_time)
+            count += 1
+            print(f"[INFO] Collected {success_count}/{num_successes} successful demonstrations after {count} episodes.")
 
         self._env.close()
 

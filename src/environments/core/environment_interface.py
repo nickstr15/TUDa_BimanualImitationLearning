@@ -443,31 +443,18 @@ class IEnvironment(MujocoEnv, ABC):
         """
         return self.metadata['render_fps']
 
-    @override
-    def reset(
-        self,
-        *,
-        seed: Optional[int] = None,
-        options: Optional[dict] = None,
-    ):
+    def randomize(self) -> Tuple:
         """
-        Reset the environment to the initial state.
-        Adapted from MujocoEnv.reset() to make use of the options' parameter.
-        :param seed:
-        :param options: dictionary of additional options for the reset,
-            currently only options[randomize] and options[render] are used
-        :return:
+        Randomize the environment.
+
+        :return: observation, info
         """
-        super().reset(seed=seed)
+        ob = self.reset_model(options={"randomize": True})
+        info = self._get_info()
 
-        mujoco.mj_resetData(self.model, self.data)
-
-        ob = self.reset_model(options)
-        info = self._get_reset_info()
-
-        if self.render_mode == "human" and \
-           (options.get("render", False) if options is not None else False):
+        if self.render_mode == "human":
             self.render()
+
         return ob, info
 
     @override

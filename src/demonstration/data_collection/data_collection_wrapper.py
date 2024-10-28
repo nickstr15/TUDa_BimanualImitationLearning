@@ -34,7 +34,6 @@ class DataCollectionWrapper(RSDataCollectionWrapper):
         self.env.reset()
         self.env.set_state_from_flattened(self._current_task_instance_state)
 
-
     @override
     def step(self, action):
         """
