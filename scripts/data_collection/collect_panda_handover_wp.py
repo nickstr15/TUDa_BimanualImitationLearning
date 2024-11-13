@@ -14,7 +14,7 @@ import argparse
 import datetime
 import os
 
-from src.demonstration.waypoints.panda_handover_wp_expert import PandaHandoverWpExpert
+from src.demonstration.waypoints.panda_handover_wp_expert import TwoArmPickPlaceWaypointExpert
 from src.environments.core.enums import ActionMode
 from src.utils.paths import DEMOS_DIR
 
@@ -38,7 +38,7 @@ def main():
 
     out_dir = os.path.join(DEMOS_DIR, "panda_handover", "wp", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
-    expert = PandaHandoverWpExpert(env_args)
+    expert = TwoArmPickPlaceWaypointExpert(env_args)
     expert.collect_data(out_dir, args.num_success, args.visualize, args.real_time)
     expert.dispose()
 

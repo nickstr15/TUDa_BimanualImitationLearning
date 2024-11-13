@@ -19,6 +19,18 @@ class RealTimeHandler:
     def __init__(self, frequency: float = 1.0):
         """
         Initialize the handler.
+
+        Example usage:
+
+        rt = RealTimeHandler(render_fps)
+        rt.reset() <-- call this directly before loop
+        for i in range(1000):
+            ################################
+            # do something that takes time #
+            # e.g. rendering               #
+            ################################
+            rt.sleep() <-- call this at the end of the loop
+
         :param frequency: The desired frequency
         """
         self._frequency = frequency

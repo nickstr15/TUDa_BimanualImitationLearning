@@ -1,4 +1,0 @@
-<mujoco>
-    <include file="assets/world.xml"/>
-    <include file="assets/franka_emika_panda/dual_panda.xml"/>
-</mujoco>

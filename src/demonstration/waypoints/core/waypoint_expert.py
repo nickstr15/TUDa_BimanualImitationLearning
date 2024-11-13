@@ -1,36 +1,34 @@
 import os.path
-import time
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 
 import numpy as np
 import yaml
 import re
 
-from transforms3d.euler import euler2quat
+from robosuite.controllers.parts.arm import OperationalSpaceController
+from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
+from transforms3d.euler import euler2quat, mat2euler, quat2euler
 from transforms3d.quaternions import qmult, qinverse, axangle2quat
 
-from src.control.utils.ee_state import EEState
-from src.control.utils.enums import GripperState
-from src.demonstration.data_collection.data_collection_wrapper import DataCollectionWrapper
-from src.demonstration.data_collection.hdf5 import gather_demonstrations_as_hdf5
-from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_POSITION_TOLERANCE, \
-    DEFAULT_ORIENTATION_TOLERANCE, DEFAULT_MAX_DURATION, DEFAULT_MIN_DURATION, DEFAULT_MUST_REACH
-from src.environments.core.action import OSAction
-from src.environments.core.enums import ActionMode
-from src.environments.core.environment_interface import IEnvironment
+from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
+    DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE
 from src.utils.clipping import clip_translation, clip_quat
 from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
 from src.utils.real_time import RealTimeHandler
+from src.utils.robot_states import TwoArmEEState
+from src.utils.robot_targets import GripperTarget
 
-class WaypointExpertBase(ABC):
+
+class TwoArmWaypointExpertBase(ABC):
     """
     Class for an expert agent that acts in the environment
     by following a predefined trajectory of waypoints.
     """
     def __init__(
         self,
-        environment : IEnvironment,
+        environment : TwoArmEnv,
         waypoints_file : str,
         max_delta_translation : float = MAX_DELTA_TRANSLATION,
         max_delta_rotation : float = MAX_DELTA_ROTATION,
@@ -52,14 +50,38 @@ class WaypointExpertBase(ABC):
         with open(full_waypoints_path, 'r') as f:
             self._waypoint_cfg = yaml.safe_load(f)
 
-        self._action_mode = self._env.action_mode
+        self._action_mode = self._check_action_mode()
 
         # minimum number of steps in done state (-> 1 second)
-        self._min_steps_terminated = int(1.0 * self._env.render_fps)
-        self._dt = 1.0 / self._env.render_fps
-        self._rt_handler = RealTimeHandler(self._env.render_fps)
+        self._min_steps_terminated = int(1.0 * self._env.control_freq)
+        self._dt = 1.0 / self._env.control_freq
+        self._rt_handler = RealTimeHandler(self._env.control_freq)
 
         self._ee_target_methods = self._create_ee_target_methods_dict()
+
+    def _check_action_mode(self) -> str:
+        """
+        Check the action mode.
+        It must be the same for all devices and can be either 'delta' or 'absolute'.
+        :return: The action mode
+        """
+        mode = None
+        for robot in self._env.robots:
+            for name, part_controller in robot.composite_controller.part_controllers.items():
+                if name not in ["left", "right"]:
+                    continue
+                if type(part_controller) != OperationalSpaceController:
+                    raise ValueError(f"[WP] Only OperationalSpaceController is supported, got {type(part_controller)}")
+                if mode is None:
+                    mode = part_controller.input_type
+                elif mode != part_controller.input_type:
+                    raise ValueError(
+                        f"[WP] Inconsistent action modes for the devices.  {mode}, got {part_controller.input_type}")
+
+        assert mode in ["delta", "absolute"], \
+            f"[WP] Invalid action mode {mode}. Expected 'delta' or 'absolute' for all arms."
+
+        return mode
 
     def _create_waypoints(self) -> list[Waypoint]:
         """
@@ -147,7 +169,7 @@ class WaypointExpertBase(ABC):
                 raw_target["device"],
                 previous_waypoints,
             )
-            mapped_target["grip"] = self.__map_gripper_state(raw_target.get("grip", None))
+            mapped_target["grip"] = self.__map_gripper_target(raw_target.get("grip", None))
 
             mapped_targets.append(mapped_target)
 
@@ -169,11 +191,11 @@ class WaypointExpertBase(ABC):
         if previous_wp is None:
             raise ValueError(f"[WP] Previous waypoint with id {previous_wp_id} not found. Invalid yaml configuration.")
 
-        previous_target = previous_wp.targets[device]
+        previous_target = previous_wp.target.left if device == "robot_left" else previous_wp.target.right
         return {
-            "pos": previous_target.get_xyz(),
-            "quat": previous_target.get_quat(),
-            "grip": previous_target.get_gripper_state()
+            "pos": previous_target.xyz,
+            "quat": previous_target.quat,
+            "grip": previous_target.grip
         }
 
     def __map_position(self, pos: list | str | None, device: str, previous_waypoints: list[Waypoint]) -> np.array:
@@ -336,24 +358,22 @@ class WaypointExpertBase(ABC):
         )
 
     @staticmethod
-    def __map_gripper_state(grip: str | int) -> GripperState:
+    def __map_gripper_target(grip: str | None) -> float:
         """
         Map the gripper state from a string to the GripperState enum.
         :param grip: Gripper state as a string
         :return: Gripper state as a GripperState enum
         """
         if type(grip) is str and grip.casefold() == "OPEN".casefold():
-            return GripperState.OPEN
+            return GripperTarget.OPEN_VALUE
         elif type(grip) is str and grip.casefold() == "CLOSED".casefold():
-            return GripperState.CLOSED
-        elif type(grip) is int and grip == 255:
-            return GripperState.OPEN
-        elif type(grip) is int and grip == 0:
-            return GripperState.CLOSED
+            return GripperTarget.CLOSED_VALUE
+        elif grip is None:
+            return GripperTarget.OPEN_VALUE
         else:
-            raise ValueError(f"[WP] Invalid gripper state {grip}. Valid values are 'OPEN', 255, 'CLOSED', 0")
+            raise ValueError(f"[WP] Invalid gripper state {grip}. Valid values are 'OPEN', 'CLOSED'")
 
-    def _get_action(self, current_state: dict, waypoint: Waypoint) -> OSAction:
+    def _get_action(self, current_state: OrderedDict, waypoint: Waypoint) -> np.ndarray:
         """
         Get the action to reach the waypoint.
         The output is a clipped version of the Waypoint state to
@@ -362,70 +382,75 @@ class WaypointExpertBase(ABC):
         :param waypoint: Waypoint to reach
         :return: Action to reach the waypoint
         """
-        assert current_state.keys() == waypoint.targets.keys(), "Current state and waypoint targets do not match"
-
-        targets = {
-            name : EEState()
-            for name in waypoint.targets.keys()
-        }
-
         max_delta_translation = self._max_delta_translation
         max_delta_rotation = self._max_delta_rotation
 
-        for name, target in waypoint.targets.items():
-            current = current_state[name]
+        current = TwoArmEEState.from_dict(current_state, self._env.env_configuration)
 
+        target_lr = [waypoint.target.left, waypoint.target.right]
+        current_lr = [current.left, current.right]
+        action_lr = []
+
+        for target, current in zip(target_lr, current_lr):
             # Clip the translation
-            pos_target = target.get_xyz()
-            pos_current = current.get_xyz()
+            pos_target = target.xyz
+            pos_current = current.xyz
             pos_delta = clip_translation(pos_target - pos_current, max_delta_translation)
-            if self._action_mode == ActionMode.ABSOLUTE:
-                targets[name].set_xyz(pos_delta + pos_current)
-            elif self._action_mode == ActionMode.RELATIVE:
-                targets[name].set_xyz(pos_delta)
+            if self._action_mode == "absolute":
+                pos_action = pos_current + pos_delta
+            elif self._action_mode == "delta":
+                pos_action = pos_delta
+                # TODO: rescale from range [-0.05, 0.05] to range [-1, 1], better: depending on the controller config
+                # => see https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149
+
+            else:
+                raise ValueError(f"[WP] Invalid action mode {self._action_mode}. Expected 'delta' or 'absolute'")
 
             # Clip the rotation
-            quat_target = target.get_quat()
-            quat_current = current.get_quat()
+            quat_target = target.quat
+            quat_current = current.quat
             quat_delta = clip_quat(
                 qmult(quat_target, qinverse(quat_current)),
                 max_delta_rotation
             )
-            if self._action_mode == ActionMode.ABSOLUTE:
-                targets[name].set_quat(qmult(quat_delta, quat_current))
+            if self._action_mode == "absolute":
+                rot_target = qmult(quat_delta, quat_current)
+                rot_action = quat2euler(rot_target)
             else:
-                targets[name].set_quat(quat_delta)
+                rot_action = quat2euler(quat_delta)
+
+                # TODO: rescale from range [-0.5, 0.5] to range [-1, 1], better: depending on the controller config
+                # => see https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149
 
             # Set GripperState
-            targets[name].set_gripper_state(target.get_gripper_state())
+            grip_action = np.array([target.grip])
 
-        return OSAction(targets)
+            action_lr.append(
+                np.concatenate([pos_action, rot_action, grip_action])
+            )
+
+        action = np.concatenate(action_lr)
+        return action
 
     def _run_episode(
         self,
         render : bool = False,
         target_real_time : bool = False,
-        random : bool = True,
     ) -> bool:
         """
         Run the expert agent in the environment.
         :param render: Whether to render the environment
         :param target_real_time: Whether to render in real time
-        :param random: Whether to randomize the initial configuration of each episode
 
         :return: True if the episode was successful
         """
-        if target_real_time and not (render and self._env.render_mode == "human"):
-            print("[INFO] Real time rendering requires rendering in human mode, ignoring real time rendering.")
+        if target_real_time and not (render and self._env.has_renderer):
+            print("[TwoArmWaypointExpertBase - INFO] Ignoring real time rendering as the environment " + \
+                  "does not have a renderer and/or render==False.")
             target_real_time = False
 
         # reset the environment
-        self._env.reset()
-        if random:
-            self._env.randomize()
-            if type(self._env) == DataCollectionWrapper:
-                self._env.update_state()
-        current_ee_states = self._env.get_robot_ee_states()
+        obs = self._env.reset()
 
         waypoints = self._create_waypoints()
 
@@ -436,14 +461,13 @@ class WaypointExpertBase(ABC):
             wp_step = 0
             self._rt_handler.reset()
             while True:
-                action = self._get_action(current_ee_states, waypoint)
-                observation, _, terminated, _, _ = self._env.step(action)
+                action = self._get_action(obs, waypoint)
+                obs, _, done, _ = self._env.step(action)
                 if render:
                     self._env.render()
                 wp_step += 1
-                current_ee_states = self._env.get_robot_ee_states()
                 reached, unreachable = waypoint.is_reached_by(
-                    current_ee_states, wp_step * self._dt
+                    obs, self._env.env_configuration, wp_step * self._dt
                 )
 
                 if reached and not is_last_wp:
@@ -451,7 +475,7 @@ class WaypointExpertBase(ABC):
                 elif unreachable:
                     break
 
-                if terminated:
+                if done:
                     steps_terminated += 1
                     if steps_terminated >= self._min_steps_terminated:
                         success = True
@@ -502,21 +526,7 @@ class WaypointExpertBase(ABC):
         :param render: Whether to render the environment
         :param target_real_time: Whether to render in real time
         """
-        tmp_directory = "/tmp/bil_wp/{}".format(str(time.time()).replace(".", "_"))
-        self._env = DataCollectionWrapper(self._env, tmp_directory)
-
-        success_count = 0
-        count = 0
-        while success_count < num_successes:
-            success_count += self._run_episode(render=render, target_real_time=target_real_time, random=True)
-            count += 1
-            print(f"[INFO] Collected {success_count}/{num_successes} successful demonstrations after {count} episodes.")
-
-        self._env.close()
-
-        gather_demonstrations_as_hdf5(tmp_directory, out_dir, self._env.args)
-
-        self._env.clean_up()
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def _create_ee_target_methods_dict(self) -> dict:

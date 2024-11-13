@@ -1,0 +1,13 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+      
+
+
+
+
+

@@ -1,8 +1,0 @@
-<mujoco>
-    <size njmax="3000" nconmax="1000"/>
-    <include file="assets/world.xml"/>
-    <include file="assets/franka_emika_panda/dual_panda.xml"/>
-
-    <include file="assets/quad_insert/quad_peg/quad_bracket.xml"/>
-    <include file="assets/quad_insert/quad_peg/quad_pegs.xml"/>
-</mujoco>

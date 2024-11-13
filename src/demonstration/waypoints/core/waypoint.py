@@ -1,75 +1,14 @@
-from typing import Dict
-
 import numpy as np
-from transforms3d.quaternions import qmult, qinverse, quat2axangle
+from collections import OrderedDict
 
-from src.control.utils.ee_state import EEState
-from src.control.utils.enums import GripperState
+from src.utils.robot_states import TwoArmEEState
+from src.utils.robot_targets import EETarget, TwoArmEETarget, GripperTarget
 
 DEFAULT_POSITION_TOLERANCE = 0.01
 DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
 DEFAULT_MIN_DURATION = 0.5 # before this time, the waypoint is not considered reached
 DEFAULT_MAX_DURATION = 30.0 # after this time, the waypoint is considered as unreachable
 DEFAULT_MUST_REACH = True
-
-class EEStateTarget(EEState):
-    """
-    The EEStateTarget class extends the ArmState class
-    by adding tolerance values for the position and orientation.
-    """
-
-    def __init__(
-        self,
-        xyz: np.ndarray = np.zeros(3),
-        rot: np.ndarray = np.zeros(3),
-        grip: GripperState = GripperState.OPEN,
-        position_tolerance: float = DEFAULT_POSITION_TOLERANCE,
-        orientation_tolerance: float = DEFAULT_ORIENTATION_TOLERANCE,
-    ) -> None:
-        """
-        :param xyz: xyz position
-        :param rot: euler angles or quaternion
-        :param grip: gripper state (open or closed)
-        :param position_tolerance: threshold quantifying if pos_target is reached
-        :param orientation_tolerance: threshold quantifying if tor_target is reached
-        """
-        super().__init__(xyz, rot, grip)
-        self._position_tolerance = position_tolerance
-        self._orientation_tolerance = orientation_tolerance
-
-
-    def get_position_tolerance(self) -> float:
-        """
-        :return: Position tolerance
-        """
-        return self._position_tolerance
-
-    def get_orientation_tolerance(self) -> float:
-        """
-        :return: Orientation tolerance
-        """
-        return self._orientation_tolerance
-
-    def is_reached_by(self, current_state: EEState) -> bool:
-        """
-        Check if the target state is reached by the current state.
-        :param current_state: Current state
-        :return: True if the target state is reached by the current state
-        """
-        current_xyz = current_state.get_xyz()
-        current_quat = current_state.get_quat()
-        current_grip = current_state.get_gripper_state()
-
-        target_xyz = self.get_xyz()
-        target_quat = self.get_quat()
-        target_grip = self.get_gripper_state()
-
-        position_diff = np.linalg.norm(target_xyz - current_xyz)
-        orientation_diff = quat2axangle(qmult(current_quat, qinverse(target_quat)))[1]
-
-        return position_diff <= self._position_tolerance \
-            and orientation_diff <= self._orientation_tolerance \
-            and current_grip == target_grip
 
 class Waypoint:
     """
@@ -94,27 +33,49 @@ class Waypoint:
         self._min_duration = waypoint_dict.get("min_duration", DEFAULT_MIN_DURATION)
         self._max_duration = waypoint_dict.get("max_duration", DEFAULT_MAX_DURATION)
         self._must_reach = waypoint_dict.get("must_reach", DEFAULT_MUST_REACH)
-        self._targets = {}
+
+        left = EETarget()
+        right = EETarget()
+
+
         for target in waypoint_dict["targets"]:
-            self._targets[target["device"]] = EEStateTarget(
-                xyz=target["pos"],
-                rot=target["quat"],
-                grip=target["grip"],
-                position_tolerance=target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                orientation_tolerance=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
-            )
+            if target["device"] == "robot_left":
+                left = EETarget(
+                    xyz=target["pos"],
+                    quat=target["quat"],
+                    grip=target["grip"],
+                    pos_tol=target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
+                    ori_tol=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                )
+            elif target["device"] == "robot_right":
+                right = EETarget(
+                    xyz=target["pos"],
+                    quat=target["quat"],
+                    grip=target["grip"],
+                    pos_tol=target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
+                    ori_tol=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                )
+            else:
+                print("[Waypoint - WARNING]: Ignoring target for unknown device: ", target["device"])
+
+        self._target = TwoArmEETarget(left, right)
 
     @property
-    def targets(self) -> Dict[str, EEStateTarget]:
+    def target(self) -> TwoArmEETarget:
         """
         :return: Targets
         """
-        return self._targets
+        return self._target
 
-    def is_reached_by(self, current_robot_state: dict[str, EEState], dt : float) -> tuple[bool, bool]:
+    def is_reached_by(
+            self,
+            current_robot_state: OrderedDict,
+            env_config: str,
+            dt: float) -> tuple[bool, bool]:
         """
         Check if the waypoint is reached by the current state.
         :param current_robot_state: Current state
+        :param env_config: environment configuration ("single-robot", "parallel" or "opposed")
         :param dt: elapsed time in seconds
         :return: True if the waypoint is reached by the current state
         """
@@ -126,9 +87,8 @@ class Waypoint:
         if dt >self._max_duration and not self._must_reach:
             return True, False
 
-        is_reached = True
-        for device, target in self._targets.items():
-            is_reached = is_reached and target.is_reached_by(current_robot_state[device])
+        current_robot_state = TwoArmEEState.from_dict(current_robot_state, env_config)
+        is_reached = self._target.is_reached_by(current_robot_state)
 
         return is_reached, unreachable
 
