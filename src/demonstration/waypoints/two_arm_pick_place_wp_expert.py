@@ -1,14 +1,12 @@
 from typing import OrderedDict
-
 import numpy as np
-
-from src.demonstration.waypoints.core.waypoint_expert import TwoArmWaypointExpertBase
-from src.environments.manipulation.two_arm_pick_place import TwoArmPickPlace
 
 import robosuite as suite
 
 from src.utils.robot_states import TwoArmEEState, EEState
 from src.utils.robot_targets import GripperTarget
+from src.demonstration.waypoints.core.waypoint_expert import TwoArmWaypointExpertBase
+from src.environments.manipulation.two_arm_pick_place import TwoArmPickPlace
 
 
 class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
@@ -59,7 +57,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
         """
         state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).left
         dct = {
-            "pos": state.xyz + np.array([0.0, 0.0, 0.05]), #TODO remove shift after testing
+            "pos": state.xyz,
             "quat": state.quat,
             "grip": GripperTarget.OPEN_VALUE
         }
@@ -74,7 +72,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
         """
         state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).right
         dtc = {
-            "pos": state.xyz + np.array([0.0, 0.0, -0.1]), #TODO remove shift after testing
+            "pos": state.xyz,
             "quat": state.quat,
             "grip": GripperTarget.CLOSED_VALUE
         }
