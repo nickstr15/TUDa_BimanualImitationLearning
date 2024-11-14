@@ -5,7 +5,7 @@ import time
 
 import numpy as np
 import yaml
-from transforms3d.euler import quat2euler, euler2quat
+from robosuite.utils.transform_utils import quat2mat, mat2euler, euler2mat, mat2quat
 
 from src.demonstration.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget, PSMoveButtonState
 
@@ -172,10 +172,10 @@ class PSMoveInterface:
                 self._tracker.enable_with_color(controller, *state.color)
 
             quat = controller.get_orientation()
-            eul0, eul1, eul2 = quat2euler(quat)
-            new_eul = [eul2, -eul0, eul1]
-            new_quat = euler2quat(*new_eul)
-            state.quat = np.asarray(new_quat)
+            eul = mat2euler(quat2mat(quat))
+            new_eul = np.array([eul[2], -eul[0], eul[1]])
+            new_quat = mat2quat(euler2mat(new_eul))
+            state.quat = np.array(new_quat)
 
             trigger_value = controller.get_trigger()
             state.trigger = trigger_value

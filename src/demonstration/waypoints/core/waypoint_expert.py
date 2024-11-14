@@ -8,14 +8,12 @@ import re
 
 from robosuite.controllers.parts.arm import OperationalSpaceController
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
-from robosuite.utils.transform_utils import quat2axisangle, convert_quat
-from transforms3d.euler import euler2quat
-from transforms3d.quaternions import qmult, qinverse, axangle2quat
+from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, euler2mat, mat2quat, axisangle2quat, \
+    quat_inverse
 
 from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
     DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE
 from src.utils.clipping import clip_translation, clip_quat_by_axisangle
-from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
 from src.utils.real_time import RealTimeHandler
 from src.utils.robot_states import TwoArmEEState
@@ -324,14 +322,14 @@ class TwoArmWaypointExpertBase(ABC):
         """
         Map the orientation from a list to the target orientation.
         :param quat: Orientation as a list [w, y, z, z]
-            or string that needs to be mapped ("wp_<id>" or "wp_<id> * [w, x, y, z]" or "[w, x, y, z] * wp_<id>")
+            or string that needs to be mapped ("wp_<id>" or "wp_<id> * [x, y, z, w]" or "[x, y, z, w] * wp_<id>")
         :param euler: Orientation as a list [roll, pitch, yaw]
             or string that needs to be mapped ("wp_<id>" or "wp_<id> * [roll, pitch, yaw] or "[roll, pitch, yaw] * wp_<id>")
         :param ax_angle: Orientation as a list [vx, vy, vz, angle]
             or string that needs to be mapped ("wp_<id>" or "wp_<id> * [vx, vy, vz, angle] or "[vx, vy, vz, angle] * wp_<id>")
         :param device: device name that the orientation belongs to
         :param previous_waypoints: List of previous waypoints
-        :return: Target quaternion as a list [w, x, y, z]
+        :return: Target quaternion as a list [x, y, z, w]
         """
         if quat is not None:
             return self.__map_orientation_fn(quat, device, previous_waypoints)
@@ -364,7 +362,7 @@ class TwoArmWaypointExpertBase(ABC):
         :param previous_waypoints: List of previous waypoints
         :param num_values: Number of values in the strings list
         :param map_fn: Function to map the values in the list to a quaternion
-        :return: Target quaternion as a list [w, x, y, z]
+        :return: Target quaternion as a list [x, y, z, w]
         """
         if type(rot) is list:
             if len(rot) != num_values:
@@ -380,7 +378,7 @@ class TwoArmWaypointExpertBase(ABC):
                 pos_quat_grip = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)
                 return pos_quat_grip["quat"]
 
-            # "wp_<id> * [w, x, y, z]"
+            # "wp_<id> * [x, y, z, w]"
             pattern = r"wp_(\d+)\s*\*\s*\[(-?\d*\.?\d+(?:,\s*-?\d*\.?\d+)*)\]"
             match = re.match(pattern, rot)
             if match:
@@ -390,9 +388,9 @@ class TwoArmWaypointExpertBase(ABC):
                     raise ValueError(f"[WP] Invalid rotation string {rot}. Expected {num_values} values, got {len(d_rot)}")
                 d_quat = map_fn(d_rot)
                 prev_quat = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)["quat"]
-                return qmult(prev_quat, d_quat)
+                return quat_multiply(prev_quat, d_quat)
 
-            # "[w, x, y, z] * wp_<id>"
+            # "[x, y, z, w] * wp_<id>"
             pattern = r"\[(-?\d*\.?\d+(?:,\s*-?\d*\.?\d+)*)\]\s*\*\s*wp_(\d+)"
             match = re.match(pattern, rot)
             if match:
@@ -402,11 +400,11 @@ class TwoArmWaypointExpertBase(ABC):
                 previous_wp_id = int(match.group(2))
                 d_quat = map_fn(d_rot)
                 pre_quat = self.__get_pos_quat_grip_from_previous_waypoint(device, previous_waypoints, previous_wp_id)["quat"]
-                return qmult(d_quat, pre_quat)
+                return quat_multiply(d_quat, pre_quat)
 
             # invalid string
             raise ValueError(f"[WP] Invalid rotation string {rot}." + \
-                             f" Expected 'wp_<id>' or 'wp_<id> * [w, x, y, z]' or '[w, x, y, z] * wp_<id>'" + \
+                             f" Expected 'wp_<id>' or 'wp_<id> * [x, y, z, w]' or '[x, y, z, w] * wp_<id>'" + \
                              f", got {rot}")
 
         raise ValueError(f"[WP] Invalid quaternion. Either 'quat' must be a list or a string.")
@@ -416,25 +414,26 @@ class TwoArmWaypointExpertBase(ABC):
         """
         Convert euler angles to a quaternion.
         :param euler: Euler angles as a list [roll, pitch, yaw]
-        :return: Quaternion as array [w, x, y, z]
+        :return: Quaternion as array [x, y, z, w]
         """
         assert len(euler) == 3, f"[WP] Invalid euler angles {euler}. Expected 3 values for [roll, pitch, yaw]"
-        return euler2quat(*euler)
+
+        return mat2quat(euler2mat(euler))
 
     @staticmethod
     def __ax_angle_to_quat(ax_angle: list) -> np.array:
         """
         Convert axis angle to a quaternion.
         :param ax_angle: Axis angle as a list [vx, vy, vz, angle]
-        :return: Quaternion as array [w, x, y, z]
+        :return: Quaternion as array [x, y, z, w]
         """
         assert len(ax_angle) == 4, f"[WP] Invalid axis angle {ax_angle}. Expected 4 values for [vx, vy, vz, theta]"
         vx, vy, vz, angle = ax_angle
-        return axangle2quat(
-            vector=[vx, vy, vz],
-            theta=angle,
-            is_normalized=False
-        )
+        aa_vec = np.array([vx, vy, vz])
+        # robosuite expects the magnitude of the axis angle to be the rotation in radians
+        aa_vec = (aa_vec / np.linalg.norm(aa_vec)) * angle
+        return axisangle2quat(aa_vec)
+
 
     @staticmethod
     def __map_gripper_target(grip: str | None) -> float:
@@ -495,19 +494,18 @@ class TwoArmWaypointExpertBase(ABC):
             else:
                 raise ValueError(f"[WP] Invalid action mode {self._action_mode}. Expected 'delta' or 'absolute'")
 
-            # Clip the rotation
             quat_target = target.quat
             quat_current = current.quat
             quat_delta = clip_quat_by_axisangle( # output quat of type wxyz
-                qmult(quat_target, qinverse(quat_current)),
+                quat_multiply(quat_target, quat_inverse(quat_current)),
                 ctrl_output_min[3:],
                 ctrl_output_max[3:]
             )
             if self._action_mode == "absolute":
-                rot_target = qmult(quat_delta, quat_current) # output quat of type wxyz
-                rot_action = quat2axisangle(convert_quat(rot_target, to="xyzw")) # quat2axisangle returns expects xyzw
+                rot_target = quat_multiply(quat_delta, quat_current)
+                rot_action = quat2axisangle(rot_target)
             else:
-                rot_action = quat2axisangle(convert_quat(quat_delta, to="xyzw")) # quat2axisangle returns expects xyzw
+                rot_action = quat2axisangle(quat_delta)
 
             part_action = np.concatenate([pos_action, rot_action])
 

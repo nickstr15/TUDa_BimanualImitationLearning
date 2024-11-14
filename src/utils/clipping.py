@@ -15,7 +15,7 @@ def clip_translation(v: np.ndarray, v_min: np.ndarray, v_max: np.ndarray) -> np.
 def clip_quat_by_axisangle(q: np.ndarray, aa_min: np.ndarray, aa_max: np.ndarray) -> np.ndarray:
     """
     Clip the rotation quaternion to an euler range.
-    :param q: Rotation quaternion [w, x, y, z]
+    :param q: Rotation quaternion [x, y, z, w]
     :param aa_min: Min axisangle per axis in radians
     :param aa_max: Max axisangle per axis in radians
     :return: Clipped rotation quaternion

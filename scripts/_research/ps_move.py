@@ -1,4 +1,4 @@
-from transforms3d.euler import quat2euler
+from robosuite.utils.transform_utils import quat2mat, mat2euler
 
 from src.demonstration.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget
 
@@ -69,7 +69,7 @@ class PsMovePlotter(PSMoveInterface):
 
     def _update_plots_left(self, pos_left, quat_left):
         x, y, z = pos_left
-        x_euler, y_euler, z_euler = quat2euler(quat_left)
+        x_euler, y_euler, z_euler = mat2euler(quat2mat(quat_left))
 
         self._left_t_vals = np.append(self._left_t_vals[-NUM_ELEMENTS:], self._t_left)
 
@@ -93,7 +93,7 @@ class PsMovePlotter(PSMoveInterface):
 
     def _update_plots_right(self, pos_right, quat_right):
         x, y, z = pos_right
-        x_euler, y_euler, z_euler = quat2euler(quat_right)
+        x_euler, y_euler, z_euler = mat2euler(quat2mat(quat_right))
 
         self._right_t_vals = np.append(self._right_t_vals[-NUM_ELEMENTS:], self._t_right)
 

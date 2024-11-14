@@ -34,7 +34,7 @@ class EEState:
     """
     A class to represent the state of an end-effector.
 
-    The quaternion is stored following the robosuite convention: [w, x, y, z]
+    The quaternion is stored following the robosuite convention: [x, y, z, w]
     """
     def __init__(
         self,
@@ -44,7 +44,7 @@ class EEState:
     ) -> None:
         """
         :param xyz: xyz position
-        :param quat: quaternion
+        :param quat: quaternion [x, y, z, w]
         :param grip: gripper state
         """
         self._xyz = xyz
@@ -61,7 +61,7 @@ class EEState:
     @property
     def quat(self) -> np.ndarray:
         """
-        :return: quaternion
+        :return: quaternion [x, y, z, w]
         """
         return self._quat
 
@@ -89,7 +89,7 @@ class EEState:
     @quat.setter
     def quat(self, quat: np.ndarray) -> None:
         """
-        :param quat: quaternion
+        :param quat: quaternion [x, y, z, w]
         """
         self._quat = quat
 

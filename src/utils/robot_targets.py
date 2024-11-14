@@ -1,5 +1,5 @@
 import numpy as np
-from transforms3d.quaternions import quat2axangle, qmult, qinverse
+from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, quat_inverse
 
 from src.utils.robot_states import TwoArmEEState, EEState
 
@@ -50,7 +50,7 @@ class EETarget:
     """
     A class to represent a target for an end-effector.
 
-    The quaternion is stored following the robosuite convention: [w, x, y, z]
+    The quaternion is stored following the robosuite convention: [x, y, z, w]
     """
     def __init__(
         self,
@@ -62,7 +62,7 @@ class EETarget:
     ) -> None:
         """
         :param xyz: xyz position
-        :param quat: quaternion
+        :param quat: quaternion [x, y, z, w]
         :param grip: gripper state
         :param pos_tol: position tolerance
         :param ori_tol: orientation tolerance
@@ -90,14 +90,14 @@ class EETarget:
     @property
     def quat(self) -> np.ndarray:
         """
-        :return: quaternion
+        :return: quaternion [x, y, z, w]
         """
         return self._quat
 
     @quat.setter
     def quat(self, quat: np.ndarray) -> None:
         """
-        :param quat: quaternion
+        :param quat: quaternion [x, y, z, w]
         """
         self._quat = quat
 
@@ -165,7 +165,7 @@ class EETarget:
         """
         pos_diff = np.linalg.norm(self._xyz - current_state.xyz)
         ori_diff = np.linalg.norm(
-            quat2axangle(qmult(qinverse(self._quat), current_state.quat))[1:]
+            quat2axisangle(quat_multiply(quat_inverse(self._quat), current_state.quat))[1:]
         )
         return pos_diff < self._pos_tol and ori_diff < self._ori_tol
 

@@ -1,8 +1,6 @@
 from typing import OrderedDict
 
 import numpy as np
-from transforms3d.euler import quat2euler
-from transforms3d.quaternions import quat2mat, axangle2quat, qmult
 
 from src.demonstration.waypoints.core.waypoint_expert import TwoArmWaypointExpertBase
 from src.environments.manipulation.two_arm_pick_place import TwoArmPickPlace
@@ -143,7 +141,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
 if __name__ == "__main__":
     two_arm_pick_place = suite.make(
         env_name="TwoArmPickPlace",
-        robots=["Baxter"],
+        robots=["Panda", "Panda"],
         has_renderer=True,
         has_offscreen_renderer=False,
         use_camera_obs=False,
