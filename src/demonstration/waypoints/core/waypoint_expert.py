@@ -8,12 +8,13 @@ import re
 
 from robosuite.controllers.parts.arm import OperationalSpaceController
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
-from transforms3d.euler import euler2quat, mat2euler, quat2euler
+from robosuite.utils.transform_utils import quat2axisangle, convert_quat
+from transforms3d.euler import euler2quat
 from transforms3d.quaternions import qmult, qinverse, axangle2quat
 
 from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
     DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE
-from src.utils.clipping import clip_translation, clip_quat
+from src.utils.clipping import clip_translation, clip_quat_by_axisangle
 from src.utils.constants import MAX_DELTA_TRANSLATION, MAX_DELTA_ROTATION
 from src.utils.paths import WAYPOINTS_DIR
 from src.utils.real_time import RealTimeHandler
@@ -25,82 +26,154 @@ class TwoArmWaypointExpertBase(ABC):
     """
     Class for an expert agent that acts in the environment
     by following a predefined trajectory of waypoints.
+
+    Only applicable for two-arm environments with OSC for each arm.
     """
     def __init__(
         self,
         environment : TwoArmEnv,
         waypoints_file : str,
-        max_delta_translation : float = MAX_DELTA_TRANSLATION,
-        max_delta_rotation : float = MAX_DELTA_ROTATION,
     ) -> None:
         """
         Constructor for the WaypointExpert class.
         :param environment: Environment in which the expert agent acts
         :param waypoints_file: File containing the waypoints n $WAYPOINTS_DIR
-        :param max_delta_translation: Maximum translation distance between current position and action output
-        :param max_delta_rotation: Maximum rotation angle between current orientation and action output
         """
         full_waypoints_path = os.path.join(WAYPOINTS_DIR, waypoints_file)
         assert os.path.isfile(full_waypoints_path), f"Waypoints file {full_waypoints_path} not found"
         self._env = environment
 
-        self._max_delta_translation = max_delta_translation
-        self._max_delta_rotation = max_delta_rotation
+        # get action mode + input/output ranges
+        self._evaluate_controller_setup()
 
         with open(full_waypoints_path, 'r') as f:
             self._waypoint_cfg = yaml.safe_load(f)
 
-        self._action_mode = self._check_action_mode()
-
         # minimum number of steps in done state (-> 1 second)
         self._min_steps_terminated = int(1.0 * self._env.control_freq)
+        # minimum number of steps in @ last waypoint before aborting the episode (-> 2 seconds)
+        self._min_steps_last_wp = int(2.0 * self._env.control_freq)
+        # timing and real time handler
         self._dt = 1.0 / self._env.control_freq
         self._rt_handler = RealTimeHandler(self._env.control_freq)
 
         self._ee_target_methods = self._create_ee_target_methods_dict()
 
-    def _check_action_mode(self) -> str:
+    def _evaluate_controller_setup(self) -> None:
         """
-        Check the action mode.
+        Evaluates the controller setup to get
+        - controller input + output ranges
+        - controller input type
+        :return:
+        """
+        controller_dict = self.__get_controllers()
+        self._get_action_mode(controller_dict)
+        self._get_controller_ranges(controller_dict)
+
+    def _get_action_mode(self, controllers_dict: dict[str, OperationalSpaceController]) -> None:
+        """
+        Check the action mode and store it in self._action_mode.
         It must be the same for all devices and can be either 'delta' or 'absolute'.
-        :return: The action mode
+
+        :param controllers_dict: Dictionary with the controllers for the left and right arm
         """
         mode = None
-        for robot in self._env.robots:
-            for name, part_controller in robot.composite_controller.part_controllers.items():
-                if name not in ["left", "right"]:
-                    continue
-                if type(part_controller) != OperationalSpaceController:
-                    raise ValueError(f"[WP] Only OperationalSpaceController is supported, got {type(part_controller)}")
-                if mode is None:
-                    mode = part_controller.input_type
-                elif mode != part_controller.input_type:
-                    raise ValueError(
-                        f"[WP] Inconsistent action modes for the devices.  {mode}, got {part_controller.input_type}")
+        for controller in controllers_dict.values():
+            if mode is None:
+                mode = controller.input_type
+            assert mode == controller.input_type, \
+                f"[WP] Inconsistent action modes for the controllers.  {mode}, got {controller.input_type}"
 
         assert mode in ["delta", "absolute"], \
-            f"[WP] Invalid action mode {mode}. Expected 'delta' or 'absolute' for all arms."
+            f"[WP] Invalid action mode {mode}. Expected 'delta' or 'absolute' for all controllers."
 
-        return mode
+        self._action_mode = mode
 
-    def _create_waypoints(self) -> list[Waypoint]:
+    def _get_controller_ranges(self, controllers_dict: dict[str, OperationalSpaceController]) -> None:
+        """
+        Get the input and output ranges of the controllers.
+
+        :param controllers_dict: Dictionary with the controllers for the left and right arm
+        """
+        self._ctrl_input_min = {
+            "left": controllers_dict["left"].input_min,
+            "right": controllers_dict["right"].input_min
+        }
+        self._ctrl_input_max = {
+            "left": controllers_dict["left"].input_max,
+            "right": controllers_dict["right"].input_max
+        }
+
+        self._ctrl_output_min = {
+            "left": controllers_dict["left"].output_min,
+            "right": controllers_dict["right"].output_min
+        }
+
+        self._ctrl_output_max = {
+            "left": controllers_dict["left"].output_max,
+            "right": controllers_dict["right"].output_max
+        }
+
+    def __get_controllers(self) -> dict[str, OperationalSpaceController]:
+        """
+        Get the input and output ranges of the controllers.
+
+        :return: Dictionary with the controllers for the left and right arm
+        """
+        controllers = {
+            "left": None,
+            "right": None
+        }
+        if len(self._env.robots) == 1:
+            # single robot with two arms
+            for name, part_controller in self._env.robots[0].composite_controller.part_controllers.items():
+                if name not in ["left", "right"]:
+                    continue
+                assert type(part_controller) == OperationalSpaceController, \
+                    f"[WP] Only OperationalSpaceController is supported, got {type(part_controller)}"
+                controllers[name] = part_controller
+
+        elif len(self._env.robots) == 2:
+            mapped_names = ["right", "left"]
+            # two separate robot arms
+            for robot, mapped_name in zip(self._env.robots, mapped_names):
+                for name, part_controller in robot.composite_controller.part_controllers.items():
+                    if name not in ["right"]:
+                        continue
+                    assert type(part_controller) == OperationalSpaceController, \
+                        f"[WP] Only OperationalSpaceController is supported, got {type(part_controller)}"
+
+                    controllers[mapped_name] = part_controller
+
+        else:
+            raise ValueError(f"[WP] Invalid number of robots {len(self._env.robots)}. Expected 1 or 2.")
+
+        return controllers
+
+    def _create_waypoints(self, obs: OrderedDict = None) -> list[Waypoint]:
         """
         Create the list of waypoints.
         This method can be dependent on the environments initial state.
+        :param obs: Observation after environment reset
         :return: List of waypoints
         """
         waypoints : list[Waypoint] = []
 
         for waypoint_dict in self._waypoint_cfg:
-            waypoints.append(self.__create_waypoint(waypoint_dict, waypoints))
+            waypoints.append(self.__create_waypoint(waypoint_dict, waypoints, obs))
 
         return waypoints
 
-    def __create_waypoint(self, waypoint_dict: dict, previous_waypoints: list[Waypoint]) -> Waypoint:
+    def __create_waypoint(
+            self, waypoint_dict: dict,
+            previous_waypoints: list[Waypoint],
+            obs: OrderedDict = None
+    ) -> Waypoint:
         """
         Create a single waypoint.
         :param waypoint_dict: Dictionary containing the waypoint data
         :param previous_waypoints: List of previous waypoints
+        :param obs: Observation after environment reset
         :return: Waypoint object
         """
 
@@ -110,16 +183,22 @@ class TwoArmWaypointExpertBase(ABC):
             "min_duration": waypoint_dict.get("min_duration", DEFAULT_MIN_DURATION),
             "max_duration": waypoint_dict.get("max_duration", DEFAULT_MAX_DURATION),
             "must_reach": waypoint_dict.get("must_reach", DEFAULT_MUST_REACH),
-            "targets": self.__create_targets(waypoint_dict, previous_waypoints)
+            "targets": self.__create_targets(waypoint_dict, previous_waypoints, obs)
         }
 
         return Waypoint(mapped_waypoint)
 
-    def __create_targets(self, waypoint_dict: dict, previous_waypoints: list[Waypoint]) -> list[dict]:
+    def __create_targets(
+            self,
+            waypoint_dict: dict,
+            previous_waypoints: list[Waypoint],
+            obs: OrderedDict = None
+    ) -> list[dict]:
         """
         Create the list of targets for a waypoint.
         :param waypoint_dict:
         :param previous_waypoints:
+        :param obs: Observation after environment reset
         :return:
         """
 
@@ -145,7 +224,7 @@ class TwoArmWaypointExpertBase(ABC):
                     if ee_target_method is None:
                         raise NotImplementedError(f"[WP] Method {ee_target} not implemented in {self.__class__.__name__}")
 
-                    pos_quat_grip = ee_target_method()
+                    pos_quat_grip = ee_target_method(obs)
 
                 mapped_target["pos"] = pos_quat_grip["pos"]
                 mapped_target["quat"] = pos_quat_grip["quat"]
@@ -373,74 +452,115 @@ class TwoArmWaypointExpertBase(ABC):
         else:
             raise ValueError(f"[WP] Invalid gripper state {grip}. Valid values are 'OPEN', 'CLOSED'")
 
-    def _get_action(self, current_state: OrderedDict, waypoint: Waypoint) -> np.ndarray:
+    def _get_action(self, current_obs: OrderedDict, waypoint: Waypoint) -> np.ndarray:
         """
         Get the action to reach the waypoint.
-        The output is a clipped version of the Waypoint state to
-        respect self._max_delta_translation and self._max_delta_rotation.
-        :param current_state: Current state of the device
+        The output is a clipped version of the Waypoint state and is scaled to the controller input range, e.g. [-1, 1].
+
+        robosuite expects the following action components:
+        - position action [x, y, z] or [dx, dy, dz]
+        - orientation action as a 3D axis angle [vx, vy, vz] or [dvx, dvy, dvz],
+            with the magnitude of the axis angle being the rotation in radians
+        - gripper action [grip] (-1 => open, 1 => closed)
+
+        - position action and orientation action are concatenated to the part action for the OSC
+        - the gripper action is a separate action for the gripper controller
+
+        :param current_obs: Current observation
         :param waypoint: Waypoint to reach
         :return: Action to reach the waypoint
         """
-        max_delta_translation = self._max_delta_translation
-        max_delta_rotation = self._max_delta_rotation
+        current = TwoArmEEState.from_dict(current_obs, self._env.env_configuration)
 
-        current = TwoArmEEState.from_dict(current_state, self._env.env_configuration)
-
+        ctrl_input_min_lr = [self._ctrl_input_min["left"], self._ctrl_input_min["right"]]
+        ctrl_input_max_lr = [self._ctrl_input_max["left"], self._ctrl_input_max["right"]]
+        ctrl_output_min_lr = [self._ctrl_output_min["left"], self._ctrl_output_min["right"]]
+        ctrl_output_max_lr = [self._ctrl_output_max["left"], self._ctrl_output_max["right"]]
         target_lr = [waypoint.target.left, waypoint.target.right]
         current_lr = [current.left, current.right]
-        action_lr = []
+        part_action_lr = []
+        grip_action_lr = []
 
-        for target, current in zip(target_lr, current_lr):
+        for target, current, ctrl_input_min, ctrl_input_max, ctrl_output_min, ctrl_output_max, in zip(
+                target_lr, current_lr, ctrl_input_min_lr, ctrl_input_max_lr, ctrl_output_min_lr, ctrl_output_max_lr
+        ):
             # Clip the translation
             pos_target = target.xyz
             pos_current = current.xyz
-            pos_delta = clip_translation(pos_target - pos_current, max_delta_translation)
+            pos_delta = clip_translation(pos_target - pos_current, ctrl_output_min[:3], ctrl_output_max[:3])
             if self._action_mode == "absolute":
                 pos_action = pos_current + pos_delta
             elif self._action_mode == "delta":
                 pos_action = pos_delta
-                # TODO: rescale from range [-0.05, 0.05] to range [-1, 1], better: depending on the controller config
-                # => see https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149
-
             else:
                 raise ValueError(f"[WP] Invalid action mode {self._action_mode}. Expected 'delta' or 'absolute'")
 
             # Clip the rotation
             quat_target = target.quat
             quat_current = current.quat
-            quat_delta = clip_quat(
+            quat_delta = clip_quat_by_axisangle( # output quat of type wxyz
                 qmult(quat_target, qinverse(quat_current)),
-                max_delta_rotation
+                ctrl_output_min[3:],
+                ctrl_output_max[3:]
             )
             if self._action_mode == "absolute":
-                rot_target = qmult(quat_delta, quat_current)
-                rot_action = quat2euler(rot_target)
+                rot_target = qmult(quat_delta, quat_current) # output quat of type wxyz
+                rot_action = quat2axisangle(convert_quat(rot_target, to="xyzw")) # quat2axisangle returns expects xyzw
             else:
-                rot_action = quat2euler(quat_delta)
+                rot_action = quat2axisangle(convert_quat(quat_delta, to="xyzw")) # quat2axisangle returns expects xyzw
 
-                # TODO: rescale from range [-0.5, 0.5] to range [-1, 1], better: depending on the controller config
-                # => see https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149
+            part_action = np.concatenate([pos_action, rot_action])
+
+            # Rescale the input range
+            if self._action_mode == "delta":
+                # (this is the reverse of
+                # https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149)
+                action_scale = abs(ctrl_output_max - ctrl_output_min) / abs(ctrl_input_max - ctrl_input_min)
+                action_output_transform = (ctrl_output_max + ctrl_output_min) / 2.0
+                action_input_transform = (ctrl_input_max + ctrl_input_min) / 2.0
+
+                part_action = (part_action - action_output_transform) / action_scale + action_input_transform
+
+            part_action_lr.append(part_action)
 
             # Set GripperState
             grip_action = np.array([target.grip])
+            grip_action_lr.append(grip_action)
 
-            action_lr.append(
-                np.concatenate([pos_action, rot_action, grip_action])
-            )
+        action = self.__compose_action(part_action_lr, grip_action_lr)
 
-        action = np.concatenate(action_lr)
         return action
+
+    def __compose_action(self, part_action_lr: list[np.ndarray], grip_action_lr: list[np.ndarray]) -> np.ndarray:
+        """
+        Compose the action for the two arms.
+
+        robosuite order: right before left
+
+        :param part_action_lr: the action controlling the position and orientation of the end-effector
+        :param grip_action_lr: the action controlling the gripper state
+        :return: total action
+        """
+        if self._env.env_configuration == "single-robot":
+            # first the part actions, then the gripper actions
+            return np.concatenate(part_action_lr[::-1] + grip_action_lr[::-1])
+        else:
+            # part + gripper + part + gripper
+            return np.concatenate([
+                part_action_lr[1], grip_action_lr[1], part_action_lr[0], grip_action_lr[0]
+            ])
 
     def _run_episode(
         self,
         render : bool = False,
         target_real_time : bool = False,
+        randomize : bool = False
     ) -> bool:
         """
         Run the expert agent in the environment.
         :param render: Whether to render the environment
         :param target_real_time: Whether to render in real time
+        :param randomize: Whether to randomize the environment
 
         :return: True if the episode was successful
         """
@@ -450,11 +570,14 @@ class TwoArmWaypointExpertBase(ABC):
             target_real_time = False
 
         # reset the environment
+        self._env.deterministic_reset = not randomize
+        self._env.hard_reset = randomize
         obs = self._env.reset()
 
-        waypoints = self._create_waypoints()
+        waypoints = self._create_waypoints(obs)
 
         steps_terminated = 0
+        steps_in_last_wp = 0
         success = False
         for n, waypoint in enumerate(waypoints):
             is_last_wp = n == len(waypoints) - 1
@@ -472,6 +595,11 @@ class TwoArmWaypointExpertBase(ABC):
 
                 if reached and not is_last_wp:
                     break
+                elif reached and is_last_wp:
+                    steps_in_last_wp += 1
+                    if steps_in_last_wp >= self._min_steps_last_wp:
+                        success = done
+                        break
                 elif unreachable:
                     break
 
@@ -486,12 +614,17 @@ class TwoArmWaypointExpertBase(ABC):
                 if target_real_time:
                     self._rt_handler.sleep()
 
-            if success:
-                print(f"[INFO] Episode finished successful.")
-
             if unreachable:
                 print(f"[INFO] Waypoint {waypoint.id} ({waypoint.description}) could not be reached. Aborting this episode.")
                 break
+
+        if success:
+            print(f"[INFO] Episode finished successful.")
+        else:
+            print(f"[INFO] Episode finished unsuccessful.")
+
+        if self._env.viewer is not None:
+            self._env.viewer.close()
 
         return success
 
@@ -510,7 +643,11 @@ class TwoArmWaypointExpertBase(ABC):
         :param num_episodes: Number of episodes to visualize
         """
         for _ in range(num_episodes):
-            _ = self._run_episode(render=True)
+            _ = self._run_episode(
+                render=True,
+                target_real_time=True,
+                randomize=True
+            )
 
     def collect_data(self,
         out_dir : str,
@@ -532,6 +669,8 @@ class TwoArmWaypointExpertBase(ABC):
     def _create_ee_target_methods_dict(self) -> dict:
         """
         Create a dictionary of methods that return the position, orientation, and gripper state of a device.
+
+        All methods take the observation after reset as input.
         :return: Dictionary of methods
         """
         return {}

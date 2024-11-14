@@ -89,7 +89,6 @@ class Waypoint:
 
         current_robot_state = TwoArmEEState.from_dict(current_robot_state, env_config)
         is_reached = self._target.is_reached_by(current_robot_state)
-
         return is_reached, unreachable
 
     @property

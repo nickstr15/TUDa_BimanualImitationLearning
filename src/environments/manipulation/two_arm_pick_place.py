@@ -215,6 +215,8 @@ class TwoArmPickPlace(TwoArmEnv):
         if len(robots) == 2 and env_configuration == "default":
             env_configuration = "parallel"
 
+        self.placement_initializer = None
+
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -345,7 +347,8 @@ class TwoArmPickPlace(TwoArmEnv):
             density=10000.0,
         )
 
-        self.placement_initializer = self._get_placement_initializer()
+        self.placement_initializer = self._get_placement_initializer() if \
+            self.placement_initializer is None else self.placement_initializer
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
@@ -381,8 +384,8 @@ class TwoArmPickPlace(TwoArmEnv):
                 y_range=[y-y_tol, y+y_tol],
                 rotation=[-rot_tol, rot_tol],
                 rotation_axis=r_axis,
-                ensure_object_boundary_in_range=True,
-                ensure_valid_placement=True,
+                ensure_object_boundary_in_range=False,
+                ensure_valid_placement=False,
                 reference_pos=self.table_offset,
             )
             placement_initializer.append_sampler(sampler)
@@ -484,13 +487,13 @@ class TwoArmPickPlace(TwoArmEnv):
         if not self.deterministic_reset:
             # Sample from the placement initializer for all objects
             object_placements = self.placement_initializer.sample()
-
             # Loop through all objects and reset their positions
             for pos, quat, obj in object_placements.values():
                 self.sim.data.set_joint_qpos(
                     obj.joints[0],
                     np.concatenate([np.array(pos), np.array(quat)])
                 )
+            self.sim.step()
 
         # reset initial distance between hammer and bin
         self._initial_hammer_bin_dist = np.linalg.norm(self._hammer_pos - self._bin_pos)

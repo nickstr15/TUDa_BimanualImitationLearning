@@ -1,3 +1,5 @@
+from typing import OrderedDict
+
 import numpy as np
 from transforms3d.euler import quat2euler
 from transforms3d.quaternions import quat2mat, axangle2quat, qmult
@@ -7,67 +9,94 @@ from src.environments.manipulation.two_arm_pick_place import TwoArmPickPlace
 
 import robosuite as suite
 
+from src.utils.robot_states import TwoArmEEState, EEState
+from src.utils.robot_targets import GripperTarget
+
 
 class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
     """
     Panda handover expert agent that follows a predefined trajectory of waypoints.
+
+    Environment must have use_object_obs=True.
     """
 
     def __init__(
             self,
             env : TwoArmPickPlace,
-            **kwargs):
+        ):
         """
         Constructor for the PandaHandoverWpExpertBase class.
-        :param dual_panda_env_args: additional arguments for the environment, default is None
-        :param kwargs: additional arguments for the expert, see WaypointExpert (core.waypoint_expert)
+        :param env: environment to interact with
         """
         super().__init__(
             environment=env,
             waypoints_file="two_arm_pick_place_wp.yaml",
-            **kwargs
         )
 
     ######################################################################
     # Definition of special ee targets ###################################
     ######################################################################
-
-    # rotation of the end-effector in the world frame that aligns with cuboid rotation = 0°
-    _zero_quat_ee = np.array([0, 1 / np.sqrt(2), 1 / np.sqrt(2), 0])
-
     def _create_ee_target_methods_dict(self) -> dict:
         """
         Create a dictionary of methods to get the special end-effector targets.
+
+        All methods take the observation after reset as input.
+
+        :return: dictionary with the methods
         """
         return {
             "initial_state_left": self.__initial_state_left,
-            "initial_state_right": self.__initial_state_right
+            "initial_state_right": self.__initial_state_right,
 
             "pre_pick_up_robot_left": self.__pre_pick_up_robot_left,
             "pre_drop_off_robot_right": self.__pre_drop_off_robot_right,
         }
 
-    def __initial_state_left(self) -> dict:
+    def __initial_state_left(self, obs: OrderedDict = None) -> dict:
         """
         Initial state for the left arm.
-        """
-        raise NotImplementedError
 
-    def __initial_state_right(self) -> dict:
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+        state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).left
+        dct = {
+            "pos": state.xyz + np.array([0.0, 0.0, 0.05]), #TODO remove shift after testing
+            "quat": state.quat,
+            "grip": GripperTarget.OPEN_VALUE
+        }
+        return dct
+
+    def __initial_state_right(self, obs: OrderedDict = None) -> dict:
         """
         Initial state for the right arm.
-        """
-        raise NotImplementedError
 
-    def __pre_pick_up_robot_left(self) -> dict:
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+        state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).right
+        dtc = {
+            "pos": state.xyz + np.array([0.0, 0.0, -0.1]), #TODO remove shift after testing
+            "quat": state.quat,
+            "grip": GripperTarget.CLOSED_VALUE
+        }
+        return dtc
+
+    def __pre_pick_up_robot_left(self, obs: OrderedDict = None) -> dict:
         """
         Pre-pick up position for the second arm.
+
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
         """
         raise NotImplementedError
 
-    def __pre_drop_off_robot_right(self) -> dict:
+    def __pre_drop_off_robot_right(self, obs: OrderedDict = None) -> dict:
         """
         Pre-drop off position for the right arm.
+
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
         """
         raise NotImplementedError
 
@@ -114,7 +143,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
 if __name__ == "__main__":
     two_arm_pick_place = suite.make(
         env_name="TwoArmPickPlace",
-        robots=["Panda", "Panda"],
+        robots=["Baxter"],
         has_renderer=True,
         has_offscreen_renderer=False,
         use_camera_obs=False,

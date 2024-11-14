@@ -1,32 +1,25 @@
 import numpy as np
-from transforms3d.quaternions import quat2axangle, axangle2quat
+from robosuite.utils.transform_utils import quat2axisangle, axisangle2quat
 
 
-def clip_translation(vector, max_length):
+def clip_translation(v: np.ndarray, v_min: np.ndarray, v_max: np.ndarray) -> np.ndarray:
     """
-    Clip the translation vector to have a maximum norm.
-    :param vector: Translation vector
-    :param max_length: Maximum length of the translation vector
+    Clip the translation vector.
+    :param v: Translation vector
+    :param v_min: Min values per axis
+    :param v_max: Max values per axis
     :return: Clipped translation vector
     """
-    assert max_length > 0, "max_length must be positive"
+    return np.clip(v, v_min, v_max)
 
-    norm = np.linalg.norm(vector)
-    if norm > max_length:
-        return vector / norm * max_length
-    return vector
-
-def clip_quat(quat, max_rot):
+def clip_quat_by_axisangle(q: np.ndarray, aa_min: np.ndarray, aa_max: np.ndarray) -> np.ndarray:
     """
-    Clip the rotation quaternion to have a maximum angle.
-    :param quat: Rotation quaternion [w, x, y, z]
-    :param max_rot: Maximum angle of the rotation quaternion in radians
+    Clip the rotation quaternion to an euler range.
+    :param q: Rotation quaternion [w, x, y, z]
+    :param aa_min: Min axisangle per axis in radians
+    :param aa_max: Max axisangle per axis in radians
     :return: Clipped rotation quaternion
     """
-    assert max_rot > 0, "max_rot must be positive"
-
-    axis, angle = quat2axangle(quat)
-    if angle > max_rot:
-        quat = axangle2quat(axis, max_rot)
-
-    return quat
+    aa = quat2axisangle(q)
+    aa_clipped = np.clip(aa, aa_min, aa_max)
+    return axisangle2quat(aa_clipped)

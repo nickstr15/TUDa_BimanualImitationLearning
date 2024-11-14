@@ -8,3 +8,4 @@ custom_envs = [
 
 for env in custom_envs:
     register_env(env)
+    print("Registered custom environment: ", env.__name__)
