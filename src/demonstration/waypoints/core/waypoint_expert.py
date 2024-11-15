@@ -9,7 +9,7 @@ import re
 from robosuite.controllers.parts.arm import OperationalSpaceController
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, euler2mat, mat2quat, axisangle2quat, \
-    quat_inverse
+    quat_inverse, quat2mat, mat2euler
 
 from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
     DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE
@@ -577,13 +577,23 @@ class TwoArmWaypointExpertBase(ABC):
         steps_terminated = 0
         steps_in_last_wp = 0
         success = False
+        unreachable = False
         for n, waypoint in enumerate(waypoints):
             is_last_wp = n == len(waypoints) - 1
             wp_step = 0
             self._rt_handler.reset()
             while True:
                 action = self._get_action(obs, waypoint)
-                obs, _, done, _ = self._env.step(action)
+                obs, _, _, _ = self._env.step(action)
+                done = self._env._check_success()
+                if done:
+                    steps_terminated += 1
+                    if steps_terminated >= self._min_steps_terminated:
+                        success = True
+                        break
+                else:
+                    steps_terminated = 0
+
                 if render:
                     self._env.render()
                 wp_step += 1
@@ -601,20 +611,16 @@ class TwoArmWaypointExpertBase(ABC):
                 elif unreachable:
                     break
 
-                if done:
-                    steps_terminated += 1
-                    if steps_terminated >= self._min_steps_terminated:
-                        success = True
-                        break
-                else:
-                    steps_terminated = 0
-
                 if target_real_time:
                     self._rt_handler.sleep()
 
+            if success:
+                break
             if unreachable:
                 print(f"[INFO] Waypoint {waypoint.id} ({waypoint.description}) could not be reached. Aborting this episode.")
                 break
+
+
 
         if success:
             print(f"[INFO] Episode finished successful.")

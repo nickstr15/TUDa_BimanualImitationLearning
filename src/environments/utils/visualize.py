@@ -28,8 +28,6 @@ def visualize_static(
     # reset the environment
     _ = env.reset()
 
-    print(env.action_spec[0].shape)
-
     # target real time rendering
     dt = 1.0 / env.control_freq
     n = int(time / dt)

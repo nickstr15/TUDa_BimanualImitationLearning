@@ -10,6 +10,8 @@ from robosuite.models.objects import HammerObject, Bin
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
+from robosuite.utils.transform_utils import quat2mat, mat2euler, quat2axisangle, axisangle2quat
+
 
 class TwoArmPickPlace(TwoArmEnv):
     """
@@ -541,7 +543,46 @@ class TwoArmPickPlace(TwoArmEnv):
         """
         Returns True if the hammer is in the bin, False otherwise.
         """
-        return su.check_contact(self.sim, self.bin.base_geoms, self.hammer.contact_geoms)
+        bin_pos = self._bin_pos
+        bin_quat = self._bin_quat
+
+        hammer_pos = self._hammer_pos
+
+        bin_aa = quat2axisangle(bin_quat)
+        bin_angle = np.linalg.norm(bin_aa)
+
+        # check if hammer is below the bins center
+        if hammer_pos[2] > bin_pos[2]:
+            return False
+
+        # Compute the corner coordinates of the bin in the xy-plane
+        def get_corners(center, angle, size):
+            # Rotation matrix from quaternion
+            rotation_matrix = quat2mat(axisangle2quat([0, 0, angle]))[:2, :2] # only xy rotation
+            half_size = size[:2] / 2
+
+            # Define local corners (relative to the center)
+            corners = np.array([
+                [-half_size[0], -half_size[1]],
+                [-half_size[0], half_size[1]],
+                [half_size[0], -half_size[1]],
+                [half_size[0], half_size[1]]
+            ])
+
+            # Rotate and translate corners to global position
+            rotated_corners = (rotation_matrix @ corners.T).T + center[:2]
+            return rotated_corners
+
+        # get bin corners
+        bin_corners = get_corners(bin_pos, bin_angle, self.bin_size)
+
+        bin_x_min, bin_x_max = np.min(bin_corners[:, 0]), np.max(bin_corners[:, 0])
+        bin_y_min, bin_y_max = np.min(bin_corners[:, 1]), np.max(bin_corners[:, 1])
+
+        hammer_in_box = bin_x_min < hammer_pos[0] < bin_x_max \
+            and bin_y_min < hammer_pos[1] < bin_y_max
+
+        return hammer_in_box
 
 if __name__ == "__main__":
     from src.environments.utils.visualize import visualize_static
