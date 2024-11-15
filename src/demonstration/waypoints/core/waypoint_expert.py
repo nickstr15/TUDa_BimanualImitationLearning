@@ -1,4 +1,7 @@
+import json
 import os.path
+import shutil
+import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
@@ -10,6 +13,7 @@ from robosuite.controllers.parts.arm import OperationalSpaceController
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, euler2mat, mat2quat, axisangle2quat, \
     quat_inverse, quat2mat, mat2euler
+from robosuite.wrappers import DataCollectionWrapper
 
 from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
     DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE
@@ -18,6 +22,7 @@ from src.utils.paths import WAYPOINTS_DIR
 from src.utils.real_time import RealTimeHandler
 from src.utils.robot_states import TwoArmEEState
 from src.utils.robot_targets import GripperTarget
+from src.demonstration.utils.gather_demonstrations import gather_demonstrations_as_hdf5
 
 
 class TwoArmWaypointExpertBase(ABC):
@@ -632,12 +637,6 @@ class TwoArmWaypointExpertBase(ABC):
 
         return success
 
-    def dispose(self) -> None:
-        """
-        Dispose the expert agent.
-        """
-        self._env.close()
-
     def visualize(
         self,
         num_episodes : int = 1
@@ -656,18 +655,44 @@ class TwoArmWaypointExpertBase(ABC):
     def collect_data(self,
         out_dir : str,
         num_successes : int,
+        env_config: dict,
         render: bool = False,
         target_real_time: bool = False
-    ) -> None:
+    ) -> str:
         """
         Collect demonstration from the expert agent in the environment.
 
         :param out_dir: Output directory for the data
         :param num_successes: Number of successful episodes to collect
+        :param env_config: Configuration of the environment, needed to ensure reproducibility
         :param render: Whether to render the environment
         :param target_real_time: Whether to render in real time
         """
-        raise NotImplementedError("Method not implemented")
+        tmp_dir = os.path.join("/tmp", "bil_wp", str(time.time()).replace(".", "_"))
+
+        self._env = DataCollectionWrapper(
+            self._env,
+            directory=tmp_dir,
+        )
+
+        success_count = 0
+        count = 0
+        while success_count < num_successes:
+            success_count += self._run_episode(
+                render=render,
+                target_real_time=target_real_time,
+                randomize=True
+            )
+            count += 1
+            print(f"[INFO] Collected {success_count}/{num_successes} successful demonstrations after {count} episodes.")
+
+        self._env.close()
+
+        env_info = json.dumps(env_config)
+        gather_demonstrations_as_hdf5(tmp_dir, out_dir, env_info)
+
+        shutil.rmtree(tmp_dir)
+
 
     @abstractmethod
     def _create_ee_target_methods_dict(self) -> dict:

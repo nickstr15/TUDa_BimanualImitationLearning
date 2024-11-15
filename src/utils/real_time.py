@@ -5,6 +5,9 @@ class RealTimeHandler:
     """
     Handler trying to run loops at a desired frequency.
 
+    Note: This handler guarantees that the loop runs with a maximum frequency of `frequency`,
+    but is very likely to run slower than the desired frequency.
+
     Example usage:
 
     rt = RealTimeHandler(render_fps)

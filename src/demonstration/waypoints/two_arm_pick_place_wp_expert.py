@@ -207,7 +207,6 @@ def example_panda(n_episodes: int = 10):
         zero_euler_right=[np.pi, 0, 0]
     )
     expert.visualize(n_episodes)
-    expert.dispose()
 
 def example_ur5e(n_episodes: int = 10):
     raise NotImplementedError
