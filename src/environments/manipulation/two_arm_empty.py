@@ -3,17 +3,16 @@ from collections import OrderedDict
 import numpy as np
 
 import robosuite.utils.transform_utils as tu
-import robosuite.utils.sim_utils as su
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import HammerObject, Bin
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite.utils.transform_utils import quat2mat, mat2euler, quat2axisangle, axisangle2quat
+from robosuite.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat
 
 
-class TwoArmPickPlace(TwoArmEnv):
+class TwoArmEmpty(TwoArmEnv):
     """
     This class corresponds to a bimanual pick and place task, requiring the robot to pick up a
     hammer, hand it over to the other robot, and place it in a bin. The task is considered successful if the hammer is
@@ -56,23 +55,8 @@ class TwoArmPickPlace(TwoArmEnv):
             :Note: Specifying "default" will automatically use the default noise settings.
                 Specifying None will automatically create the required dict with "magnitude" set to 0.0.
 
-        table_full_size (3-tuple): x, y, and z dimensions of the table.
-
-        table_friction (3-tuple): the three mujoco friction parameters for
-            each table.
-
         arm_distances (float): the distance between the two arms. Default is 0.7. Only used if two robots are used and
             the env_configuration is "parallel".
-
-        bin_size (3-tuple): (x,y,z) dimensions of bin to use
-
-        position_tol (2-tuple): the tolerance for the position of the objects at the start of the episodes.
-            The position will be sampled uniformly in the range for x and y dimension.
-            Default is (0.05, 0.05).
-
-        orientation_tol (float): the tolerance for the rotation of the objects at the start of the episodes.
-            The rotation will be sampled uniformly in the range [-rotation_tol, rotation_tol] around the z axis.
-            Default is pi / 4.
 
         use_camera_obs (bool): if True, every observation includes rendered image(s)
 
@@ -160,10 +144,8 @@ class TwoArmPickPlace(TwoArmEnv):
             controller_configs=None,
             gripper_types="default",
             initialization_noise="default",
-            table_full_size=(0.8, 1.5, 0.05),
-            table_friction=(1.0, 5e-3, 1e-4),
             arm_distances=0.7,
-            bin_size=(0.35, 0.35, 0.08),
+            bin_size=(0.3, 0.3, 0.15),
             position_tol=(0.05, 0.05),
             orientation_tol=np.pi/4,
             use_camera_obs=True,
@@ -190,14 +172,8 @@ class TwoArmPickPlace(TwoArmEnv):
             renderer_config=None,
     ):
 
-        # settings for table-top
-        self.table_full_size = table_full_size
-        self.table_friction = table_friction
-        self.table_offset = np.array((0, 0, 0.8))
-
         # setting for arm position
         self.arm_distances = arm_distances
-        self._initial_hammer_bin_dist = arm_distances
 
         # settings for bin
         self.bin_size = np.array(bin_size)
@@ -270,23 +246,7 @@ class TwoArmPickPlace(TwoArmEnv):
         Returns:
             float: reward value
         """
-        reward_ = 0
-
-        # check for goal completion: hammer in the bin
-        if self._check_success():
-            reward_ += 1
-
-        # if using reward shaping, add distance component
-        if self.reward_shaping:
-            # Compute distance between hammer and bin and normalize by initial distance
-            dist = np.linalg.norm(self._hammer_pos - self._bin_pos)
-            normed_dist = dist / self._initial_hammer_bin_dist
-            reward_ += -1*np.clip(normed_dist, 0, 1)
-
-        if self.reward_scale is not None:
-            reward_ *= self.reward_scale / 1.0
-
-        return reward_
+        return 0
 
 
     def _load_model(self):
@@ -295,15 +255,20 @@ class TwoArmPickPlace(TwoArmEnv):
         """
         super()._load_model()
 
+        # load model for table-top workspace
+        mujoco_arena = TableArena(
+            table_offset=(0, 0, 0.05),
+        )
+
         # Adjust base pose(s) accordingly
         if self.env_configuration == "single-robot":
-            xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+            xpos = self.robots[0].robot_model.base_xpos_offset["table"](mujoco_arena.table_full_size[0])
             self.robots[0].robot_model.set_base_xpos(xpos)
         else:
             if self.env_configuration == "opposed":
                 # Set up robots facing towards each other by rotating them from their default position
                 for robot, rotation in zip(self.robots, (np.pi / 2, -np.pi / 2)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                    xpos = robot.robot_model.base_xpos_offset["table"](mujoco_arena.table_full_size[0])
                     rot = np.array((0, 0, rotation))
                     xpos = tu.euler2mat(rot) @ np.array(xpos)
                     robot.robot_model.set_base_xpos(xpos)
@@ -313,16 +278,9 @@ class TwoArmPickPlace(TwoArmEnv):
                 half_arm_distance = self.arm_distances / 2.0
                 offsets = (-half_arm_distance, half_arm_distance)
                 for robot, offset in zip(self.robots, offsets):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                    xpos = robot.robot_model.base_xpos_offset["table"](mujoco_arena.table_full_size[0])
                     xpos = np.array(xpos) + np.array((0, offset, 0))
                     robot.robot_model.set_base_xpos(xpos)
-
-        # load model for table-top workspace
-        mujoco_arena = TableArena(
-            table_full_size=self.table_full_size,
-            table_friction=self.table_friction,
-            table_offset=self.table_offset,
-        )
 
         # Arena always gets set to zero origin
         mujoco_arena.set_origin([0, 0, 0])
@@ -334,279 +292,15 @@ class TwoArmPickPlace(TwoArmEnv):
             quat=[0.6530981063842773, 0.2710406184196472, 0.27104079723358154, 0.6530979871749878],
         )
 
-        # initialize objects of interest
-        self.hammer = HammerObject(
-            name="hammer",
-            handle_radius=0.015,
-            handle_length=0.20,
-            handle_density=150.0,
-            handle_friction=4.0,
-            head_density_ratio=1.5,
-        )
-        self.bin = Bin(
-            name="bin",
-            bin_size=self.bin_size,
-            density=10000.0,
-        )
-
-        self.placement_initializer = self._get_placement_initializer() if \
-            self.placement_initializer is None else self.placement_initializer
-
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
             mujoco_arena = mujoco_arena,
             mujoco_robots = [robot.robot_model for robot in self.robots],
-            mujoco_objects = [self.hammer, self.bin],
+            mujoco_objects = [],
         )
-
-    def _get_placement_initializer(self):
-        """
-        Helper function to return a placement initializer for the task.
-        """
-
-        # Create a placement initializer
-        placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
-
-        # Pre-define settings for each object's placement
-        objects = [self.hammer, self.bin]
-        half_arm_distance = self.arm_distances / 2.0
-        y_centers = [-half_arm_distance, half_arm_distance]
-        x_tol = self.position_tol[0]
-        y_tol = self.position_tol[1]
-        rot_tol = self.orientation_tol
-        rot_axes = ["y", "z"]
-        for obj, y, r_axis in zip(
-            objects, y_centers, rot_axes
-        ):
-            # Create a sampler for the object
-            sampler = UniformRandomSampler(
-                name=f"{obj.name}ObjectSampler",
-                mujoco_objects=obj,
-                x_range=[-x_tol, x_tol],
-                y_range=[y-y_tol, y+y_tol],
-                rotation=[-rot_tol, rot_tol],
-                rotation_axis=r_axis,
-                ensure_object_boundary_in_range=False,
-                ensure_valid_placement=False,
-                reference_pos=self.table_offset,
-            )
-            placement_initializer.append_sampler(sampler)
-
-        return placement_initializer
-
-    def _setup_references(self):
-        """
-        Sets up references to important components. A reference is typically an
-        index or a list of indices that point to the corresponding elements
-        in a flatten array, which is how MuJoCo stores physical simulation data.
-        """
-        super()._setup_references()
-
-        # Hammer object references from this env
-        self.hammer_body_id = self.sim.model.body_name2id(self.hammer.root_body)
-        # Bin object references from this env
-        self.bin_body_id = self.sim.model.body_name2id(self.bin.root_body)
-
-        # General env references
-        self.table_top_id = self.sim.model.site_name2id("table_top")
-
-    def _setup_observables(self):
-        """
-        Sets up observables to be used for this environment.
-
-        Returns:
-            OrderedDict: Dictionary mapping observable names to its corresponding Observable object
-        """
-        observables = super()._setup_observables()
-
-        # low-level object information
-        if self.use_object_obs:
-            modality = "object"
-
-            #position and rotation of hammer
-            @sensor(modality=modality)
-            def hammer_pos(_):
-                return np.array(self._hammer_pos)
-
-            @sensor(modality=modality)
-            def hammer_quat(_):
-                return np.array(self._hammer_quat)
-
-            #position and rotation of bin
-            @sensor(modality=modality)
-            def bin_pos(_):
-                return np.array(self._bin_pos)
-
-            @sensor(modality=modality)
-            def bin_quat(_):
-                return np.array(self._bin_quat)
-
-            sensors = [hammer_pos, hammer_quat, bin_pos, bin_quat]
-            names = [s.__name__ for s in sensors]
-
-            arm_sensor_fns = []
-            if self.env_configuration == "single-robot":
-                # If single-robot, we only have one robot. gripper 0 is always right and gripper 1 is always left
-                pf0 = self.robots[0].robot_model.naming_prefix + "right_"
-                pf1 = self.robots[0].robot_model.naming_prefix + "left_"
-                prefixes = [pf0, pf1]
-                arm_sensor_fns = [
-                    self._get_obj_eef_sensor(full_pf, f"handle_xpos", f"gripper{idx}_to_handle", modality)
-                    for idx, full_pf in enumerate(prefixes)
-                ]
-            else:
-                # If not single-robot, we have two robots. gripper 0 is always the first robot's gripper and
-                # gripper 1 is always the second robot's gripper. However, must account for the fact that
-                # each robot may have multiple arms/grippers
-                robot_arm_prefixes = [self._get_arm_prefixes(robot, include_robot_name=False) for robot in self.robots]
-                robot_full_prefixes = [self._get_arm_prefixes(robot, include_robot_name=True) for robot in self.robots]
-                for idx, (arm_prefixes, full_prefixes) in enumerate(zip(robot_arm_prefixes, robot_full_prefixes)):
-                    arm_sensor_fns += [
-                        self._get_obj_eef_sensor(full_pf, f"handle_xpos", f"{arm_pf}gripper{idx}_to_handle", modality)
-                        for arm_pf, full_pf in zip(arm_prefixes, full_prefixes)
-                    ]
-
-            sensors += arm_sensor_fns
-            names += [s.__name__ for s in arm_sensor_fns]
-
-            # Create observables
-            for name, s in zip(names, sensors):
-                observables[name] = Observable(
-                    name=name,
-                    sensor=s,
-                    sampling_rate=self.control_freq,
-                )
-
-        return observables
-
-    def _reset_internal(self):
-        """
-        Resets simulation internal configurations.
-        """
-        super()._reset_internal()
-
-        # Reset all object positions using initializer sampler if we're not directly loading from a xml
-        if not self.deterministic_reset:
-            # Sample from the placement initializer for all objects
-            object_placements = self.placement_initializer.sample()
-            # Loop through all objects and reset their positions
-            for pos, quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(
-                    obj.joints[0],
-                    np.concatenate([np.array(pos), np.array(quat)])
-                )
-            self.sim.step()
-
-        # reset initial distance between hammer and bin
-        self._initial_hammer_bin_dist = np.linalg.norm(self._hammer_pos - self._bin_pos)
 
     def _check_success(self):
-        """
-        Check if the task has been completed. For this task, this means the hammer is in the bin.
-
-        Returns:
-            bool: True if task is successful (hammer is in the bin), False otherwise.
-        """
-
-        return self._hammer_in_bin and not self._grasp_hammer
-
-    @property
-    def _hammer_pos(self):
-        """
-        Returns the position of the hammer in the world frame.
-        """
-        return self.sim.data.body_xpos[self.hammer_body_id]
-
-    @property
-    def _hammer_quat(self):
-        """
-        Returns the orientation of the hammer in the world frame.
-        """
-        return self.sim.data.body_xquat[self.hammer_body_id]
-
-    @property
-    def _bin_pos(self):
-        """
-        Returns the position of the bin in the world frame.
-        """
-        return self.sim.data.body_xpos[self.bin_body_id]
-
-    @property
-    def _bin_quat(self):
-        """
-        Returns the orientation of the bin in the world frame.
-        """
-        return self.sim.data.body_xquat[self.bin_body_id]
-
-    @property
-    def _hammer_in_bin(self):
-        """
-        Returns True if the hammer is in the bin, False otherwise.
-        """
-        bin_pos = self._bin_pos
-        bin_quat = self._bin_quat
-
-        hammer_pos = self._hammer_pos
-
-        bin_aa = quat2axisangle(bin_quat)
-        bin_angle = np.linalg.norm(bin_aa)
-
-        # check if hammer has correct z position
-        hammer_center_z = hammer_pos[2]
-        bin_center_z = bin_pos[2]
-        bin_height = self.bin_size[2]
-        if hammer_center_z > bin_center_z + bin_height / 2:
-            return False
-
-        # Compute the corner coordinates of the bin in the xy-plane
-        def get_corners(center, angle, size):
-            # Rotation matrix from quaternion
-            rotation_matrix = quat2mat(axisangle2quat([0, 0, angle]))[:2, :2] # only xy rotation
-            half_size = size[:2] / 2
-
-            # Define local corners (relative to the center)
-            corners = np.array([
-                [-half_size[0], -half_size[1]],
-                [-half_size[0], half_size[1]],
-                [half_size[0], -half_size[1]],
-                [half_size[0], half_size[1]]
-            ])
-
-            # Rotate and translate corners to global position
-            rotated_corners = (rotation_matrix @ corners.T).T + center[:2]
-            return rotated_corners
-
-        # get bin corners
-        bin_corners = get_corners(bin_pos, bin_angle, self.bin_size)
-
-        bin_x_min, bin_x_max = np.min(bin_corners[:, 0]), np.max(bin_corners[:, 0])
-        bin_y_min, bin_y_max = np.min(bin_corners[:, 1]), np.max(bin_corners[:, 1])
-
-        hammer_in_box = bin_x_min < hammer_pos[0] < bin_x_max \
-            and bin_y_min < hammer_pos[1] < bin_y_max
-
-        return hammer_in_box
-
-    @property
-    def _grasp_hammer(self):
-        """
-        Returns True if the first arm is grasping the hammer, False otherwise.
-        """
-        # Check if any Arm's gripper is grasping the hammer
-        (g0, g1) = (
-            (self.robots[0].gripper["right"], self.robots[0].gripper["left"])
-            if self.env_configuration == "single-robot"
-            else (self.robots[0].gripper, self.robots[1].gripper)
-        )
-        return (
-            self._check_grasp(gripper=g0, object_geoms=self.hammer) or
-            self._check_grasp(gripper=g1, object_geoms=self.hammer)
-        )
-
-if __name__ == "__main__":
-    from src.environments.utils.visualize import visualize_static
-
-    visualize_static("TwoArmPickPlace", robots="Baxter")
+        return False
 
 
 

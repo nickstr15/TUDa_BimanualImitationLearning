@@ -1,0 +1,23 @@
+- name: "Sawyer"
+  null_euler: [3.14159, 0.0, 0.0]
+- name: "Panda"
+  null_euler: [3.14159, 0.0, 0.0]
+- name: "Kinova3"
+  null_euler: [-3.14159, 0.0, 0.0]
+- name: "IIWA"
+  null_euler: [3.14159, 0.0, 0.0]
+- name: "UR5e"
+  null_euler: [-3.14159, 0.0, 0.0]
+
+- name: "Baxter"
+  type: "dual"
+  null_euler_left: [3.14159, 0.0, 0.0]
+  null_euler_right: [-3.14159, 0.0, 0.0]
+- name: "Yumi"
+  type: "dual"
+  null_euler_left: [3.14159, 0.0, 1.5708]
+  null_euler_right: [3.14159, 0.0, -1.5708]
+
+
+
+

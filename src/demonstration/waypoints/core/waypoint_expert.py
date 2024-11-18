@@ -17,10 +17,11 @@ from robosuite.wrappers import DataCollectionWrapper
 
 from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
     DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE
+from src.demonstration.waypoints.utils.null_orientation import get_two_arm_null_orientation
 from src.utils.clipping import clip_translation, clip_quat_by_axisangle
 from src.utils.paths import WAYPOINTS_DIR
 from src.utils.real_time import RealTimeHandler
-from src.utils.robot_states import TwoArmEEState
+from src.utils.robot_states import TwoArmEEState, EEState
 from src.utils.robot_targets import GripperTarget
 from src.demonstration.utils.gather_demonstrations import gather_demonstrations_as_hdf5
 
@@ -36,11 +37,17 @@ class TwoArmWaypointExpertBase(ABC):
         self,
         environment : TwoArmEnv,
         waypoints_file : str,
+        null_euler_left: np.array = np.zeros(3),
+        null_euler_right: np.array = np.zeros(3)
     ) -> None:
         """
         Constructor for the WaypointExpert class.
-        :param environment: Environment in which the expert agent acts
+        :param environment: Environment in which the expert agent acts. MUST use use_object_obs=True.
         :param waypoints_file: File containing the waypoints n $WAYPOINTS_DIR
+        :param null_euler_left: [r, p, y] rotation for the left arm, that aligns the left gripper rotation with
+            the objects angle = 0°. This value is different for every arm. E.g. for the Panda arm:
+        :param null_euler_right: [r, p, y] rotation for the right arm, that aligns the right gripper rotation with
+            the objects angle = 0°. This value is different for every arm.
         """
         full_waypoints_path = os.path.join(WAYPOINTS_DIR, waypoints_file)
         assert os.path.isfile(full_waypoints_path), f"Waypoints file {full_waypoints_path} not found"
@@ -48,6 +55,8 @@ class TwoArmWaypointExpertBase(ABC):
 
         # get action mode + input/output ranges
         self._evaluate_controller_setup()
+
+        self._null_quat_right, self._null_quat_left = get_two_arm_null_orientation([r.name for r in self._env.robots])
 
         with open(full_waypoints_path, 'r') as f:
             self._waypoint_cfg = yaml.safe_load(f)
@@ -61,6 +70,8 @@ class TwoArmWaypointExpertBase(ABC):
         self._rt_handler = RealTimeHandler(self._env.control_freq)
 
         self._ee_target_methods = self._create_ee_target_methods_dict()
+
+
 
     def _evaluate_controller_setup(self) -> None:
         """
@@ -694,7 +705,6 @@ class TwoArmWaypointExpertBase(ABC):
         shutil.rmtree(tmp_dir)
 
 
-    @abstractmethod
     def _create_ee_target_methods_dict(self) -> dict:
         """
         Create a dictionary of methods that return the position, orientation, and gripper state of a device.
@@ -702,7 +712,40 @@ class TwoArmWaypointExpertBase(ABC):
         All methods take the observation after reset as input.
         :return: Dictionary of methods
         """
-        return {}
+        return {
+            "initial_state_left": self._initial_state_left,
+            "initial_state_right": self._initial_state_right,
+        }
+
+    def _initial_state_left(self, obs: OrderedDict = None) -> dict:
+        """
+        Initial state for the left arm.
+
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+        state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).left
+        dct = {
+            "pos": state.xyz,
+            "quat": state.quat,
+            "grip": GripperTarget.OPEN_VALUE
+        }
+        return dct
+
+    def _initial_state_right(self, obs: OrderedDict = None) -> dict:
+        """
+        Initial state for the right arm.
+
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+        state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).right
+        dtc = {
+            "pos": state.xyz,
+            "quat": state.quat,
+            "grip": GripperTarget.OPEN_VALUE
+        }
+        return dtc
 
 
 

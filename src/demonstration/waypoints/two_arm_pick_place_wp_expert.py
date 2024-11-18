@@ -13,34 +13,8 @@ from src.environments.manipulation.two_arm_pick_place import TwoArmPickPlace
 
 class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
     """
-    Panda handover expert agent that follows a predefined trajectory of waypoints.
-
-    Environment must have use_object_obs=True.
+    Specific waypoint expert for the TwoArmPickPlace environment.
     """
-
-    def __init__(
-            self,
-            env : TwoArmPickPlace,
-            waypoints_file : str,
-            zero_euler_left: np.ndarray | list,
-            zero_euler_right: np.ndarray | list,
-        ):
-        """
-        Constructor for the PandaHandoverWpExpertBase class.
-        :param env: environment to interact with
-        :param waypoints_file: file with the waypoints
-        :param zero_euler_left: [r, p, y] rotation for the left arm, that aligns the left gripper rotation with
-            the objects angle = 0°. This value is different for every arm. E.g. for the Panda arm:
-        :param zero_euler_right: [r, p, y] rotation for the right arm, that aligns the right gripper rotation with
-            the objects angle = 0°. This value is different for every arm.
-        """
-        super().__init__(
-            environment=env,
-            waypoints_file=waypoints_file,
-        )
-
-        self._zero_quat_left = mat2quat(euler2mat(zero_euler_left))
-        self._zero_quat_right = mat2quat(euler2mat(zero_euler_right))
 
     ######################################################################
     # Definition of special ee targets ###################################
@@ -53,10 +27,8 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
 
         :return: dictionary with the methods
         """
-        return {
-            "initial_state_left": self.__initial_state_left,
-            "initial_state_right": self.__initial_state_right,
-
+        dct = super()._create_ee_target_methods_dict()
+        update = {
             "pre_pick_up_robot_right": self.__pre_pick_up_robot_right,
             "pre_drop_off_robot_left": self.__pre_drop_off_robot_left,
 
@@ -64,35 +36,8 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
             "pre_hand_over_robot_left": self.__pre_hand_over_robot_left,
         }
 
-    def __initial_state_left(self, obs: OrderedDict = None) -> dict:
-        """
-        Initial state for the left arm.
-
-        :param obs: observation after reset
-        :return: dictionary with the target position, orientation, and gripper state
-        """
-        state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).left
-        dct = {
-            "pos": state.xyz,
-            "quat": state.quat,
-            "grip": GripperTarget.OPEN_VALUE
-        }
+        dct.update(update)
         return dct
-
-    def __initial_state_right(self, obs: OrderedDict = None) -> dict:
-        """
-        Initial state for the right arm.
-
-        :param obs: observation after reset
-        :return: dictionary with the target position, orientation, and gripper state
-        """
-        state: EEState = TwoArmEEState.from_dict(obs, env_config=self._env.env_configuration).right
-        dtc = {
-            "pos": state.xyz,
-            "quat": state.quat,
-            "grip": GripperTarget.OPEN_VALUE
-        }
-        return dtc
 
     def __pre_pick_up_robot_right(self, obs: OrderedDict = None) -> dict:
         """
@@ -153,7 +98,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
         # Apply angle adjustment and convert to quaternion
         angle_rad = np.deg2rad(angle_deg)
         target_quat = axisangle2quat(np.array([0, 0, 1]) * angle_rad)
-        target_quat = quat_multiply(target_quat, self._zero_quat_left)
+        target_quat = quat_multiply(target_quat, self._null_quat_left)
 
         # Calculate target position with offset
         target_pos = obj_pos + np.dot(quat2mat(target_quat), offset)
@@ -173,7 +118,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
         target_pos = np.array([0.03, 0.0, 1])
         target_quat = quat_multiply(
             axisangle2quat(np.array([1, 0, 0]) * np.deg2rad(90)),
-            self._zero_quat_right
+            self._null_quat_right
         )
         return {
             "pos": target_pos,
@@ -183,7 +128,7 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
 
     def __pre_hand_over_robot_left(self, obs: OrderedDict = None) -> dict:
         target_pos = np.array([-0.03, 0, 1.1])
-        target_quat = self._zero_quat_right
+        target_quat = self._null_quat_right
         return {
             "pos": target_pos,
             "quat": target_quat,
@@ -191,10 +136,13 @@ class TwoArmPickPlaceWaypointExpert(TwoArmWaypointExpertBase):
         }
 
 
-def example_panda(n_episodes: int = 10):
+def example_panda(
+    n_episodes: int = 10,
+    robots: str | list[str] = ["Panda", "Panda"]
+):
     two_arm_pick_place = suite.make(
         env_name="TwoArmPickPlace",
-        robots=["Panda", "Panda"],
+        robots=robots,
         has_renderer=True,
         has_offscreen_renderer=False,
         use_camera_obs=False,
@@ -203,14 +151,16 @@ def example_panda(n_episodes: int = 10):
     expert = TwoArmPickPlaceWaypointExpert(
         two_arm_pick_place,
         waypoints_file="two_arm_pick_place_wp.yaml",
-        zero_euler_left=[np.pi, 0, 0],
-        zero_euler_right=[np.pi, 0, 0]
+        null_euler_left=[np.pi, 0, 0],
+        null_euler_right=[np.pi, 0, 0]
     )
     expert.visualize(n_episodes)
 
-def example_ur5e(n_episodes: int = 10):
-    raise NotImplementedError
 
 if __name__ == "__main__":
-    example_panda(2)
-    # example_ur5e()
+    #example_panda(2, ["Panda", "Panda"])
+    #example_panda(2, ["Kinova3", "Kinova3"])
+    #example_panda(2, ["IIWA", "IIWA"])
+    #example_panda(2, ["UR5e", "UR5e"])
+
+    example_panda(2, ["Panda", "IIWA"])
