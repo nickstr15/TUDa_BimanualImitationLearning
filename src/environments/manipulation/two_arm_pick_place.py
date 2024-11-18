@@ -2,15 +2,13 @@ from collections import OrderedDict
 
 import numpy as np
 
-import robosuite.utils.transform_utils as tu
-import robosuite.utils.sim_utils as su
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import HammerObject, Bin
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite.utils.transform_utils import quat2mat, mat2euler, quat2axisangle, axisangle2quat
+from robosuite.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat, euler2mat, convert_quat
 
 
 class TwoArmPickPlace(TwoArmEnv):
@@ -305,7 +303,7 @@ class TwoArmPickPlace(TwoArmEnv):
                 for robot, rotation in zip(self.robots, (np.pi / 2, -np.pi / 2)):
                     xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
                     rot = np.array((0, 0, rotation))
-                    xpos = tu.euler2mat(rot) @ np.array(xpos)
+                    xpos = euler2mat(rot) @ np.array(xpos)
                     robot.robot_model.set_base_xpos(xpos)
                     robot.robot_model.set_base_ori(rot)
             else:  # "parallel" configuration setting
@@ -335,14 +333,8 @@ class TwoArmPickPlace(TwoArmEnv):
         )
 
         # initialize objects of interest
-        self.hammer = HammerObject(
-            name="hammer",
-            handle_radius=0.015,
-            handle_length=0.20,
-            handle_density=150.0,
-            handle_friction=4.0,
-            head_density_ratio=1.5,
-        )
+        self.hammer = HammerObject(name="hammer")
+
         self.bin = Bin(
             name="bin",
             bin_size=self.bin_size,
@@ -508,7 +500,7 @@ class TwoArmPickPlace(TwoArmEnv):
             bool: True if task is successful (hammer is in the bin), False otherwise.
         """
 
-        return self._hammer_in_bin and not self._grasp_hammer
+        return self._hammer_in_bin and not self._grasping_hammer
 
     @property
     def _hammer_pos(self):
@@ -522,7 +514,8 @@ class TwoArmPickPlace(TwoArmEnv):
         """
         Returns the orientation of the hammer in the world frame.
         """
-        return self.sim.data.body_xquat[self.hammer_body_id]
+        # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
+        return convert_quat(self.sim.data.body_xquat[self.hammer_body_id], to="xyzw")
 
     @property
     def _bin_pos(self):
@@ -536,7 +529,8 @@ class TwoArmPickPlace(TwoArmEnv):
         """
         Returns the orientation of the bin in the world frame.
         """
-        return self.sim.data.body_xquat[self.bin_body_id]
+        # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
+        return convert_quat(self.sim.data.body_xquat[self.bin_body_id], to="xyzw")
 
     @property
     def _hammer_in_bin(self):
@@ -588,9 +582,9 @@ class TwoArmPickPlace(TwoArmEnv):
         return hammer_in_box
 
     @property
-    def _grasp_hammer(self):
+    def _grasping_hammer(self):
         """
-        Returns True if the first arm is grasping the hammer, False otherwise.
+        Returns True if any arm is grasping the hammer, False otherwise.
         """
         # Check if any Arm's gripper is grasping the hammer
         (g0, g1) = (

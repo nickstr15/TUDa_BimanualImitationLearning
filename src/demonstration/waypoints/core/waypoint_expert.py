@@ -37,17 +37,11 @@ class TwoArmWaypointExpertBase(ABC):
         self,
         environment : TwoArmEnv,
         waypoints_file : str,
-        null_euler_left: np.array = np.zeros(3),
-        null_euler_right: np.array = np.zeros(3)
     ) -> None:
         """
         Constructor for the WaypointExpert class.
         :param environment: Environment in which the expert agent acts. MUST use use_object_obs=True.
         :param waypoints_file: File containing the waypoints n $WAYPOINTS_DIR
-        :param null_euler_left: [r, p, y] rotation for the left arm, that aligns the left gripper rotation with
-            the objects angle = 0°. This value is different for every arm. E.g. for the Panda arm:
-        :param null_euler_right: [r, p, y] rotation for the right arm, that aligns the right gripper rotation with
-            the objects angle = 0°. This value is different for every arm.
         """
         full_waypoints_path = os.path.join(WAYPOINTS_DIR, waypoints_file)
         assert os.path.isfile(full_waypoints_path), f"Waypoints file {full_waypoints_path} not found"

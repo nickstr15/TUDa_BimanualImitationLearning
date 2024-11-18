@@ -100,37 +100,6 @@
       quat: "wp_8"
       grip: "closed"
 
-################################################
-# DROP OFF WITH LEFT ARM #######################
-################################################
-- id: 10
-  description: "go to pre-drop off position"
-  targets:
-    - device: "robot_right"
-      ee_target: "wp_9"
-    - device: "robot_left"
-      ee_target: "pre_drop_off_robot_left"
-
-- id: 11
-  description: "go to drop off position"
-  targets:
-    - device: "robot_right"
-      ee_target: "wp_9"
-    - device: "robot_left"
-      pos : "wp_10 + [0, 0, -0.1]"
-      quat: "wp_10"
-      grip: "closed"
-
-- id: 12
-  description: "drop off object with left arm"
-  targets:
-  - device: "robot_right"
-    ee_target: "wp_11"
-  - device: "robot_left"
-    pos: "wp_11"
-    quat: "wp_11"
-    grip: "open"
-
 
 
 

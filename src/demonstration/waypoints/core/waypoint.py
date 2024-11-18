@@ -7,7 +7,7 @@ from src.utils.robot_targets import EETarget, TwoArmEETarget, GripperTarget
 DEFAULT_POSITION_TOLERANCE = 0.01
 DEFAULT_ORIENTATION_TOLERANCE = np.deg2rad(5)
 DEFAULT_MIN_DURATION = 0.5 # before this time, the waypoint is not considered reached
-DEFAULT_MAX_DURATION = 30.0 # after this time, the waypoint is considered as unreachable
+DEFAULT_MAX_DURATION = 10.0 # after this time, the waypoint is considered as unreachable
 DEFAULT_MUST_REACH = True
 
 class Waypoint:
