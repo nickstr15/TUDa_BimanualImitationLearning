@@ -1,0 +1,20 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+
+- id: 1
+  description: "move left arm with hole to random target position"
+  targets:
+    - device: "robot_left" #important: first left, as method for right needs this values
+      ee_target: "random_target_left"
+    - device: "robot_right"
+      ee_target: "pre_target_right"
+
+
+
+
+

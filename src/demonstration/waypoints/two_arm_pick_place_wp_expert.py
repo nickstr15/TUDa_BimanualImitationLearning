@@ -1,4 +1,4 @@
-from typing import OrderedDict, Callable
+from typing import OrderedDict
 import numpy as np
 
 import robosuite as suite

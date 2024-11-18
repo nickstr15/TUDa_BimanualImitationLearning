@@ -549,14 +549,21 @@ class TwoArmWaypointExpertBase(ABC):
         :param grip_action_lr: the action controlling the gripper state
         :return: total action
         """
-        if self._env.env_configuration == "single-robot":
-            # first the part actions, then the gripper actions
-            return np.concatenate(part_action_lr[::-1] + grip_action_lr[::-1])
-        else:
-            # part + gripper + part + gripper
-            return np.concatenate([
-                part_action_lr[1], grip_action_lr[1], part_action_lr[0], grip_action_lr[0]
-            ])
+        dof = self._env.action_spec[0].shape[0]
+        if dof == 12: # no gripper
+            return np.concatenate(part_action_lr[::-1])
+
+        if dof == 14: # gripper + single arms
+            if self._env.env_configuration == "single-robot":
+                # first the part actions, then the gripper actions
+                return np.concatenate(part_action_lr[::-1] + grip_action_lr[::-1])
+            else:
+                # part + gripper + part + gripper
+                return np.concatenate([
+                    part_action_lr[1], grip_action_lr[1], part_action_lr[0], grip_action_lr[0]
+                ])
+
+        raise NotImplementedError(f"[WP] Unsupported action space with {dof} DoF.")
 
     def _run_episode(
         self,

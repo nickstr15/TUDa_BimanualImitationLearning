@@ -1,8 +1,8 @@
-from typing import OrderedDict, Callable
+from typing import OrderedDict
 import numpy as np
 
 import robosuite as suite
-from robosuite import TwoArmHandover, TwoArmLift
+from robosuite import TwoArmLift
 from robosuite.utils.transform_utils import quat2mat, mat2euler, axisangle2quat, quat_multiply
 
 from src.utils.robot_targets import GripperTarget

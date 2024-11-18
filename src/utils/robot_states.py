@@ -9,7 +9,7 @@ class RawGripperState:
 
     def __init__(
         self,
-        qpos: np.array = np.zeros(2)
+        qpos: np.ndarray | None = np.zeros(2)
     ) -> None:
         """
         :param qpos: gripper joint positions
@@ -17,14 +17,14 @@ class RawGripperState:
         self._qpos = qpos
 
     @property
-    def qpos(self) -> float:
+    def qpos(self) -> np.ndarray | None:
         """
         :return: gripper state
         """
         return self._qpos
 
     @qpos.setter
-    def qpos(self, qpos: np.array) -> None:
+    def qpos(self, qpos: np.ndarray | None) -> None:
         """
         :param qpos: gripper joint positions
         """
@@ -40,7 +40,7 @@ class EEState:
         self,
         xyz: np.ndarray = np.zeros(3),
         quat: np.ndarray = np.array([1, 0, 0, 0]),
-        grip: np.ndarray = np.zeros(2)
+        grip: np.ndarray | None = np.zeros(2)
     ) -> None:
         """
         :param xyz: xyz position
@@ -66,7 +66,7 @@ class EEState:
         return self._quat
 
     @property
-    def qpos_grip(self) -> np.array:
+    def qpos_grip(self) -> np.ndarray | None:
         """
         :return: gripper state
         """
@@ -94,7 +94,7 @@ class EEState:
         self._quat = quat
 
     @qpos_grip.setter
-    def qpos_grip(self, qpos: np.array) -> None:
+    def qpos_grip(self, qpos: np.ndarray | None) -> None:
         """
         :param qpos: gripper state
         """
@@ -168,23 +168,23 @@ class TwoArmEEState:
             left = EEState(
                 xyz=np.array(data["robot0_left_eef_pos"]),
                 quat=np.array(data["robot0_left_eef_quat"]),
-                grip=np.array(data["robot0_left_gripper_qpos"])
+                grip=np.array(data.get("robot0_left_gripper_qpos", None))
             )
             right = EEState(
                 xyz=np.array(data["robot0_right_eef_pos"]),
                 quat=np.array(data["robot0_right_eef_quat"]),
-                grip=np.array(data["robot0_right_gripper_qpos"])
+                grip=np.array(data.get("robot0_right_gripper_qpos", None))
             )
         else:
             left = EEState(
                 xyz=np.array(data["robot1_eef_pos"]),
                 quat=np.array(data["robot1_eef_quat"]),
-                grip=np.array(data["robot1_gripper_qpos"])
+                grip=np.array(data.get("robot1_gripper_qpos", None))
             )
             right = EEState(
                 xyz=np.array(data["robot0_eef_pos"]),
                 quat=np.array(data["robot0_eef_quat"]),
-                grip=np.array(data["robot0_gripper_qpos"])
+                grip=np.array(data.get("robot0_gripper_qpos", None))
             )
 
         return cls(left, right)
