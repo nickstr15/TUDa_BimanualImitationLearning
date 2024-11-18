@@ -73,6 +73,7 @@ def example(
     two_arm_pick_place = suite.make(
         env_name="TwoArmPickPlace",
         robots=robots,
+        env_configuration="parallel",
         has_renderer=True,
         has_offscreen_renderer=False,
         use_camera_obs=False,
