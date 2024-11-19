@@ -17,8 +17,7 @@ class TwoArmPegInHoleWaypointExpert(TwoArmWaypointExpertBase):
         super().__init__(**kwargs)
         self._env: TwoArmPegInHole = self._env  # for type hinting in pycharm
 
-        self._target_pos_left = np.array([0.0, 0.0, 1.0])
-        self._target_quat_left = self._null_quat_left
+        self._hole_offset = np.array([0, 0, -0.17]) # offset for the hole from ee
 
     ######################################################################
     # Definition of special ee targets ###################################
@@ -33,35 +32,28 @@ class TwoArmPegInHoleWaypointExpert(TwoArmWaypointExpertBase):
         """
         dct = super()._create_ee_target_methods_dict()
         update = {
-            "random_target_left": self.__random_target_left,
+            "pre_target_left": self.__pre_target_left,
             "pre_target_right": self.__pre_target_right,
+
+            "target_left": self.__target_left,
+            "target_right": self.__target_right,
         }
 
         dct.update(update)
         return dct
 
-    def __random_target_left(self, obs: OrderedDict = None) -> dict:
+    def __pre_target_left(self, obs: OrderedDict = None) -> dict:
         """
         Random target for the left arm.
         :param obs:
         :return:
         """
-        euler_x = np.random.uniform(np.deg2rad(-30), 0)
-        euler_y = np.random.uniform(np.deg2rad(20), np.deg2rad(20))
-        euler_z = np.random.uniform(np.deg2rad(10), np.deg2rad(10))
-        random_quat = mat2quat(euler2mat(np.array([euler_x, euler_y, euler_z])))
-
-        pos_x = np.random.uniform(-0.1, 0.1)
-        pos_y = np.random.uniform(0.1, 0.3)
-        pos_z = np.random.uniform(1.0, 1.2)
-        random_pos = np.array([pos_x, pos_y, pos_z])
-
-        self._target_quat_left = random_quat
-        self._target_pos_left = random_pos
+        pos = np.array([-0.2, 0.2, 1.2])
+        quat = self._null_quat_left
 
         return {
-            "pos": random_pos,
-            "quat": quat_multiply(random_quat, self._null_quat_left),
+            "pos": pos,
+            "quat": quat,
             "grip": GripperTarget.OPEN_VALUE #grip irrelevant
         }
 
@@ -71,7 +63,44 @@ class TwoArmPegInHoleWaypointExpert(TwoArmWaypointExpertBase):
         :param obs:
         :return:
         """
-        raise NotImplementedError # TODO
+        pos = np.array([-0.2, -(0.2+self._env.peg_length), 1.2]) + self._hole_offset
+        quat = quat_multiply(axisangle2quat(np.array([1, 0, 0]) * np.pi/2), self._null_quat_right)
+
+        return {
+            "pos": pos,
+            "quat": quat,
+            "grip": GripperTarget.OPEN_VALUE #grip irrelevant
+        }
+
+    def __target_left(self, obs: OrderedDict = None) -> dict:
+        """
+        Target position for the left arm.
+        :param obs:
+        :return:
+        """
+        pos = np.array([-0.2, 0, 1.2])
+        quat = self._null_quat_left
+
+        return {
+            "pos": pos,
+            "quat": quat,
+            "grip": GripperTarget.OPEN_VALUE #grip irrelevant
+        }
+
+    def __target_right(self, obs: OrderedDict = None) -> dict:
+        """
+        Target position for the right arm.
+        :param obs:
+        :return:
+        """
+        pos = np.array([-0.2, -self._env.peg_length, 1.2]) + self._hole_offset
+        quat = quat_multiply(axisangle2quat(np.array([1, 0, 0]) * np.pi/2), self._null_quat_right)
+
+        return {
+            "pos": pos,
+            "quat": quat,
+            "grip": GripperTarget.OPEN_VALUE #grip irrelevant
+        }
 
 def example(
     n_episodes: int = 10,
