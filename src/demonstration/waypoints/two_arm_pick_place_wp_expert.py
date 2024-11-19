@@ -17,6 +17,9 @@ class TwoArmPickPlaceWaypointExpert(TwoArmHandoverWaypointExpert):
         super().__init__(**kwargs)
         self._env : TwoArmPickPlace = self._env # for type hinting in pycharm
 
+        self._target_bin_name = "bin"
+        self._get_hammer_head_halfsize_fn = lambda: self._env.hammer.head_halfsize
+
     ######################################################################
     # Definition of special ee targets ###################################
     ######################################################################
@@ -30,40 +33,65 @@ class TwoArmPickPlaceWaypointExpert(TwoArmHandoverWaypointExpert):
         """
         dct = super()._create_ee_target_methods_dict()
         update = {
-            "pre_drop_off_robot_left": self.__pre_drop_off_robot_left,
+            "pre_drop_off_hammer_left": self.__pre_drop_off_hammer_left,
+            "drop_off_hammer_left": self.__drop_off_hammer_left,
         }
 
         dct.update(update)
         return dct
 
-    def __pre_drop_off_robot_left(self, obs: OrderedDict = None) -> dict:
+    def __pre_drop_off_hammer_left(self, obs: OrderedDict = None) -> dict:
         """
         Pre-drop off position for the left arm.
 
         :param obs: observation after reset
         :return: dictionary with the target position, orientation, and gripper state
         """
+        return self.__drop_off_computation(
+            obs=obs,
+            z_offset=self._bin_height + 0.2
+        )
+
+    def __drop_off_hammer_left(self, obs: OrderedDict = None) -> dict:
+        """
+        Drop off position for the left arm.
+
+        :param obs: observation after reset
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+        head_halfsize = self._get_hammer_head_halfsize_fn()
+        return self.__drop_off_computation(
+            obs=obs,
+            z_offset= self._bin_height/2 + head_halfsize + 0.03
+        )
+
+    def __drop_off_computation(self, obs: OrderedDict = None, z_offset: int = 0) -> dict:
+        """
+        Drop off position for the left arm.
+        :param obs: observation after reset
+        :param z_offset: offset in z direction
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+
+        """
         # recompute grip offset arm0
-        hammer_quat = obs["hammer_quat"]
+        hammer_quat = obs[f"{self._hammer_name}_quat"]
         flip_sign = np.sign(mat2euler(quat2mat(hammer_quat))[0])
-        handle_length = self._env.hammer.handle_length
+        handle_length = self._get_hammer_handle_length_fn()
         grip_offset_0 = 0.5 * handle_length - 0.02  # grasp 2cm from hammer head
         grip_offset_0 *= -1 * flip_sign * self._handover_mode
 
         # compute grip offset arm1, 6cm shifted to handle center from grip offset arm0
         grip_offset_1 = grip_offset_0 - 0.06 * np.sign(grip_offset_0)
+        """
 
         dct = self._calculate_target_pose(
-            obj_pos=obs["bin_pos"],
-            obj_quat=obs["bin_quat"],
-            offset=np.array([grip_offset_1, 0.0, 0.15]),
+            obj_pos=obs[f"{self._target_bin_name}_pos"],
+            obj_quat=obs.get(f"{self._target_bin_name}_quat", np.array([0, 0, 0, 1])),
+            offset=np.array([0.0, 0.0, z_offset]),
             gripper_state=GripperTarget.CLOSED_VALUE,
+            adjustment_quat=axisangle2quat(np.array([0, 0, 1]) * np.pi/4)
         )
-
-        #rotate by 10 degree around x-axis to drop off with a slight angle, to make the hammer fall to the side
-        rot = axisangle2quat(np.array([1, 0, 0]) * np.deg2rad(10) * np.random.choice([-1, 1]))
-        dct["quat"] = quat_multiply(dct["quat"], rot)
-
         return dct
 
 def example(

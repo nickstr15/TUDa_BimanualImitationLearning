@@ -163,7 +163,7 @@ class TwoArmPickPlace(TwoArmEnv):
             arm_distances=0.7,
             bin_size=(0.35, 0.35, 0.08),
             position_tol=(0.05, 0.05),
-            orientation_tol=np.pi/4,
+            orientation_tol=np.pi,
             use_camera_obs=True,
             use_object_obs=True,
             reward_scale=1.0,

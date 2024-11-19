@@ -13,7 +13,7 @@
   description: "go to pre-pick up position"
   targets:
     - device: "robot_right"
-      ee_target: "pre_pick_up_robot_right"
+      ee_target: "pre_pick_up_hammer_right"
     - device: "robot_left"
       ee_target: "wp_0"
 
@@ -21,9 +21,7 @@
   description: "go down with right arm"
   targets:
     - device: "robot_right"
-      pos: "wp_1 + [0, 0, -0.05]"
-      quat: "wp_1"
-      grip: "open"
+      ee_target: "pick_up_hammer_right"
     - device: "robot_left"
       ee_target: "wp_1"
 
@@ -41,8 +39,8 @@
   description: "pick up object with right arm"
   targets:
     - device: "robot_right"
-      pos: "wp_3 + [0, 0, 0.1]"
-      quat: "wp_3"
+      pos: "wp_1"
+      quat: "wp_1"
       grip: "closed"
     - device: "robot_left"
       ee_target: "wp_3"
@@ -51,10 +49,18 @@
 # HAND OVER TO LEFT ARM ########################
 ################################################
 - id: 5
-  description: "go to pre-hand over position"
+  description: "go to pre-hand over position (1/2)"
   targets:
     - device: "robot_right"
       ee_target: "hand_over_robot_right"
+    - device: "robot_left"
+      ee_target: "wp_4"
+
+- id: 51
+  description: "go to pre-hand over position (1/2)"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_5"
     - device: "robot_left"
       ee_target: "pre_hand_over_robot_left"
 
@@ -62,10 +68,10 @@
   description: "both arms in hand over position"
   targets:
     - device: "robot_right"
-      ee_target: "wp_5"
+      ee_target: "wp_51"
     - device: "robot_left"
-      pos: "wp_5 + [0, 0, -0.1]"
-      quat: "wp_5"
+      pos: "wp_51 + [0, 0, -0.1]"
+      quat: "wp_51"
       grip: "open"
 
 - id: 7
@@ -109,7 +115,7 @@
     - device: "robot_right"
       ee_target: "wp_9"
     - device: "robot_left"
-      ee_target: "pre_drop_off_robot_left"
+      ee_target: "pre_drop_off_hammer_left"
 
 - id: 11
   description: "go to drop off position"
@@ -117,9 +123,7 @@
     - device: "robot_right"
       ee_target: "wp_9"
     - device: "robot_left"
-      pos : "wp_10 + [0, 0, -0.1]"
-      quat: "wp_10"
-      grip: "closed"
+      ee_target : "drop_off_hammer_left"
 
 - id: 12
   description: "drop off object with left arm"
