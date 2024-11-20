@@ -4,13 +4,12 @@ import numpy as np
 
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
-from robosuite.models.objects import HammerObject, Bin
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat, euler2mat, convert_quat
+from robosuite.utils.transform_utils import quat2mat,  euler2mat, convert_quat, mat2euler
 
-from src.models.objects.quad_insert_objects import QuadBracketObject
+from src.models.objects.quad_insert_objects import QuadBracketObject, QuadPegObject
 
 
 class TwoArmQuadInsert(TwoArmEnv):
@@ -60,24 +59,24 @@ class TwoArmQuadInsert(TwoArmEnv):
         table_friction (3-tuple): the three mujoco friction parameters for
             each table.
 
-        arm_distances (float): the distance between the two arms. Default is 0.5. Only used if two robots are used and
+        arm_distances (float): the distance between the two arms. Default is 0.6. Only used if two robots are used and
             the env_configuration is "parallel".
 
         position_tol_bracket (2-tuple): the tolerance for the position of the bracket at the start of the episodes.
             The position will be sampled uniformly in the range for x and y dimension.
-            Default is (0.05, 0.05).
+            Default is (0.02, 0.02).
 
         orientation_tol_bracket (2-tuple): the tolerance for the rotation of the bracket at the start of the episodes.
             The rotation will be sampled uniformly in the range around the z axis.
-            Default is [-pi/4, pi/4].
+            Default is [-pi/8, pi/8].
 
         position_tol_peg (2-tuple): the tolerance for the position of the peg at the start of the episodes.
             The position will be sampled uniformly in the range for x and y dimension.
-            Default is (0.05, 0.05).
+            Default is (0.02, 0.02).
 
         orientation_tol_peg (2-tuple): the tolerance for the rotation of the peg at the start of the episodes.
             The rotation will be sampled uniformly in the range around the z axis.
-            Default is [-pi/4, pi/4].
+            Default is [-pi/8, pi/8].
 
         use_camera_obs (bool): if True, every observation includes rendered image(s)
 
@@ -167,11 +166,11 @@ class TwoArmQuadInsert(TwoArmEnv):
             initialization_noise="default",
             table_full_size=(0.8, 1.5, 0.05),
             table_friction=(1.0, 5e-3, 1e-4),
-            arm_distances=0.5,
-            position_tol_bracket=(0.05, 0.05),
-            orientation_tol_bracket=(-np.pi/4, np.pi/4),
-            position_tol_peg=(0.05, 0.05),
-            orientation_tol_peg=(-np.pi / 4, np.pi / 4),
+            arm_distances=0.6,
+            position_tol_bracket=(0.02, 0.02),
+            orientation_tol_bracket=(-np.pi/8, np.pi/8),
+            position_tol_peg=(0.02, 0.02),
+            orientation_tol_peg=(-np.pi/8, np.pi/8),
             use_camera_obs=True,
             use_object_obs=True,
             reward_scale=1.0,
@@ -195,6 +194,8 @@ class TwoArmQuadInsert(TwoArmEnv):
             renderer="mjviewer",
             renderer_config=None,
     ):
+        # fixed settings
+        self.handle_distance = 0.5
 
         # settings for table-top
         self.table_full_size = table_full_size
@@ -203,7 +204,6 @@ class TwoArmQuadInsert(TwoArmEnv):
 
         # setting for arm position
         self.arm_distances = arm_distances
-
 
         # initial sampling range for object positions
         self.position_tol_bracket = position_tol_bracket
@@ -258,13 +258,11 @@ class TwoArmQuadInsert(TwoArmEnv):
         Reward function for the task.
 
         Sparse un-normalized reward:
-            0 if hammer is not in the bin
-            1 if hammer is in the bin
+            0 if bracket is not inserted
+            1 if bracket is inserted
 
         Un-normalized summed components if using reward shaping:
-            Distance: in [-1, 0], the distance between the hammer and the bin, normalized
-                by initial distance (-1 at start), 0 when hammer is in the bin
-            Success: 0 if hammer is not in the bin, 1 if hammer is in the bin
+            Not implemented for this task
 
         Note that the final reward is normalized and scaled by reward_scale / 1.0 as
         well so that the max score is equal to reward_scale
@@ -338,6 +336,7 @@ class TwoArmQuadInsert(TwoArmEnv):
 
         # initialize objects of interest
         self.bracket = QuadBracketObject(name="bracket")
+        self.peg = QuadPegObject(name="peg")
 
         self.placement_initializer = self._get_placement_initializer() if \
             self.placement_initializer is None else self.placement_initializer
@@ -346,7 +345,7 @@ class TwoArmQuadInsert(TwoArmEnv):
         self.model = ManipulationTask(
             mujoco_arena = mujoco_arena,
             mujoco_robots = [robot.robot_model for robot in self.robots],
-            mujoco_objects = [self.bracket],
+            mujoco_objects = [self.bracket, self.peg],
         )
 
     def _get_placement_initializer(self):
@@ -358,28 +357,29 @@ class TwoArmQuadInsert(TwoArmEnv):
         placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
 
         # Pre-define settings for each object's placement
-        objects = [self.bracket]
-        half_arm_distance = self.arm_distances / 2.0
-        y_centers = [-half_arm_distance]
-        x_tols = [self.position_tol_bracket[0]]
-        y_tols = [self.position_tol_bracket[1]]
-        rot_tols = [self.orientation_tol_bracket]
-        rot_axes = ["z"]
-        for obj, y, x_tol, y_tol, rot_tol, r_axis in zip(
+        objects = [self.bracket, self.peg]
+        x_centers = [-0.05, -0.15]
+        y_centers = [-0.38, 0.38]
+        x_tols = [self.position_tol_bracket[0], self.position_tol_peg[0]]
+        y_tols = [self.position_tol_bracket[1], self.position_tol_peg[1]]
+        rot_tols = [self.orientation_tol_bracket, self.orientation_tol_peg]
+        rot_axes = ["z", "z"]
+        for obj, x, y, x_tol, y_tol, rot_tol, r_axis in zip(
             objects,
-            y_centers, x_tols, y_tols,
+            x_centers, y_centers,
+            x_tols, y_tols,
             rot_tols, rot_axes
         ):
             # Create a sampler for the object
             sampler = UniformRandomSampler(
                 name=f"{obj.name}ObjectSampler",
                 mujoco_objects=obj,
-                x_range=[-x_tol, x_tol],
+                x_range=[x-x_tol, x+x_tol],
                 y_range=[y-y_tol, y+y_tol],
                 rotation=[rot_tol[0], rot_tol[1]],
                 rotation_axis=r_axis,
                 ensure_object_boundary_in_range=False,
-                ensure_valid_placement=False,
+                ensure_valid_placement=True,
                 reference_pos=self.table_offset,
             )
             placement_initializer.append_sampler(sampler)
@@ -514,7 +514,9 @@ class TwoArmQuadInsert(TwoArmEnv):
         """
         Returns the position of the hammer in the world frame.
         """
-        return self.sim.data.body_xpos[self.bracket_body_id]
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["center"])
+        ]
 
     @property
     def _bracket_quat(self):
@@ -522,39 +524,101 @@ class TwoArmQuadInsert(TwoArmEnv):
         Returns the orientation of the hammer in the world frame.
         """
         # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
-        return convert_quat(self.sim.data.body_xquat[self.bracket_body_id], to="xyzw")
+        return convert_quat(
+            self.sim.data.site_xmat[
+                self.sim.model.site_name2id(self.bracket.important_sites["center"])
+            ],
+            to="xyzw"
+        )
 
     @property
     def _bracket_handle_a_pos(self):
         """
         Returns the position of the first handle of the hammer in the world frame.
         """
-        return self.sim.data.site_xpos[self.sim.model.site_name2id(self.bracket.important_sites["handle_a"])]
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["handle_a"])
+        ]
 
     @property
     def _bracket_handle_b_pos(self):
         """
         Returns the position of the second handle of the hammer in the world frame.
         """
-        return self.sim.data.site_xpos[self.sim.model.site_name2id(self.bracket.important_sites["handle_b"])]
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["handle_b"])
+        ]
 
     @property
     def _bracket_handle_a_quat(self):
         """
         Returns the orientation of the first handle of the hammer in the world frame.
         """
-        return convert_quat(self.sim.data.site_xmat[self.sim.model.site_name2id(self.bracket.important_sites["handle_a"])], to="xyzw")
+        return convert_quat(
+            self.sim.data.site_xmat[
+                self.sim.model.site_name2id(self.bracket.important_sites["handle_a"])
+            ],
+            to="xyzw"
+        )
 
     @property
     def _bracket_handle_b_quat(self):
         """
         Returns the orientation of the second handle of the hammer in the world frame.
         """
-        return convert_quat(self.sim.data.site_xmat[self.sim.model.site_name2id(self.bracket.important_sites["handle_b"])], to="xyzw")
+        return convert_quat(
+            self.sim.data.site_xmat[
+                self.sim.model.site_name2id(self.bracket.important_sites["handle_b"])
+            ],
+            to="xyzw"
+        )
+
+    @property
+    def _peg_target_pos(self):
+        """
+        Returns the position of the target peg in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.peg.important_sites["target"])
+        ]
+
+    @property
+    def _peg_target_quat(self):
+        """
+        Returns the orientation of the target peg in the world frame.
+        """
+        return convert_quat(
+            self.sim.data.site_xmat[
+                self.sim.model.site_name2id(self.peg.important_sites["target"])
+            ],
+            to="xyzw"
+        )
 
     @property
     def _bracket_inserted(self):
-        return False
+        """
+        Returns True if the bracket is inserted on the peg.
+        """
+        # Check if the bracket is within the peg
+        bracket_pos = self._bracket_pos
+        peg_pos = self._peg_target_pos
+
+        pos_ok = (
+            np.linalg.norm(bracket_pos[:1] - peg_pos[:1]) < 0.02  # 2cm tolerance in xy-plane
+            and np.abs(bracket_pos[2] - peg_pos[2]) < 0.005 # 5mm tolerance in z-direction
+        )
+
+        # Check if the bracket is aligned with the peg
+        bracket_quat = self._bracket_quat
+        peg_quat = self._peg_target_quat
+
+        # Compute the relative rotation between the bracket and the peg
+        bracket_rot = mat2euler(quat2mat(bracket_quat))
+        peg_rot = mat2euler(quat2mat(peg_quat))
+        rel_rot = np.abs(bracket_rot - peg_rot)
+
+        rot_ok = np.all(rel_rot < np.rad2deg(5))
+        return pos_ok and rot_ok
 
 if __name__ == "__main__":
     from src.environments.utils.visualize import visualize_static

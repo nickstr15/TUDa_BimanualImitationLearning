@@ -1,0 +1,59 @@
+<mujoco model="peg">
+    <asset>
+        <mesh name="dual_peg_base"    file="quad_peg_base.stl" />
+        <mesh name="dual_peg_pin_a"   file="../dual_pegs/pin_a.stl" />
+        <mesh name="dual_peg_stand_a" file="../dual_pegs/stand_a.stl" />
+        <mesh name="dual_peg_pin_b"   file="../dual_pegs/pin_b.stl" />
+        <mesh name="dual_peg_stand_b" file="../dual_pegs/stand_b.stl" />
+
+        <material name="black" specular="1" shininess="0.5" reflectance="1" emission="0.1"  rgba="0.2 0.2 0.2 1"/>
+        <material name="grey" specular="1" shininess="0.5" reflectance="1" emission="0.1" rgba="0.5 0.5 0.5 1"/>
+    </asset>
+
+    <worldbody>
+        <body>
+            <body name="object">
+                <inertial pos="0 0 0" mass="100.0" diaginertia="10 10 10"/>
+
+                <geom name="dual_peg_base" type="mesh" mesh="dual_peg_base" pos="0 0 0.05" material="grey"
+                      solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_pin_a" type="mesh" mesh="dual_peg_pin_a" pos="0 0.13 0" material="black"
+                      solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_stand_a" type="mesh" mesh="dual_peg_stand_a" pos="0 0.13 0" material="black"
+                      solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_pin_b" type="mesh" mesh="dual_peg_pin_b" pos="0 -0.33 0" material="black"
+                      solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_stand_b" type="mesh" mesh="dual_peg_stand_b" pos="0 -0.33 0" material="black"
+                      solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_pin_c" type="mesh" mesh="dual_peg_pin_a" pos="0 0.33 0" quat="0 0 0 0.707108"
+                      material="black" solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_stand_c" type="mesh" mesh="dual_peg_stand_a" pos="0 0.33 0" quat="0 0 0 0.707108"
+                      material="black" solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_pin_d" type="mesh" mesh="dual_peg_pin_b" pos="0 -0.13 0" quat="0 0 0 0.707108"
+                      material="black" solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+                <geom name="dual_peg_stand_d" type="mesh" mesh="dual_peg_stand_b" pos="0 -0.13 0" quat="0 0 0 0.707108"
+                      material="black" solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
+                      group="0" condim="4"/>
+
+                <site name="target_site" rgba="1 0 0 1" size="0.005" pos="0 0 0.012"/>
+            </body>
+            <!--
+            - bottom_site should be the bottom of the object, i.e. contact point with the surface it is placed on.
+            - top_site should be the top of the object, i.e. contact point if something is placed on it.
+            - horizontal_radius_site can be any point on a circle in the x-y plane that does not intersect the object.
+                This allows us to place multiple objects without having them collide into one another.
+            -->
+            <site rgba="0 0 0 0" size="0.005" pos="0 0 0" name="bottom_site"/>
+            <site rgba="0 0 0 0" size="0.005" pos="0 0 0.05" name="top_site"/>
+            <site rgba="0 0 0 0" size="0.005" pos="0.37 0 0" name="horizontal_radius_site"/>
+        </body>
+    </worldbody>
+</mujoco>
