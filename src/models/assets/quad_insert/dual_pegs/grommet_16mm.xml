@@ -35,6 +35,7 @@
         <mesh name="grommet_16mm_32"     file="dual_pegs/hole_16_32.stl" />
         <mesh name="grommet_16mm_33"     file="dual_pegs/hole_16_33.stl" />
 
+        <material name="silver" specular="1" shininess="0.5" reflectance="1" emission="0.25" rgba="0.82 0.82 0.82 1"/>
     </asset>
 
     <worldbody>

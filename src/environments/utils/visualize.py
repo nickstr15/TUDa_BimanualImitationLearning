@@ -1,6 +1,5 @@
 import robosuite as suite
 import numpy as np
-from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 
 from src.utils.real_time import RealTimeHandler
 
@@ -26,7 +25,8 @@ def visualize_static(
     )
 
     # reset the environment
-    _ = env.reset()
+    obs = env.reset()
+    print(obs)
 
     # target real time rendering
     dt = 1.0 / env.control_freq
