@@ -36,7 +36,6 @@ class TargetVisualizationWrapper(Wrapper):
         self._eef_controllers = self._get_eef_controllers()
         assert n_arms == len(self._eef_controllers), \
             f"[TargetVisualizationWrapper] Have {n_arms} arms, but {len(self._eef_controllers)} end-effector controllers"
-
         self.env.set_xml_processor(processor=self._add_indicators_to_model)
 
         # Conduct a (hard) reset to make sure visualization changes propagate
@@ -105,8 +104,11 @@ class TargetVisualizationWrapper(Wrapper):
         worldbody = root.find("worldbody")
 
         for i, (name, part_controller) in enumerate(self._eef_controllers.items()):
+            indicator_name = name + "_indicator_body"
+            if indicator_name in xml:
+                continue
             rgba = DEFAULT_COLORS[i % len(DEFAULT_COLORS)]
-            indicator_body = self.__default_indicator_body(name, rgba)
+            indicator_body = self.__default_indicator_body(indicator_name, rgba)
             worldbody.append(indicator_body)
 
         xml = ET.tostring(root, encoding="utf8").decode("utf8")
@@ -117,7 +119,7 @@ class TargetVisualizationWrapper(Wrapper):
         name: str,
         rgba: list[float],
     ) -> ET.Element:
-        indicator_body = new_body(name=name + "_indicator_body", pos=(0, 0, -1), mocap=True)
+        indicator_body = new_body(name=name, pos=(0, 0, -1), mocap=True)
 
         sphere = new_geom(
             name=name + "_indicator_sphere_geom",

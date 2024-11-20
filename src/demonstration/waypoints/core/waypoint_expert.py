@@ -24,6 +24,7 @@ from src.utils.real_time import RealTimeHandler
 from src.utils.robot_states import TwoArmEEState, EEState
 from src.utils.robot_targets import GripperTarget
 from src.demonstration.utils.gather_demonstrations import gather_demonstrations_as_hdf5
+from src.wrappers.target_visualization_wrapper import TargetVisualizationWrapper
 
 
 class TwoArmWaypointExpertBase(ABC):
@@ -586,7 +587,6 @@ class TwoArmWaypointExpertBase(ABC):
 
         # reset the environment
         self._env.deterministic_reset = not randomize
-        self._env.hard_reset = randomize
         obs = self._env.reset()
 
         waypoints = self._create_waypoints(obs)
@@ -651,12 +651,17 @@ class TwoArmWaypointExpertBase(ABC):
 
     def visualize(
         self,
-        num_episodes : int = 1
+        num_episodes : int = 1,
+        visualize_targets : bool = False
     ) -> None:
         """
         Visualize the expert agent in the environment.
         :param num_episodes: Number of episodes to visualize
+        :param visualize_targets: Whether to visualize the target positions
         """
+        if self.visualize:
+            self._env = TargetVisualizationWrapper(self._env)
+
         for _ in range(num_episodes):
             _ = self._run_episode(
                 render=True,
@@ -664,13 +669,16 @@ class TwoArmWaypointExpertBase(ABC):
                 randomize=True
             )
 
+        if visualize_targets:
+            self._env = self._env.unwrapped()
+
     def collect_data(self,
         out_dir : str,
         num_successes : int,
         env_config: dict,
         render: bool = False,
         target_real_time: bool = False
-    ) -> str:
+    ):
         """
         Collect demonstration from the expert agent in the environment.
 
