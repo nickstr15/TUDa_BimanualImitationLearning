@@ -13,7 +13,6 @@ from robosuite.utils.transform_utils import mat2quat, make_pose, pose_in_A_to_po
 from robosuite.wrappers import Wrapper
 from robosuite.environments.robot_env import RobotEnv
 
-
 DEFAULT_COLORS = [
     [1, 0, 0, 0.3],  # red
     [0, 0, 1, 0.3],  # blue
