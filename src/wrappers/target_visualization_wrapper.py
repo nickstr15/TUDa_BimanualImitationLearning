@@ -3,13 +3,11 @@ This file implements a wrapper for visualizing the end-effector targets in a rob
 """
 
 import xml.etree.ElementTree as ET
-from platform import processor
 
-import numpy as np
 from robosuite.controllers.parts.arm import OperationalSpaceController
 
 from robosuite.utils.mjcf_utils import new_body, new_geom
-from robosuite.utils.transform_utils import mat2quat, make_pose, pose_in_A_to_pose_in_B, pose_inv
+from robosuite.utils.transform_utils import make_pose, pose_in_A_to_pose_in_B
 from robosuite.wrappers import Wrapper
 from robosuite.environments.robot_env import RobotEnv
 
@@ -29,7 +27,7 @@ class TargetVisualizationWrapper(Wrapper):
         sure indicators are properly added to the sim model.
 
         Args:
-            env (RobotEnv): The environment to wrap
+            env (RobotEnv): The environment to wrap, must use OSC controllers for all end-effectors parts
         """
         super().__init__(env)
 
