@@ -415,7 +415,7 @@ class TwoArmQuadInsert(TwoArmEnv):
 
             #position and rotation of hammer
             @sensor(modality=modality)
-            def bracket_pos(_):
+            def bracket_xpos(_):
                 return np.array(self._bracket_pos)
 
             @sensor(modality=modality)
@@ -424,25 +424,25 @@ class TwoArmQuadInsert(TwoArmEnv):
 
             #position and rotation of bracket handles
             @sensor(modality=modality)
-            def bracket_handle_a_pos(_):
+            def handle0_xpos(_):
                 return np.array(self._bracket_handle_a_pos)
 
             @sensor(modality=modality)
-            def bracket_handle_b_pos(_):
+            def handle1_xpos(_):
                 return np.array(self._bracket_handle_b_pos)
 
             @sensor(modality=modality)
-            def bracket_handle_a_quat(_):
-                return np.array(self._bracket_handle_a_quat)
+            def target_xpos(_):
+                return np.array(self._peg_target_pos)
 
             @sensor(modality=modality)
-            def bracket_handle_b_quat(_):
-                return np.array(self._bracket_handle_b_quat)
+            def target_quat(_):
+                return np.array(self._peg_target_quat)
 
             sensors = [
-                bracket_pos, bracket_quat,
-                bracket_handle_a_pos, bracket_handle_b_pos,
-                bracket_handle_a_quat, bracket_handle_b_quat
+                bracket_xpos, bracket_quat,
+                handle0_xpos, handle1_xpos,
+                target_xpos, target_quat
             ]
             names = [s.__name__ for s in sensors]
 

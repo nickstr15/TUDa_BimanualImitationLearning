@@ -1,0 +1,60 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+
+################################################
+# PRE PICK UP ##################################
+################################################
+- id: 1
+  description: "go to pre-pick up position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_pick_up_robot_right"
+    - device: "robot_left"
+      ee_target: "pre_pick_up_robot_left"
+
+- id: 2
+  description: "go into pre-pick up position"
+  targets:
+  - device: "robot_right"
+    pos: "wp_1 + [0, 0, -0.1]"
+    quat: "wp_1"
+    grip: "open"
+  - device: "robot_left"
+    pos: "wp_1 + [0, 0, -0.1]"
+    quat: "wp_1"
+    grip: "open"
+
+- id: 3
+  description: "close grippers"
+  targets:
+  - device: "robot_right"
+    pos: "wp_2"
+    quat: "wp_2"
+    grip: "closed"
+  - device: "robot_left"
+    pos: "wp_2"
+    quat: "wp_2"
+    grip: "closed"
+
+- id: 4
+  description: "pick up object"
+  targets:
+  - device: "robot_right"
+    pos: "wp_3 + [0, 0, 0.2]"
+    quat: "wp_3"
+    grip: "closed"
+  - device: "robot_left"
+    pos: "wp_3 + [0, 0, 0.2]"
+    quat: "wp_3"
+    grip: "closed"
+
+
+
+
+
+

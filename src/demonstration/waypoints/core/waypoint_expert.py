@@ -659,7 +659,7 @@ class TwoArmWaypointExpertBase(ABC):
         :param num_episodes: Number of episodes to visualize
         :param visualize_targets: Whether to visualize the target positions
         """
-        if self.visualize:
+        if visualize_targets:
             self._env = TargetVisualizationWrapper(self._env)
 
         for _ in range(num_episodes):

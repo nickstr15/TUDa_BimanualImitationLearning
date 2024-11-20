@@ -17,6 +17,8 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
         super().__init__(**kwargs)
         self._env: TwoArmLift = self._env  # for type hinting in pycharm
 
+        self._object_name = "pot"
+
     ######################################################################
     # Definition of special ee targets ###################################
     ######################################################################
@@ -48,11 +50,11 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
         handle1_xpos = obs["handle1_xpos"]
         # select handle_xpos by the one with larger y value
         handle_xpos = handle0_xpos if handle0_xpos[1] >= handle1_xpos[1] else handle1_xpos
-        pot_quat = obs["pot_quat"]
+        object_quat = obs[f"{self._object_name}_quat"]
 
         return self._calculate_pre_pickup_pose(
             xpos=handle_xpos,
-            quat=pot_quat,
+            quat=object_quat,
             null_quat=self._null_quat_left,
         )
 
@@ -67,11 +69,11 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
         handle1_xpos = obs["handle1_xpos"]
         #select handle_xpos by the one with smaller y value
         handle_xpos = handle0_xpos if handle0_xpos[1] < handle1_xpos[1] else handle1_xpos
-        pot_quat = obs["pot_quat"]
+        object_quat = obs[f"{self._object_name}_quat"]
 
         return self._calculate_pre_pickup_pose(
             xpos=handle_xpos,
-            quat=pot_quat,
+            quat=object_quat,
             null_quat=self._null_quat_right,
         )
 
