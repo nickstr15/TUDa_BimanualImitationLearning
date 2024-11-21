@@ -51,30 +51,30 @@
 
                 <site rgba="1 0 0 1" size="0.003" pos="0 0 0" name="center_site"/>
 
-                <geom name="handle_a0" type="box" material="dark_silver"
-                      size="0.04 0.005 0.005" pos="0 -0.175 0.055"
+                <geom name="handle0_a" type="box" material="dark_silver"
+                      size="0.04 0.005 0.01" pos="0 -0.175 0.05"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
-                <site rgba="1 0 0 1" size="0.005" pos="0 -0.175 0.055" name="handle_a_site"/>
-                <geom name="handle_a1" type="box" material="dark_silver"
+                <site rgba="1 0 0 1" size="0.005" pos="0 -0.175 0.05" name="handle0_site"/>
+                <geom name="handle0_b" type="box" material="dark_silver"
                       size="0.005 0.005 0.03" pos="0.035 -0.175 0.03"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
-                <geom name="handle_a2" type="box" material="dark_silver"
+                <geom name="handle0_c" type="box" material="dark_silver"
                       size="0.005 0.005 0.03" pos="-0.035 -0.175 0.03"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
 
-                <geom name="handle_b0" type="box" material="dark_silver"
-                      size="0.04 0.005 0.005" pos="0 0.325 0.055"
+                <geom name="handle1_a" type="box" material="dark_silver"
+                      size="0.04 0.005 0.01" pos="0 0.325 0.05"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
-                <site rgba="1 0 0 1" size="0.005" pos="0 0.325 0.055" name="handle_b_site"/>
-                <geom name="handle_b1" type="box" material="dark_silver"
+                <site rgba="1 0 0 1" size="0.005" pos="0 0.325 0.05" name="handle1_site"/>
+                <geom name="handle1_b" type="box" material="dark_silver"
                       size="0.005 0.005 0.03" pos="0.035 0.325 0.03"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
-                <geom name="handle_b2" type="box" material="dark_silver"
+                <geom name="handle1_c" type="box" material="dark_silver"
                       size="0.005 0.005 0.03" pos="-0.035 0.325 0.03"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>

@@ -7,7 +7,7 @@ from robosuite.models.arenas import TableArena
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite.utils.transform_utils import quat2mat,  euler2mat, convert_quat, mat2euler
+from robosuite.utils.transform_utils import quat2mat, euler2mat, mat2euler, mat2quat
 
 from src.models.objects.quad_insert_objects import QuadBracketObject, QuadPegObject
 
@@ -416,7 +416,7 @@ class TwoArmQuadInsert(TwoArmEnv):
             #position and rotation of hammer
             @sensor(modality=modality)
             def bracket_xpos(_):
-                return np.array(self._bracket_pos)
+                return np.array(self._bracket_xpos)
 
             @sensor(modality=modality)
             def bracket_quat(_):
@@ -425,15 +425,15 @@ class TwoArmQuadInsert(TwoArmEnv):
             #position and rotation of bracket handles
             @sensor(modality=modality)
             def handle0_xpos(_):
-                return np.array(self._bracket_handle_a_pos)
+                return np.array(self._bracket_handle0_xpos)
 
             @sensor(modality=modality)
             def handle1_xpos(_):
-                return np.array(self._bracket_handle_b_pos)
+                return np.array(self._bracket_handle1_xpos)
 
             @sensor(modality=modality)
             def target_xpos(_):
-                return np.array(self._peg_target_pos)
+                return np.array(self._peg_target_xpos)
 
             @sensor(modality=modality)
             def target_quat(_):
@@ -510,7 +510,7 @@ class TwoArmQuadInsert(TwoArmEnv):
         return self._bracket_inserted
 
     @property
-    def _bracket_pos(self):
+    def _bracket_xpos(self):
         """
         Returns the position of the hammer in the world frame.
         """
@@ -523,58 +523,32 @@ class TwoArmQuadInsert(TwoArmEnv):
         """
         Returns the orientation of the hammer in the world frame.
         """
-        # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
-        return convert_quat(
-            self.sim.data.site_xmat[
-                self.sim.model.site_name2id(self.bracket.important_sites["center"])
-            ],
-            to="xyzw"
-        )
+        xmat = self.sim.data.site_xmat[
+            self.sim.model.site_name2id(self.bracket.important_sites["center"])
+        ]
+
+        return mat2quat(xmat.reshape((3, 3)))
 
     @property
-    def _bracket_handle_a_pos(self):
+    def _bracket_handle0_xpos(self):
         """
         Returns the position of the first handle of the hammer in the world frame.
         """
         return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["handle_a"])
+            self.sim.model.site_name2id(self.bracket.important_sites["handle0"])
         ]
 
     @property
-    def _bracket_handle_b_pos(self):
+    def _bracket_handle1_xpos(self):
         """
         Returns the position of the second handle of the hammer in the world frame.
         """
         return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["handle_b"])
+            self.sim.model.site_name2id(self.bracket.important_sites["handle1"])
         ]
 
     @property
-    def _bracket_handle_a_quat(self):
-        """
-        Returns the orientation of the first handle of the hammer in the world frame.
-        """
-        return convert_quat(
-            self.sim.data.site_xmat[
-                self.sim.model.site_name2id(self.bracket.important_sites["handle_a"])
-            ],
-            to="xyzw"
-        )
-
-    @property
-    def _bracket_handle_b_quat(self):
-        """
-        Returns the orientation of the second handle of the hammer in the world frame.
-        """
-        return convert_quat(
-            self.sim.data.site_xmat[
-                self.sim.model.site_name2id(self.bracket.important_sites["handle_b"])
-            ],
-            to="xyzw"
-        )
-
-    @property
-    def _peg_target_pos(self):
+    def _peg_target_xpos(self):
         """
         Returns the position of the target peg in the world frame.
         """
@@ -587,12 +561,10 @@ class TwoArmQuadInsert(TwoArmEnv):
         """
         Returns the orientation of the target peg in the world frame.
         """
-        return convert_quat(
-            self.sim.data.site_xmat[
-                self.sim.model.site_name2id(self.peg.important_sites["target"])
-            ],
-            to="xyzw"
-        )
+        xmat = self.sim.data.site_xmat[
+            self.sim.model.site_name2id(self.peg.important_sites["target"])
+        ]
+        return mat2quat(xmat.reshape((3, 3)))
 
     @property
     def _bracket_inserted(self):
@@ -600,8 +572,8 @@ class TwoArmQuadInsert(TwoArmEnv):
         Returns True if the bracket is inserted on the peg.
         """
         # Check if the bracket is within the peg
-        bracket_pos = self._bracket_pos
-        peg_pos = self._peg_target_pos
+        bracket_pos = self._bracket_xpos
+        peg_pos = self._peg_target_xpos
 
         pos_ok = (
             np.linalg.norm(bracket_pos[:1] - peg_pos[:1]) < 0.02  # 2cm tolerance in xy-plane

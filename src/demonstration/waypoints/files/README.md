@@ -39,7 +39,10 @@ This folder contains the waypoint files for the different tasks.
     
     - device: <device_name>
       # ...
-      
+  
+  uses_feedback: <bool>              # if True, the waypoint uses feedback from the current observation (default: False)
+                                     # -> the waypoint is recomputed for every time step
+                                     # uses feedback is only applicable with a defined ee_target method 
   min_duration: <time>               # time [sec] before status "reached" is possible (default: 1.0)
   max_duration: <time>               # time [sec] max_time to reach target (default: 30.0)
   must_reach: <bool>                 # if True, the waypoint must be reached (default: True)

@@ -1,3 +1,4 @@
+import numpy as np
 from robosuite.models.objects import MujocoXMLObject
 
 from src.utils.paths import xml_path_completion
@@ -24,10 +25,26 @@ class QuadBracketObject(MujocoXMLObject):
         """
         # Get dict from super call and add to it
         dic = super().important_sites
-        dic.update({"handle_a": self.naming_prefix + "handle_a_site"})
-        dic.update({"handle_b": self.naming_prefix + "handle_b_site"})
+        dic.update({"handle0": self.naming_prefix + "handle0_site"})
+        dic.update({"handle1": self.naming_prefix + "handle1_site"})
         dic.update({"center": self.naming_prefix + "center_site"})
         return dic
+
+    @property
+    def center_to_handle0(self):
+        """
+        Returns:
+            np.array: vector from center to handle_a
+        """
+        return np.array([0, -0.175, 0.05])
+
+    @property
+    def center_to_handle1(self):
+        """
+        Returns:
+            np.array: vector from center to handle_b
+        """
+        return np.array([0, 0.325, 0.05])
 
 class QuadPegObject(MujocoXMLObject):
     def __init__(self, name: str):

@@ -52,7 +52,7 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
         handle_xpos = handle0_xpos if handle0_xpos[1] >= handle1_xpos[1] else handle1_xpos
         object_quat = obs[f"{self._object_name}_quat"]
 
-        return self._calculate_pre_pickup_pose(
+        return self._calculate_pose(
             xpos=handle_xpos,
             quat=object_quat,
             null_quat=self._null_quat_left,
@@ -71,17 +71,19 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
         handle_xpos = handle0_xpos if handle0_xpos[1] < handle1_xpos[1] else handle1_xpos
         object_quat = obs[f"{self._object_name}_quat"]
 
-        return self._calculate_pre_pickup_pose(
+        return self._calculate_pose(
             xpos=handle_xpos,
             quat=object_quat,
-            null_quat=self._null_quat_right,
+            null_quat=self._null_quat_right
         )
 
-    def _calculate_pre_pickup_pose(
-            self,
+    @staticmethod
+    def _calculate_pose(
             xpos: np.ndarray,
             quat: np.ndarray,
             null_quat: np.ndarray,
+            offset_xpos: np.ndarray = np.array([0.0, 0.0, 0.1]),
+            grip: float = GripperTarget.OPEN_VALUE,
     ) -> dict:
         """
         Calculate the pre-pickup pose for the arm.
@@ -89,6 +91,8 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
         :param xpos: position of the handle
         :param quat: orientation of the pot
         :param null_quat: null orientation for the end-effector
+        :param offset_xpos: offset for the position in world frame (!)
+        :param grip: gripper state
         :return: dictionary with the target position, orientation, and gripper state
         """
         # compute the offset
@@ -105,11 +109,10 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
 
         target_quat = axisangle2quat(np.array([0, 0, 1]) * np.deg2rad(angle_deg))
 
-        offset = np.array([0.0, 0.0, 0.1])
         return {
-            "pos": xpos + offset,
+            "pos": xpos + offset_xpos,
             "quat": quat_multiply(target_quat, null_quat),
-            "grip": GripperTarget.OPEN_VALUE,
+            "grip": grip
         }
 
 
