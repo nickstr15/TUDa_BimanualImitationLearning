@@ -118,10 +118,12 @@ class TwoArmLiftWaypointExpert(TwoArmWaypointExpertBase):
 
 def example(
     n_episodes: int = 10,
-    robots: str | list[str] = ["Panda"]*2
+    robots: str | list[str] = ["Panda"]*2,
+    gripper_types: str | list[str] = ["default", "default"]
 ):
     two_arm_pick_place = suite.make(
         env_name="TwoArmLift",
+        gripper_types=gripper_types,
         robots=robots,
         env_configuration="parallel",
         has_renderer=True,
@@ -140,5 +142,5 @@ if __name__ == "__main__":
     #example()
     #example(2, ["Kinova3", "Kinova3"])
     example(2, ["IIWA", "IIWA"])
-    #example(2, ["UR5e", "UR5e"])
+    #example(2, ["UR5e", "UR5e"], ["Robotiq140Gripper", "Robotiq140Gripper"])
     #example(2, ["Panda", "IIWA"])

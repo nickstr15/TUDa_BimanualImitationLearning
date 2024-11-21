@@ -171,11 +171,13 @@ class TwoArmTransportWaypointExpert(TwoArmPickPlaceWaypointExpert):
 
 def example(
     n_episodes: int = 10,
-    robots: str | list[str] = ["Panda"]*2
+    robots: str | list[str] = ["Panda"]*2,
+    gripper_types: str | list[str] = ["default", "default"]
 ):
     two_arm_transport = suite.make(
         env_name="TwoArmTransport",
         robots=robots,
+        gripper_types=gripper_types,
         env_configuration="parallel",
         tables_boundary=(0.65, 1.2, 0.05), # important for reachability
         bin_size=(0.3, 0.3, 0.08), # better reachability
@@ -195,5 +197,5 @@ if __name__ == "__main__":
     example()
     #example(2, ["Kinova3", "Kinova3"])
     #example(2, ["IIWA", "IIWA"])
-    #example(2, ["UR5e", "UR5e"])
+    #example(2, ["UR5e", "UR5e"], ["Robotiq140Gripper", "Robotiq140Gripper"])
     #example(2, ["Panda", "IIWA"])
