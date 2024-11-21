@@ -359,7 +359,7 @@ class TwoArmQuadInsert(TwoArmEnv):
         # Pre-define settings for each object's placement
         objects = [self.bracket, self.peg]
         x_centers = [-0.05, -0.15]
-        y_centers = [-0.38, 0.38]
+        y_centers = [-0.4, 0.35]
         x_tols = [self.position_tol_bracket[0], self.position_tol_peg[0]]
         y_tols = [self.position_tol_bracket[1], self.position_tol_peg[1]]
         rot_tols = [self.orientation_tol_bracket, self.orientation_tol_peg]
@@ -439,10 +439,44 @@ class TwoArmQuadInsert(TwoArmEnv):
             def target_quat(_):
                 return np.array(self._peg_target_quat)
 
+            @sensor(modality=modality)
+            def flap_a_hole_xpos(_):
+                return np.array(self._flap_a_hole_xpos)
+
+            @sensor(modality=modality)
+            def flap_b_hole_xpos(_):
+                return np.array(self._flap_b_hole_xpos)
+
+            @sensor(modality=modality)
+            def flap_c_hole_xpos(_):
+                return np.array(self._flap_c_hole_xpos)
+
+            @sensor(modality=modality)
+            def flap_d_hole_xpos(_):
+                return np.array(self._flap_d_hole_xpos)
+
+            @sensor(modality=modality)
+            def flap_a_peg_xpos(_):
+                return np.array(self._flap_a_peg_xpos)
+
+            @sensor(modality=modality)
+            def flap_b_peg_xpos(_):
+                return np.array(self._flap_b_peg_xpos)
+
+            @sensor(modality=modality)
+            def flap_c_peg_xpos(_):
+                return np.array(self._flap_c_peg_xpos)
+
+            @sensor(modality=modality)
+            def flap_d_peg_xpos(_):
+                return np.array(self._flap_d_peg_xpos)
+
             sensors = [
                 bracket_xpos, bracket_quat,
                 handle0_xpos, handle1_xpos,
-                target_xpos, target_quat
+                target_xpos, target_quat,
+                flap_a_hole_xpos, flap_b_hole_xpos, flap_c_hole_xpos, flap_d_hole_xpos,
+                flap_a_peg_xpos, flap_b_peg_xpos, flap_c_peg_xpos, flap_d_peg_xpos
             ]
             names = [s.__name__ for s in sensors]
 
@@ -507,7 +541,7 @@ class TwoArmQuadInsert(TwoArmEnv):
             bool: True if task is successful (hammer is in the bin), False otherwise.
         """
 
-        return self._bracket_inserted
+        return self._bracket_inserted and not self._grasping_bracket
 
     @property
     def _bracket_xpos(self):
@@ -567,30 +601,110 @@ class TwoArmQuadInsert(TwoArmEnv):
         return mat2quat(xmat.reshape((3, 3)))
 
     @property
+    def _flap_a_hole_xpos(self):
+        """
+        Returns the position of the first hole of the bracket in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["flap_a_hole"])
+        ]
+
+    @property
+    def _flap_b_hole_xpos(self):
+        """
+        Returns the position of the second hole of the bracket in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["flap_b_hole"])
+        ]
+
+    @property
+    def _flap_c_hole_xpos(self):
+        """
+        Returns the position of the third hole of the bracket in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["flap_c_hole"])
+        ]
+
+    @property
+    def _flap_d_hole_xpos(self):
+        """
+        Returns the position of the fourth hole of the bracket in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.bracket.important_sites["flap_d_hole"])
+        ]
+
+    @property
+    def _flap_a_peg_xpos(self):
+        """
+        Returns the position of the first hole of the peg in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.peg.important_sites["flap_a_peg"])
+        ]
+
+    @property
+    def _flap_b_peg_xpos(self):
+        """
+        Returns the position of the second hole of the peg in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.peg.important_sites["flap_b_peg"])
+        ]
+
+    @property
+    def _flap_c_peg_xpos(self):
+        """
+        Returns the position of the third hole of the peg in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.peg.important_sites["flap_c_peg"])
+        ]
+
+    @property
+    def _flap_d_peg_xpos(self):
+        """
+        Returns the position of the fourth hole of the peg in the world frame.
+        """
+        return self.sim.data.site_xpos[
+            self.sim.model.site_name2id(self.peg.important_sites["flap_d_peg"])
+        ]
+
+
+    @property
     def _bracket_inserted(self):
         """
         Returns True if the bracket is inserted on the peg.
         """
-        # Check if the bracket is within the peg
-        bracket_pos = self._bracket_xpos
-        peg_pos = self._peg_target_xpos
+        hole_pos = np.array([
+            self._flap_a_hole_xpos, self._flap_b_hole_xpos, self._flap_c_hole_xpos, self._flap_d_hole_xpos
+        ])
 
-        pos_ok = (
-            np.linalg.norm(bracket_pos[:1] - peg_pos[:1]) < 0.02  # 2cm tolerance in xy-plane
-            and np.abs(bracket_pos[2] - peg_pos[2]) < 0.005 # 5mm tolerance in z-direction
+        peg_pos = np.array([
+            self._flap_a_peg_xpos, self._flap_b_peg_xpos, self._flap_c_peg_xpos, self._flap_d_peg_xpos
+        ])
+
+        pos_ok = np.all(np.linalg.norm(hole_pos - peg_pos, axis=1) < 0.002) # 2mm tolerance
+
+        return pos_ok
+
+    @property
+    def _grasping_bracket(self):
+        """
+        Returns True if any arm is grasping the hammer, False otherwise.
+        """
+        # Check if any Arm's gripper is grasping the bracket
+        (g0, g1) = (
+            (self.robots[0].gripper["right"], self.robots[0].gripper["left"])
+            if self.env_configuration == "single-robot"
+            else (self.robots[0].gripper, self.robots[1].gripper)
         )
-
-        # Check if the bracket is aligned with the peg
-        bracket_quat = self._bracket_quat
-        peg_quat = self._peg_target_quat
-
-        # Compute the relative rotation between the bracket and the peg
-        bracket_rot = mat2euler(quat2mat(bracket_quat))
-        peg_rot = mat2euler(quat2mat(peg_quat))
-        rel_rot = np.abs(bracket_rot - peg_rot)
-
-        rot_ok = np.all(rel_rot < np.rad2deg(5))
-        return pos_ok and rot_ok
+        return (
+                self._check_grasp(gripper=g0, object_geoms=self.bracket) or
+                self._check_grasp(gripper=g1, object_geoms=self.bracket)
+        )
 
 if __name__ == "__main__":
     from src.environments.utils.visualize import visualize_static

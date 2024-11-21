@@ -1,6 +1,7 @@
 import numpy as np
 import robosuite as suite
-from robosuite.utils.transform_utils import quat2mat, quat2axisangle
+from robosuite.utils.transform_utils import quat2mat, quat2axisangle, mat2quat, quat_multiply, quat_inverse, \
+    convert_quat, axisangle2quat
 
 from src.demonstration.waypoints.two_arm_lift_wp_expert import TwoArmLiftWaypointExpert
 from src.environments.manipulation.two_arm_quad_insert import TwoArmQuadInsert
@@ -16,6 +17,7 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         self._env: TwoArmQuadInsert = self._env  # for type hinting in pycharm
 
         self._object_name = "bracket"
+        self._initial_insertion_offset = 0.05
 
     ######################################################################
     # Definition of special ee targets ###################################
@@ -30,88 +32,46 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         """
         dct = super()._create_ee_target_methods_dict()
         update = {
-            "pre_goal_robot_right": self.__pre_goal_robot_right,
-            "pre_goal_robot_left": self.__pre_goal_robot_left,
+            "pre_goal_robot_right": lambda obs: self.__compute_pre_goal(obs, "right"),
+            "pre_goal_robot_left": lambda obs: self.__compute_pre_goal(obs, "left"),
 
-            "goal_robot_right": self.__goal_robot_right,
-            "goal_robot_left": self.__goal_robot_left,
+            "goal_robot_right": lambda obs: self.__compute_target_pose(obs, "right"),
+            "goal_robot_left": lambda obs: self.__compute_target_pose(obs, "left"),
+
+            "goal_robot_right_1": lambda obs: self.__compute_target_pose(obs, "right", GripperTarget.OPEN_VALUE),
+            "goal_robot_left_1": lambda obs: self.__compute_target_pose(obs, "left", GripperTarget.OPEN_VALUE),
         }
 
         dct.update(update)
         return dct
 
-    def __pre_goal_robot_right(self, obs: dict = None) -> dict:
-        """
-        Pre-goal position for the right arm.
-
-        :param obs: observation after reset
-        :return: dictionary with the target position, orientation, and gripper state
-        """
-        handle0_xpos = obs["handle0_xpos"]
-        handle1_xpos = obs["handle1_xpos"]
-        v_to_handle = self._env.bracket.center_to_handle0 if handle0_xpos[1] < handle1_xpos[1] \
-            else self._env.bracket.center_to_handle1
-
-        offset_xpos = np.array([0, 0, 0.05])
-        return self.__calculate_goal_pose(obs, v_to_handle, offset_xpos)
-
-    def __pre_goal_robot_left(self, obs: dict = None) -> dict:
-        """
-        Pre-goal position for the left arm.
-
-        :param obs: observation after reset
-        :return: dictionary with the target position, orientation, and gripper state
-        """
-        handle0_xpos = obs["handle0_xpos"]
-        handle1_xpos = obs["handle1_xpos"]
-        v_to_handle = self._env.bracket.center_to_handle0 if handle0_xpos[1] >= handle1_xpos[1] \
-            else self._env.bracket.center_to_handle1
-
-        offset_xpos = np.array([0, 0, 0.05])
-        return self.__calculate_goal_pose(obs, v_to_handle, offset_xpos)
-
-    def __goal_robot_left(self, obs: dict = None) -> dict:
-        """
-        Feedback goal position for the left arm.
-
-        :param obs: observation after reset
-        :return: dictionary with the target position, orientation, and gripper state
-        """
-        handle0_xpos = obs["handle0_xpos"]
-        handle1_xpos = obs["handle1_xpos"]
-        v_to_handle = self._env.bracket.center_to_handle0 if handle0_xpos[1] >= handle1_xpos[1] \
-            else self._env.bracket.center_to_handle1
-
-        return self.__calculate_goal_pose(obs, v_to_handle)
-
-    def __goal_robot_right(self, obs: dict = None) -> dict:
-        """
-        Feedback goal position for the right arm.
-
-        :param obs: observation after reset
-        :return: dictionary with the target position, orientation, and gripper state
-        """
-        handle0_xpos = obs["handle0_xpos"]
-        handle1_xpos = obs["handle1_xpos"]
-        v_to_handle = self._env.bracket.center_to_handle0 if handle0_xpos[1] < handle1_xpos[1] \
-            else self._env.bracket.center_to_handle1
-
-        return self.__calculate_goal_pose(obs, v_to_handle)
-
-    def __calculate_goal_pose(
+    def __compute_pre_goal(
             self,
             obs: dict,
-            v_to_handle: np.ndarray,
-            offset_xpos: np.ndarray = np.zeros(3),
+            arm: str
     ) -> dict:
         """
-        Calculate the pre-goal pose for the robot.
-
-        :param obs: observation after reset
-        :param v_to_handle: vector from the center of the bracket to the handle
-        :param offset_xpos: additional offset in the world frame
-        :return: dictionary with the target position, orientation, and gripper state
+        Compute the pre-goal target pose for the robot arm.
+        :param obs:
+        :param arm:
+        :return:
         """
+        assert arm in ["right", "left"], f"Invalid arm: {arm}"
+
+        self._insertion_offset = {
+            "right": self._initial_insertion_offset,
+            "left": self._initial_insertion_offset
+        }
+
+        handle0_xpos = obs["handle0_xpos"]
+        handle1_xpos = obs["handle1_xpos"]
+        if arm == "right":
+            v_to_handle = self._env.bracket.center_to_handle0 if handle0_xpos[1] < handle1_xpos[1] \
+                else self._env.bracket.center_to_handle1
+        else:
+            v_to_handle = self._env.bracket.center_to_handle0 if handle0_xpos[1] >= handle1_xpos[1] \
+                else self._env.bracket.center_to_handle1
+
         target_xpos = np.array(obs["target_xpos"])
         target_quat = np.array(obs["target_quat"])
 
@@ -124,9 +84,88 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
             xpos=target_xpos,
             quat=target_quat,
             null_quat=self._null_quat_right,
-            offset_xpos=offset_xpos,
+            offset_xpos=np.array([0, 0, self._initial_insertion_offset]),
             grip=GripperTarget.CLOSED_VALUE,
         )
+
+    def __compute_target_pose(
+            self,
+            obs: dict,
+            arm: str,
+            grip: GripperTarget = GripperTarget.CLOSED_VALUE
+    ) -> dict:
+        """
+        Compute the target pose for the robot arm.
+
+        :param obs: current observation
+        :param arm: arm to compute the target for, either "right" or "left"
+        :param grip: desired gripper state
+        :return: dictionary with the target position, orientation, and gripper state
+        """
+        assert arm in ["right", "left"], f"Invalid arm: {arm}"
+
+        self._insertion_offset[arm] -= 0.001
+        self._insertion_offset[arm] = max(0.0, self._insertion_offset[arm])
+
+        if self._env.env_configuration == "single-robot":
+            robot = f"robot0_{arm}"
+        elif arm == "right":
+            robot = "robot0"
+        else:
+            robot = "robot1"
+
+        current_xpos = obs[f"{robot}_eef_pos"]
+        current_quat = obs[f"{robot}_eef_quat"]
+
+        H_current = np.eye(4)
+        H_current[:3, 3] = current_xpos
+        H_current[:3, :3] = quat2mat(current_quat)
+
+        bracket_pos = obs["bracket_xpos"]
+        bracket_quat = obs["bracket_quat"]
+        peg_pos = obs["target_xpos"]
+        peg_quat = obs["target_quat"]
+
+        T = self.__compute_transformation(bracket_pos, bracket_quat, peg_pos, peg_quat)
+
+        H_target = T @ H_current
+        target_xpos = H_target[:3, 3] + np.array([0, 0, self._insertion_offset[arm]])
+        target_quat = mat2quat(H_target[:3, :3])
+
+        return {
+            "pos": target_xpos,
+            "quat": target_quat,
+            "grip": grip
+        }
+
+
+    @staticmethod
+    def __compute_transformation(
+            bracket_pos: np.ndarray,
+            bracket_quat: np.ndarray,
+            peg_pos: np.ndarray,
+            peg_quat: np.ndarray
+    ) -> np.ndarray:
+        """
+        Compute the transformation to move the bracket to the peg.
+
+        :param bracket_pos: position of the bracket
+        :param bracket_quat: orientation of the bracket
+        :param peg_pos: position of the peg
+        :param peg_quat: orientation of the peg
+
+        :return: transformation matrix
+        """
+        H_bracket = np.eye(4)
+        H_bracket[:3, 3] = bracket_pos
+        H_bracket[:3, :3] = quat2mat(bracket_quat)
+
+        H_peg = np.eye(4)
+        H_peg[:3, 3] = peg_pos
+        H_peg[:3, :3] = quat2mat(peg_quat)
+
+        T = np.linalg.inv(H_bracket) @ H_peg
+        return T
 
 
 def example(

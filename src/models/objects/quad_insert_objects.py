@@ -28,6 +28,10 @@ class QuadBracketObject(MujocoXMLObject):
         dic.update({"handle0": self.naming_prefix + "handle0_site"})
         dic.update({"handle1": self.naming_prefix + "handle1_site"})
         dic.update({"center": self.naming_prefix + "center_site"})
+        dic.update({"flap_a_hole": self.naming_prefix + "flap_a_hole_site"})
+        dic.update({"flap_b_hole": self.naming_prefix + "flap_b_hole_site"})
+        dic.update({"flap_c_hole": self.naming_prefix + "flap_c_hole_site"})
+        dic.update({"flap_d_hole": self.naming_prefix + "flap_d_hole_site"})
         return dic
 
     @property
@@ -36,7 +40,7 @@ class QuadBracketObject(MujocoXMLObject):
         Returns:
             np.array: vector from center to handle_a
         """
-        return np.array([0, -0.175, 0.05])
+        return np.array([0, -0.175, 0.055])
 
     @property
     def center_to_handle1(self):
@@ -44,7 +48,7 @@ class QuadBracketObject(MujocoXMLObject):
         Returns:
             np.array: vector from center to handle_b
         """
-        return np.array([0, 0.325, 0.05])
+        return np.array([0, 0.325, 0.055])
 
 class QuadPegObject(MujocoXMLObject):
     def __init__(self, name: str):
@@ -67,4 +71,8 @@ class QuadPegObject(MujocoXMLObject):
         # Get dict from super call and add to it
         dic = super().important_sites
         dic.update({"target": self.naming_prefix + "target_site"})
+        dic.update({"flap_a_peg": self.naming_prefix + "flap_a_peg_site"})
+        dic.update({"flap_b_peg": self.naming_prefix + "flap_b_peg_site"})
+        dic.update({"flap_c_peg": self.naming_prefix + "flap_c_peg_site"})
+        dic.update({"flap_d_peg": self.naming_prefix + "flap_d_peg_site"})
         return dic

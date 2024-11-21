@@ -52,10 +52,10 @@
                 <site rgba="1 0 0 1" size="0.003" pos="0 0 0" name="center_site"/>
 
                 <geom name="handle0_a" type="box" material="dark_silver"
-                      size="0.04 0.005 0.01" pos="0 -0.175 0.05"
+                      size="0.04 0.005 0.005" pos="0 -0.175 0.055"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
-                <site rgba="1 0 0 1" size="0.005" pos="0 -0.175 0.05" name="handle0_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="0 -0.175 0.055" name="handle0_site"/>
                 <geom name="handle0_b" type="box" material="dark_silver"
                       size="0.005 0.005 0.03" pos="0.035 -0.175 0.03"
                       conaffinity="1" contype="1" mass="0.025"
@@ -66,10 +66,10 @@
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
 
                 <geom name="handle1_a" type="box" material="dark_silver"
-                      size="0.04 0.005 0.01" pos="0 0.325 0.05"
+                      size="0.04 0.005 0.005" pos="0 0.325 0.055"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
-                <site rgba="1 0 0 1" size="0.005" pos="0 0.325 0.05" name="handle1_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="0 0.325 0.055" name="handle1_site"/>
                 <geom name="handle1_b" type="box" material="dark_silver"
                       size="0.005 0.005 0.03" pos="0.035 0.325 0.03"
                       conaffinity="1" contype="1" mass="0.025"
@@ -114,6 +114,7 @@
                     <geom name="grommet_11mm_32_a" type="mesh" mesh="grommet_11mm_32" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_33_a" type="mesh" mesh="grommet_11mm_33" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                 </body>
+
                 <body name="handle_11mm_flap_b" pos="0.0 -0.13 0.005" quat="0 0 0.707108 0">
                     <geom name="grommet_11mm_01_b" type="mesh" mesh="grommet_11mm_01" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_02_b" type="mesh" mesh="grommet_11mm_02" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
@@ -149,6 +150,7 @@
                     <geom name="grommet_11mm_32_b" type="mesh" mesh="grommet_11mm_32" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_33_b" type="mesh" mesh="grommet_11mm_33" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                 </body>
+
                 <body name="handle_11mm_flap_c" pos="0.0 0.33 0.00">
                     <geom name="grommet_11mm_01_c" type="mesh" mesh="grommet_11mm_01" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_02_c" type="mesh" mesh="grommet_11mm_02" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
@@ -184,6 +186,7 @@
                     <geom name="grommet_11mm_32_c" type="mesh" mesh="grommet_11mm_32" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_33_c" type="mesh" mesh="grommet_11mm_33" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                 </body>
+
                 <body name="handle_11mm_flap_d" pos="0.0 -0.33 0.00">
                     <geom name="grommet_11mm_01_d" type="mesh" mesh="grommet_11mm_01" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_02_d" type="mesh" mesh="grommet_11mm_02" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
@@ -219,6 +222,11 @@
                     <geom name="grommet_11mm_32_d" type="mesh" mesh="grommet_11mm_32" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                     <geom name="grommet_11mm_33_d" type="mesh" mesh="grommet_11mm_33" pos="0 0 0" material="silver" conaffinity="1" contype="1" mass="0.0001" group="0"/>
                 </body>
+
+                <site rgba="1 0 0 1" size="0.005" pos="0.0925 0.13 0.0" name="flap_a_hole_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="0.0925 -0.13 0.0" name="flap_b_hole_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="-0.0925 0.33 0.0" name="flap_c_hole_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="-0.0925 -0.33 0.0" name="flap_d_hole_site"/>
             </body>
             <!--
             - bottom_site should be the bottom of the object, i.e. contact point with the surface it is placed on.

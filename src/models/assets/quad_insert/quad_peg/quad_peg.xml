@@ -43,7 +43,12 @@
                       material="black" solimp="0.998 0.998 0.001" solref="0.001 1" density="100" friction="0.95 0.3 0.1"
                       group="0" condim="4"/>
 
-                <site name="target_site" rgba="1 0 0 1" size="0.005" pos="0 0 0.012"/>
+                <site name="target_site" rgba="1 0 0 1" size="0.005" pos="0 0 0.025"/>
+
+                <site rgba="1 0 0 1" size="0.005" pos="0.0925 0.13 0.025" name="flap_a_peg_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="0.0925 -0.13 0.025" name="flap_b_peg_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="-0.0925 0.33 0.025" name="flap_c_peg_site"/>
+                <site rgba="1 0 0 1" size="0.005" pos="-0.0925 -0.33 0.025" name="flap_d_peg_site"/>
             </body>
             <!--
             - bottom_site should be the bottom of the object, i.e. contact point with the surface it is placed on.

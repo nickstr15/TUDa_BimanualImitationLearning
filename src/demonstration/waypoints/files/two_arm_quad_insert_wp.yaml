@@ -14,12 +14,8 @@
   targets:
     - device: "robot_right"
       ee_target: "pre_pick_up_robot_right"
-      pos_tolerance: 0.001
-      rot_tolerance: 1
     - device: "robot_left"
       ee_target: "pre_pick_up_robot_left"
-      pos_tolerance: 0.001
-      rot_tolerance: 1
 
 - id: 2
   description: "go into pre-pick up position"
@@ -28,14 +24,10 @@
     pos: "wp_1 + [0, 0, -0.1]"
     quat: "wp_1"
     grip: "open"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
   - device: "robot_left"
     pos: "wp_1 + [0, 0, -0.1]"
     quat: "wp_1"
     grip: "open"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
 
 - id: 3
   description: "close grippers"
@@ -44,14 +36,11 @@
     pos: "wp_2"
     quat: "wp_2"
     grip: "closed"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
   - device: "robot_left"
     pos: "wp_2"
     quat: "wp_2"
     grip: "closed"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
+  min_duration: 1.0
 
 - id: 4
   description: "pick up object"
@@ -60,14 +49,10 @@
     pos: "wp_3 + [0, 0, 0.1]"
     quat: "wp_3"
     grip: "closed"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
   - device: "robot_left"
     pos: "wp_3 + [0, 0, 0.1]"
     quat: "wp_3"
     grip: "closed"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
 
 ################################################
 # MOVE TO GOAL #################################
@@ -77,38 +62,31 @@
   targets:
     - device: "robot_right"
       ee_target: "pre_goal_robot_right"
-      pos_tolerance: 0.001
-      rot_tolerance: 1
     - device: "robot_left"
       ee_target: "pre_goal_robot_left"
-      pos_tolerance: 0.001
-      rot_tolerance: 1
-  uses_feedback: true
 
-- id: 6
+- id: 7
   description: "insertion"
   targets:
   - device: "robot_right"
     ee_target: "goal_robot_right"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
+    pos_tolerance: 0.0005
+    rot_tolerance: 0.1
   - device: "robot_left"
     ee_target: "goal_robot_left"
-    pos_tolerance: 0.001
-    rot_tolerance: 1
+    pos_tolerance: 0.0005
+    rot_tolerance: 0.1
   uses_feedback: true
+  min_duration: 2.0
 
 - id: 7
-  description: "open grippers"
+  description: "post insertion"
   targets:
-    - device: "robot_right"
-      pos: "wp_6"
-      quat: "wp_6"
-      grip: "open"
-    - device: "robot_left"
-      pos: "wp_6"
-      quat: "wp_6"
-      grip: "open"
+  - device: "robot_right"
+    ee_target: "goal_robot_right_1"
+  - device: "robot_left"
+    ee_target: "goal_robot_left_1"
+  uses_feedback: true
 
 
 

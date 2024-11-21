@@ -20,6 +20,7 @@ def visualize_static(
         env_name=env,
         robots=robots,
         has_renderer=True,
+        render_camera="frontview",
         has_offscreen_renderer=False,
         use_camera_obs=False,
     )
