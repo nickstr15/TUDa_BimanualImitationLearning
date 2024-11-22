@@ -1,0 +1,62 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+
+###############################################
+# PICKUP ######################################
+###############################################
+
+- id: 1
+  description: "move arms to correct orientation"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_pre_pickup_right"
+    - device: "robot_left"
+      ee_target: "pre_pre_pickup_left"
+
+- id: 2
+  description: "move arms to correct position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_pickup_right"
+      pos_tol: 0.02
+    - device: "robot_left"
+      pos_tol: 0.02
+      ee_target: "pre_pickup_left"
+
+- id: 3
+  description: "lift ball"
+  targets:
+    - device: "robot_right"
+      pos: "wp_2 + [0, 0, 0.3]"
+      quat: "wp_2"
+      grip: "open"
+      pos_tol: 0.04
+    - device: "robot_left"
+      pos: "wp_2 + [0, 0, 0.3]"
+      quat: "wp_2"
+      grip: "open"
+      pos_tol: 0.04
+
+###############################################
+# MOVE ABOVE BIN ##############################
+###############################################
+
+- id: 4
+  description: "move above bin"
+  targets:
+    - device: "robot_right"
+      ee_target: "above_bin_right"
+    - device: "robot_left"
+      ee_target: "above_bin_left"
+  uses_feedback: true
+
+
+
+
+
+

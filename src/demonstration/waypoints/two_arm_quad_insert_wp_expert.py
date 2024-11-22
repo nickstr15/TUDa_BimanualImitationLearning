@@ -1,3 +1,5 @@
+from typing import OrderedDict
+
 import numpy as np
 import robosuite as suite
 from robosuite.utils.transform_utils import quat2mat, quat2axisangle, mat2quat, quat_multiply, quat_inverse, \
@@ -5,6 +7,7 @@ from robosuite.utils.transform_utils import quat2mat, quat2axisangle, mat2quat, 
 
 from src.demonstration.waypoints.two_arm_lift_wp_expert import TwoArmLiftWaypointExpert
 from src.environments.manipulation.two_arm_quad_insert import TwoArmQuadInsert
+from src.utils.robot_states import TwoArmEEState
 from src.utils.robot_targets import GripperTarget
 
 
@@ -47,7 +50,7 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
 
     def __compute_pre_goal(
             self,
-            obs: dict,
+            obs: OrderedDict,
             arm: str
     ) -> dict:
         """
@@ -90,7 +93,7 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
 
     def __compute_target_pose(
             self,
-            obs: dict,
+            obs: OrderedDict,
             arm: str,
             grip: GripperTarget = GripperTarget.CLOSED_VALUE
     ) -> dict:
@@ -107,19 +110,12 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         self._insertion_offset[arm] -= 0.001
         self._insertion_offset[arm] = max(0.0, self._insertion_offset[arm])
 
-        if self._env.env_configuration == "single-robot":
-            robot = f"robot0_{arm}"
-        elif arm == "right":
-            robot = "robot0"
-        else:
-            robot = "robot1"
-
-        current_xpos = obs[f"{robot}_eef_pos"]
-        current_quat = obs[f"{robot}_eef_quat"]
+        two_arm_ee_state = TwoArmEEState.from_dict(obs, self._env.env_configuration)
+        ee_state = two_arm_ee_state.right if arm == "right" else two_arm_ee_state.left
 
         H_current = np.eye(4)
-        H_current[:3, 3] = current_xpos
-        H_current[:3, :3] = quat2mat(current_quat)
+        H_current[:3, 3] = ee_state.xyz
+        H_current[:3, :3] = quat2mat(ee_state.quat)
 
         bracket_pos = obs["bracket_xpos"]
         bracket_quat = obs["bracket_quat"]
