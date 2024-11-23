@@ -58,7 +58,9 @@ class EETarget:
         quat: np.ndarray = np.array([1, 0, 0, 0]),
         grip: float = GripperTarget.OPEN_VALUE,
         pos_tol: float = 0.01,
-        ori_tol: float = np.deg2rad(5)
+        ori_tol: float = np.deg2rad(5),
+        max_vel_pos: float = None,
+        max_vel_ori: float = None,
     ) -> None:
         """
         :param xyz: xyz position
@@ -72,6 +74,8 @@ class EETarget:
         self._grip = GripperTarget(grip)
         self._pos_tol = pos_tol
         self._ori_tol = ori_tol
+        self._max_vel_pos = max_vel_pos
+        self._max_vel_ori = max_vel_ori
 
     @property
     def xyz(self) -> np.ndarray:
@@ -156,6 +160,34 @@ class EETarget:
         :param ori_tol: orientation tolerance
         """
         self._ori_tol = ori_tol
+
+    @property
+    def max_vel_pos(self) -> float | None:
+        """
+        :return: maximum velocity for position
+        """
+        return self._max_vel_pos
+
+    @max_vel_pos.setter
+    def max_vel_pos(self, max_vel_pos: float | None) -> None:
+        """
+        :param max_vel_pos: maximum velocity for position
+        """
+        self._max_vel_pos = max_vel_pos
+
+    @property
+    def max_vel_ori(self) -> float | None:
+        """
+        :return: maximum velocity for orientation
+        """
+        return self._max_vel_ori
+
+    @max_vel_ori.setter
+    def max_vel_ori(self, max_vel_ori: float | None) -> None:
+        """
+        :param max_vel_ori: maximum velocity for orientation
+        """
+        self._max_vel_ori = max_vel_ori
 
     def is_reached_by(self, current_state: EEState) -> bool:
         """

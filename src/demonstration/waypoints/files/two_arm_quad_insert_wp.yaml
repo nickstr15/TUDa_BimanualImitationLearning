@@ -72,12 +72,15 @@
     ee_target: "goal_robot_right"
     pos_tolerance: 0.0005
     rot_tolerance: 0.1
+    max_vel_pos: 0.005
+    max_vel_ori: 0.1
   - device: "robot_left"
     ee_target: "goal_robot_left"
     pos_tolerance: 0.0005
     rot_tolerance: 0.1
+    max_vel_pos: 0.005
+    max_vel_ori: 0.1
   uses_feedback: true
-  min_duration: 2.0
 
 - id: 7
   description: "post insertion"

@@ -61,11 +61,6 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         """
         assert arm in ["right", "left"], f"Invalid arm: {arm}"
 
-        self._insertion_offset = {
-            "right": self._initial_insertion_offset,
-            "left": self._initial_insertion_offset
-        }
-
         handle0_xpos = obs["handle0_xpos"]
         handle1_xpos = obs["handle1_xpos"]
         if arm == "right":
@@ -107,9 +102,6 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         """
         assert arm in ["right", "left"], f"Invalid arm: {arm}"
 
-        self._insertion_offset[arm] -= 0.001
-        self._insertion_offset[arm] = max(0.0, self._insertion_offset[arm])
-
         two_arm_ee_state = TwoArmEEState.from_dict(obs, self._env.env_configuration)
         ee_state = two_arm_ee_state.right if arm == "right" else two_arm_ee_state.left
 
@@ -125,7 +117,7 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         T = self.__compute_transformation(bracket_pos, bracket_quat, peg_pos, peg_quat)
 
         H_target = T @ H_current
-        target_xpos = H_target[:3, 3] + np.array([0, 0, self._insertion_offset[arm]])
+        target_xpos = H_target[:3, 3]
         target_quat = mat2quat(H_target[:3, :3])
 
         return {

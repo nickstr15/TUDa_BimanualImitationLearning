@@ -2,6 +2,7 @@ import numpy as np
 from collections import OrderedDict
 import re
 
+from numpy.ma.core import max_filler
 from robosuite.utils.transform_utils import quat_multiply, mat2quat, euler2mat, axisangle2quat
 
 from src.utils.robot_states import TwoArmEEState
@@ -68,7 +69,9 @@ class Waypoint:
                     quat=target["quat"],
                     grip=target["grip"],
                     pos_tol=target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                    ori_tol=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                    ori_tol=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE),
+                    max_vel_pos=target.get("max_vel_pos", None),
+                    max_vel_ori=target.get("max_vel_ori", None)
                 )
             elif target["device"] == "robot_right":
                 right = EETarget(
@@ -76,7 +79,9 @@ class Waypoint:
                     quat=target["quat"],
                     grip=target["grip"],
                     pos_tol=target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                    ori_tol=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                    ori_tol=target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE),
+                    max_vel_pos=target.get("max_vel_pos", None),
+                    max_vel_ori=target.get("max_vel_ori", None),
                 )
             else:
                 print("[Waypoint - WARNING]: Ignoring target for unknown device: ", target["device"])
@@ -97,7 +102,9 @@ class Waypoint:
                     quat=update["quat"],
                     grip=update["grip"],
                     pos_tol=update.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                    ori_tol=update.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                    ori_tol=update.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE),
+                    max_vel_pos=update.get("max_vel_pos", None),
+                    max_vel_ori=update.get("max_vel_ori", None)
                 )
                 self._target.left = left_update
             elif update["device"] == "robot_right":
@@ -106,7 +113,9 @@ class Waypoint:
                     quat=update["quat"],
                     grip=update["grip"],
                     pos_tol=update.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                    ori_tol=update.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                    ori_tol=update.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE),
+                    max_vel_pos=update.get("max_vel_pos", None),
+                    max_vel_ori=update.get("max_vel_ori", None),
                 )
                 self._target.right = right_update
             else:
@@ -197,7 +206,9 @@ class Waypoint:
             mapped_target = {
                 "device": raw_target["device"],
                 "pos_tol": raw_target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                "rot_tol": raw_target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                "rot_tol": raw_target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE),
+                "max_vel_pos": raw_target.get("max_vel_pos", None),
+                "max_vel_ori": raw_target.get("max_vel_ori", None)
             }
 
             ####################################
@@ -261,7 +272,9 @@ class Waypoint:
             mapped_target = {
                 "device": raw_target["device"],
                 "pos_tol": raw_target.get("pos_tol", DEFAULT_POSITION_TOLERANCE),
-                "rot_tol": raw_target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE)
+                "rot_tol": raw_target.get("rot_tol", DEFAULT_ORIENTATION_TOLERANCE),
+                "max_vel_pos": raw_target.get("max_vel_pos", None),
+                "max_vel_ori": raw_target.get("max_vel_ori", None)
             }
 
             ####################################

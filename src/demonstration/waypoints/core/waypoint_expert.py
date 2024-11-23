@@ -2,7 +2,7 @@ import json
 import os.path
 import shutil
 import time
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import OrderedDict
 
 import numpy as np
@@ -11,12 +11,10 @@ import yaml
 
 from robosuite.controllers.parts.arm import OperationalSpaceController
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
-from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, euler2mat, mat2quat, axisangle2quat, \
-    quat_inverse, quat2mat, mat2euler
+from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, quat_inverse
 from robosuite.wrappers import DataCollectionWrapper
 
-from src.demonstration.waypoints.core.waypoint import Waypoint, DEFAULT_MUST_REACH, DEFAULT_MIN_DURATION, \
-    DEFAULT_MAX_DURATION, DEFAULT_POSITION_TOLERANCE, DEFAULT_ORIENTATION_TOLERANCE, DEFAULT_USES_FEEDBACK
+from src.demonstration.waypoints.core.waypoint import Waypoint
 from src.demonstration.waypoints.utils.null_orientation import get_two_arm_null_orientation
 from src.utils.clipping import clip_translation, clip_quat_by_axisangle
 from src.utils.paths import WAYPOINTS_DIR
@@ -25,6 +23,38 @@ from src.utils.robot_states import TwoArmEEState, EEState
 from src.utils.robot_targets import GripperTarget
 from src.demonstration.utils.gather_demonstrations import gather_demonstrations_as_hdf5
 from src.wrappers.target_visualization_wrapper import TargetVisualizationWrapper
+
+def get_limits(
+        abs_limit: float | np.ndarray | None,
+        lower_min: float | np.ndarray,
+        upper_max: float | np.ndarray
+) -> tuple:
+    """
+    Get the limits for a value.
+    :param abs_limit: Absolute limit
+    :param lower_min: Lower limit
+    :param upper_max: Upper limit
+    :return: Tuple with the limits
+    """
+    if abs_limit is None:
+        return lower_min, upper_max
+
+    # assert type of lower_min and lower_max is the same
+    assert type(upper_max) == type(lower_min), \
+        f"Expected upper_max and lower_min to have the same type, got {type(upper_max)} and {type(lower_min)}"
+
+    # if abs_limit is a scalar and lower_min and upper_max are arrays, then make abs_limit an array
+    if type(abs_limit) == float and type(lower_min) == np.ndarray:
+        abs_limit = np.array([abs_limit] * len(lower_min))
+
+    limit_low = -1*abs_limit
+    limit_high = abs_limit
+
+    # clip the abs_limit to the range of lower_min and upper_max
+    limit_low = np.clip(limit_low, lower_min, upper_max)
+    limit_high = np.clip(limit_high, lower_min, upper_max)
+
+    return limit_low, limit_high
 
 
 class TwoArmWaypointExpertBase(ABC):
@@ -212,7 +242,10 @@ class TwoArmWaypointExpertBase(ABC):
             # Clip the translation
             pos_target = target.xyz
             pos_current = current.xyz
-            pos_delta = clip_translation(pos_target - pos_current, ctrl_output_min[:3], ctrl_output_max[:3])
+
+            v_min, v_max = get_limits(target.max_vel_pos, ctrl_output_min[:3], ctrl_output_max[:3])
+
+            pos_delta = clip_translation(pos_target - pos_current, v_min, v_max)
             if self._action_mode == "absolute":
                 pos_action = pos_current + pos_delta
             elif self._action_mode == "delta":
@@ -222,10 +255,13 @@ class TwoArmWaypointExpertBase(ABC):
 
             quat_target = target.quat
             quat_current = current.quat
+
+            v_min, v_max = get_limits(target.max_vel_ori, ctrl_output_min[3:], ctrl_output_max[3:])
+
             quat_delta = clip_quat_by_axisangle( # output quat of type wxyz
                 quat_multiply(quat_target, quat_inverse(quat_current)),
-                ctrl_output_min[3:],
-                ctrl_output_max[3:]
+                v_min,
+                v_max
             )
             if self._action_mode == "absolute":
                 rot_target = quat_multiply(quat_delta, quat_current)
