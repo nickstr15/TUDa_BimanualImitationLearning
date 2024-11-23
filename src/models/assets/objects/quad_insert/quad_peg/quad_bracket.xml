@@ -51,8 +51,9 @@
 
                 <site rgba="1 0 0 1" size="0.003" pos="0 0 0" name="center_site"/>
 
+                <!--size="0.04 0.005 0.005" pos="0 -0.175 0.055"-->
                 <geom name="handle0_a" type="box" material="dark_silver"
-                      size="0.04 0.005 0.005" pos="0 -0.175 0.055"
+                      size="0.04 0.005 0.03" pos="0 -0.175 0.03"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
                 <site rgba="1 0 0 1" size="0.005" pos="0 -0.175 0.055" name="handle0_site"/>
@@ -65,8 +66,9 @@
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
 
+                <!--size="0.04 0.005 0.005" pos="0 -0.175 0.055"-->
                 <geom name="handle1_a" type="box" material="dark_silver"
-                      size="0.04 0.005 0.005" pos="0 0.325 0.055"
+                      size="0.04 0.005 0.03" pos="0 0.325 0.03"
                       conaffinity="1" contype="1" mass="0.025"
                       solimp="0.998 0.998 0.001" solref="0.02 1" density="100" friction="0.95 0.3 0.1" group="0" condim="4"/>
                 <site rgba="1 0 0 1" size="0.005" pos="0 0.325 0.055" name="handle1_site"/>
