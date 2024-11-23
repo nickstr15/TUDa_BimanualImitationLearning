@@ -65,9 +65,9 @@ class TwoArmBallInsert(TwoArmEnv):
         arm_distances (float): the distance between the two arms. Default is 0.7. Only used if two robots are used and
             the env_configuration is "parallel".
 
-        ball_min_size (float): minimum size of the ball
+        ball_min_size (float): minimum size of the ball, default is 0.08
 
-        ball_max_size (float): maximum size of the ball
+        ball_max_size (float): maximum size of the ball, default is 0.1
 
         position_tol (2-tuple): the tolerance for the position of the objects at the start of the episodes.
             The position will be sampled uniformly in the range for x and y dimension.
@@ -166,8 +166,8 @@ class TwoArmBallInsert(TwoArmEnv):
             table_full_size=(0.8, 0.8, 0.05),
             table_friction=(1.0, 5e-3, 1e-4),
             arm_distances=0.6,
-            ball_min_size=0.10,
-            ball_max_size=0.13,
+            ball_min_size=0.08,
+            ball_max_size=0.1,
             position_tol=(0.05, 0.05),
             orientation_tol=np.pi,
             use_camera_obs=True,
@@ -358,6 +358,7 @@ class TwoArmBallInsert(TwoArmEnv):
         self.ball = BallObject(
             name="ball",
             material=ball_mat,
+            density=1.0,
             size_min=self._ball_min_size,
             size_max=self._ball_max_size,
         )
@@ -365,7 +366,7 @@ class TwoArmBallInsert(TwoArmEnv):
         bin_size = [
             2*self.ball.size[0]+0.05,
             2*self.ball.size[0]+0.05,
-            self.ball.size[0]+0.05
+            0.8*self.ball.size[0]
         ]
         self.bin = Bin(
             name="bin",
@@ -373,8 +374,7 @@ class TwoArmBallInsert(TwoArmEnv):
             density=10000.0,
         )
 
-        self.placement_initializer = self._get_placement_initializer() if \
-            self.placement_initializer is None else self.placement_initializer
+        self.placement_initializer = self._get_placement_initializer()
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
@@ -530,7 +530,7 @@ class TwoArmBallInsert(TwoArmEnv):
             bool: True if task is successful (hammer is in the bin), False otherwise.
         """
 
-        return self._ball_in_bin and not self._touching_ball
+        return self._ball_in_bin
 
     @property
     def _ball_pos(self):
@@ -566,7 +566,7 @@ class TwoArmBallInsert(TwoArmEnv):
         xy_ok = np.linalg.norm(bin_pos[:2] - ball_pos[:2]) < 0.5 * self.bin.bin_size[0]
         z_ok = np.abs(
             (ball_pos[2]-self.ball.size[0]) - (bin_pos[2] - 0.5*self.bin.bin_size[2])
-        ) < 0.02
+        ) < 0.01
         return xy_ok and z_ok
 
 if __name__ == "__main__":

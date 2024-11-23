@@ -338,8 +338,7 @@ class TwoArmQuadInsert(TwoArmEnv):
         self.bracket = QuadBracketObject(name="bracket")
         self.peg = QuadPegObject(name="peg")
 
-        self.placement_initializer = self._get_placement_initializer() if \
-            self.placement_initializer is None else self.placement_initializer
+        self.placement_initializer = self._get_placement_initializer()
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(

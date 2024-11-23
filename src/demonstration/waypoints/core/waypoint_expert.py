@@ -25,7 +25,7 @@ from src.demonstration.utils.gather_demonstrations import gather_demonstrations_
 from src.wrappers.target_visualization_wrapper import TargetVisualizationWrapper
 
 def get_limits(
-        abs_limit: float | np.ndarray | None,
+        abs_limit: float | np.ndarray | list | None,
         lower_min: float | np.ndarray,
         upper_max: float | np.ndarray
 ) -> tuple:
@@ -46,6 +46,9 @@ def get_limits(
     # if abs_limit is a scalar and lower_min and upper_max are arrays, then make abs_limit an array
     if type(abs_limit) == float and type(lower_min) == np.ndarray:
         abs_limit = np.array([abs_limit] * len(lower_min))
+
+    if type(abs_limit) == list:
+        abs_limit = np.array(abs_limit)
 
     limit_low = -1*abs_limit
     limit_high = abs_limit
@@ -273,8 +276,8 @@ class TwoArmWaypointExpertBase(ABC):
 
             # Rescale the input range
             if self._action_mode == "delta":
-                # (this is the reverse of
-                # https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149)
+                # this is the reverse of
+                # https://github.com/ARISE-Initiative/robosuite/blob/0926cbec81bf19ff7667d387b55da8b8714647ea/robosuite/controllers/parts/controller.py#L149
                 action_scale = abs(ctrl_output_max - ctrl_output_min) / abs(ctrl_input_max - ctrl_input_min)
                 action_output_transform = (ctrl_output_max + ctrl_output_min) / 2.0
                 action_input_transform = (ctrl_input_max + ctrl_input_min) / 2.0

@@ -32,15 +32,15 @@
   description: "lift ball"
   targets:
     - device: "robot_right"
-      pos: "wp_2 + [0, 0, 0.3]"
+      pos: "wp_2 + [0, 0, 0.1]"
       quat: "wp_2"
       grip: "open"
-      pos_tol: 0.04
+      max_vel_pos: 0.02
     - device: "robot_left"
-      pos: "wp_2 + [0, 0, 0.3]"
+      pos: "wp_2 + [0, 0, 0.1]"
       quat: "wp_2"
       grip: "open"
-      pos_tol: 0.04
+      max_vel_pos: 0.02
 
 ###############################################
 # MOVE ABOVE BIN ##############################
@@ -51,8 +51,25 @@
   targets:
     - device: "robot_right"
       ee_target: "above_bin_right"
+      max_vel_pos: 0.02
     - device: "robot_left"
       ee_target: "above_bin_left"
+      max_vel_pos: 0.02
+  uses_feedback: true
+
+###############################################
+# DROP ########################################
+###############################################
+
+- id: 5
+  description: "drop ball"
+  targets:
+    - device: "robot_right"
+      ee_target: "drop_right"
+      max_vel_pos: 0.02
+    - device: "robot_left"
+      ee_target: "drop_left"
+      max_vel_pos: 0.02
   uses_feedback: true
 
 

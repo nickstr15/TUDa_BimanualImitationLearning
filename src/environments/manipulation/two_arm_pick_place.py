@@ -341,8 +341,7 @@ class TwoArmPickPlace(TwoArmEnv):
             density=10000.0,
         )
 
-        self.placement_initializer = self._get_placement_initializer() if \
-            self.placement_initializer is None else self.placement_initializer
+        self.placement_initializer = self._get_placement_initializer()
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(

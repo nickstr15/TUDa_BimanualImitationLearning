@@ -43,6 +43,9 @@ class TwoArmBallInsertWaypointExpert(TwoArmWaypointExpertBase):
 
             "above_bin_right": lambda obs: self.__above_bin(obs, "right"),
             "above_bin_left": lambda obs: self.__above_bin(obs, "left"),
+
+            "drop_right": lambda obs: self.__drop(obs, "right"),
+            "drop_left": lambda obs: self.__drop(obs, "left"),
         }
 
         dct.update(update)
@@ -135,20 +138,22 @@ class TwoArmBallInsertWaypointExpert(TwoArmWaypointExpertBase):
 
     def __above_bin(self, obs: OrderedDict, arm: str) -> dict:
         """
-        Get the target to move the arm above the bin.
+                Get the target to move the arm above the bin.
 
-        :param obs: the observation after reset
-        :param arm: the arm to get the target for
-        :return: the target
-        """
+                :param obs: the observation after reset
+                :param arm: the arm to get the target for
+                :return: the target
+                """
         assert arm in ["right", "left"], f"Invalid arm: {arm}"
 
         ball_pos = obs["ball_pos"]
 
         bin_pos = obs["bin_pos"]
-        ball_pos_target = bin_pos + self._env.bin.bin_size[2]/2 + self._env.ball.size[0] + 0.05
+        ball_pos_target = bin_pos
+        target_height = self._env.bin.bin_size[2] / 2 + self._env.ball.size[0] + 0.05
+        ball_pos_target[2] += target_height
 
-        #vector from ball to ball_target
+        # vector from ball to ball_target
         v = ball_pos_target - ball_pos
 
         two_arm_ee_state = TwoArmEEState.from_dict(obs, self._env.env_configuration)
@@ -158,14 +163,38 @@ class TwoArmBallInsertWaypointExpert(TwoArmWaypointExpertBase):
         current_quat = ee_state.quat
 
         current_pos[0] += v[0]
+        current_pos[1] += v[1]
 
-        print(v)
         return {
             "pos": current_pos,
             "quat": current_quat,
             "grip": GripperTarget.OPEN_VALUE,
         }
 
+    def __drop(self, obs: OrderedDict, arm: str) -> dict:
+        """
+        Get the target to drop the ball into the bin.
+        :param obs: current observation
+        :param arm: the arm to get the target for
+        :return: the target
+        """
+        assert arm in ["right", "left"], f"Invalid arm: {arm}"
+
+        two_arm_ee_state = TwoArmEEState.from_dict(obs, self._env.env_configuration)
+        ee_state = two_arm_ee_state.right if arm == "right" else two_arm_ee_state.left
+
+        sign = -1 if arm == "right" else 1
+
+        current_pos = ee_state.xyz
+        current_quat = ee_state.quat
+
+        current_pos[1] += sign * 0.2
+
+        return {
+            "pos": current_pos,
+            "quat": current_quat,
+            "grip": GripperTarget.OPEN_VALUE,
+        }
 
 def example(
     n_episodes: int = 10,
