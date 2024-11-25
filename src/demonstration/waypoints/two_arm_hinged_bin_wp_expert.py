@@ -172,8 +172,8 @@ def example(
 
 
 if __name__ == "__main__":
-    #example()
+    example()
     #example(2, ["Kinova3", "Kinova3"])
     #example(2, ["IIWA", "IIWA"])
-    example(2, ["UR5e", "UR5e"])
+    #example(2, ["UR5e", "UR5e"])
     #example(2, ["Panda", "IIWA"])

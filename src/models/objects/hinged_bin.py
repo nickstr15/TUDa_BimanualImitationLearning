@@ -31,7 +31,7 @@ class HingedBin(CompositeBodyObject):
         wall_thickness=0.01,
         handle_height=0.04,
         handle_width=0.1,
-        handle_thickness=0.04,
+        handle_thickness=0.02,
         transparent_walls=True,
         friction=None,
         bin_density=100000.0,
@@ -255,7 +255,7 @@ class HingedBin(CompositeBodyObject):
         handle_pos = np.array([
             -0.8*half_lid_size[0],
             0,
-            self.handle_height + half_lid_size[2]
+            0.5*self.handle_height + half_lid_size[2]
         ])
         handle_quat = np.array([1, 0, 0, 0])
         self.handle = BoxObject(
