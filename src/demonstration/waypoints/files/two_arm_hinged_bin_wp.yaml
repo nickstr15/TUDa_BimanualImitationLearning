@@ -1,0 +1,199 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+
+################################################
+# PICK UP WITH RIGHT ARM #######################
+################################################
+- id: 1
+  description: "go to pre-pick up position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_pick_up_hammer_right"
+    - device: "robot_left"
+      ee_target: "pre_handle_left"
+
+- id: 2
+  description: "go down with right arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "pick_up_hammer_right"
+    - device: "robot_left"
+      ee_target: "wp_1"
+
+- id: 3
+  description: "close gripper of right arm"
+  targets:
+    - device: "robot_right"
+      pos: "wp_2"
+      quat: "wp_2"
+      grip: "closed"
+    - device: "robot_left"
+      ee_target: "wp_2"
+
+- id: 4
+  description: "pick up object with right arm"
+  targets:
+    - device: "robot_right"
+      pos: "wp_1"
+      quat: "wp_1"
+      grip: "closed"
+    - device: "robot_left"
+      ee_target: "wp_3"
+
+################################################
+# OPEN BIN WITH LEFT ARM #######################
+################################################
+- id: 5
+  description: "open bin with left arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_4"
+    - device: "robot_left"
+      ee_target: "handle_left"
+
+- id: 6
+  description: "grasp handle with left arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_5"
+    - device: "robot_left"
+      pos: "wp_5"
+      quat: "wp_5"
+      grip: "closed"
+
+- id: 7
+  description: "open lid"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_6"
+    - device: "robot_left"
+      ee_target: "open_bin_left"
+      max_vel_pos: 0.02
+      max_vel_ori: 0.1
+      pos_tol: 0.05
+      rot_tol: 0.36
+
+################################################
+# DROP OFF WITH RIGHT ARM ######################
+################################################
+- id: 8
+  description: "go to pre-drop off position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_drop_off_hammer_right"
+      pos_tol: 0.03
+      rot_tol: 0.18
+    - device: "robot_left"
+      ee_target: "wp_7"
+      pos_tol: 0.05
+      rot_tol: 0.36
+
+- id: 9
+  description: "go down with right arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "drop_off_hammer_right"
+      pos_tol: 0.03
+      rot_tol: 0.18
+    - device: "robot_left"
+      ee_target: "wp_8"
+      pos_tol: 0.05
+      rot_tol: 0.36
+
+- id: 10
+  description: "open gripper of right arm"
+  targets:
+    - device: "robot_right"
+      pos: "wp_9"
+      quat: "wp_9"
+      grip: "open"
+      pos_tol: 0.03
+      rot_tol: 0.18
+    - device: "robot_left"
+      ee_target: "wp_9"
+      pos_tol: 0.05
+      rot_tol: 0.36
+
+################################################
+# MOVE RIGHT ARM OUT OF THE WAY ################
+################################################
+- id: 11
+  description: "move right arm out of the way"
+  targets:
+    - device: "robot_right"
+      pos: "wp_8"
+      quat: "wp_8"
+      grip: "open"
+      pos_tol: 0.03
+      rot_tol: 0.18
+    - device: "robot_left"
+      ee_target: "wp_10"
+      pos_tol: 0.05
+      rot_tol: 0.36
+
+- id: 12
+  description: "move right arm out of the way"
+  targets:
+    - device: "robot_right"
+      pos: "wp_11 + [0, -0.5, 0]"
+      quat: "wp_11"
+      grip: "open"
+      pos_tol: 0.03
+      rot_tol: 0.18
+    - device: "robot_left"
+      ee_target: "wp_11"
+      pos_tol: 0.05
+      rot_tol: 0.36
+
+################################################
+# CLOSE LID WITH LEFT ARM ######################
+################################################
+- id: 13
+  description: "close lid with left arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_12"
+    - device: "robot_left"
+      pos: "wp_6"
+      quat: "wp_6"
+      grip: "closed"
+      max_vel_pos: 0.02
+      max_vel_ori: 0.1
+      pos_tol: 0.08
+      rot_tol: 1
+
+- id: 14
+  description: "release handle with left arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_12"
+    - device: "robot_left"
+      pos: "wp_13"
+      quat: "wp_13"
+      grip: "open"
+      max_vel_pos: 0.02
+      max_vel_ori: 0.1
+      pos_tol: 0.08
+      rot_tol: 1
+
+- id: 15
+  description: "release handle with left arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_12"
+    - device: "robot_left"
+      ee_target: "wp_1"
+
+
+
+
+
+
+
+
+

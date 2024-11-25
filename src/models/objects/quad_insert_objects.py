@@ -3,7 +3,7 @@ from robosuite.models.objects import MujocoXMLObject
 
 from src.utils.paths import asset_path_completion
 
-class QuadBracketObject(MujocoXMLObject):
+class QuadBracket(MujocoXMLObject):
     def __init__(self, name: str):
         super().__init__(
             asset_path_completion("objects/quad_insert/quad_peg/quad_bracket.xml"),
@@ -50,7 +50,7 @@ class QuadBracketObject(MujocoXMLObject):
         """
         return np.array([0, 0.325, 0.055])
 
-class QuadPegObject(MujocoXMLObject):
+class QuadPeg(MujocoXMLObject):
     def __init__(self, name: str):
         super().__init__(
             asset_path_completion("objects/quad_insert/quad_peg/quad_peg.xml"),

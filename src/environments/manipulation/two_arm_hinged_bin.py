@@ -4,18 +4,20 @@ import numpy as np
 
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
+from robosuite.models.objects import HammerObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite.utils.transform_utils import quat2mat, euler2mat, mat2euler, mat2quat
+from robosuite.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat, euler2mat, convert_quat, mat2euler
 
-from src.models.objects.quad_insert_objects import QuadBracket, QuadPeg
+from src.models.objects.hinged_bin import HingedBin
 
 
-class TwoArmQuadInsert(TwoArmEnv):
+class TwoArmHingedBin(TwoArmEnv):
     """
-    This class corresponds to a bimanual pick and place task, requiring the robot to pick up a bracket with four holes
-    that must be placed on a peg. The task is considered successful if the bracket is successfully inserted.
+    This class corresponds to a bimanual pick and place task, requiring the robot to pick up a
+    hammer and place it in a hinged bin. The task is considered successful if the hammer is
+    placed in the bin, and the lid is closed.
 
     Args:
         robots (str or list of str): Specification for specific robot(s)
@@ -59,24 +61,18 @@ class TwoArmQuadInsert(TwoArmEnv):
         table_friction (3-tuple): the three mujoco friction parameters for
             each table.
 
-        arm_distances (float): the distance between the two arms. Default is 0.6. Only used if two robots are used and
+        arm_distance (float): the distance between the two arms. Default is 0.5. Only used if two robots are used and
             the env_configuration is "parallel".
 
-        position_tol_bracket (2-tuple): the tolerance for the position of the bracket at the start of the episodes.
+        full_bin_size (3-tuple): (x,y,z) full dimensions of bin to use
+
+        position_tol (2-tuple): the tolerance for the position of the objects at the start of the episodes.
             The position will be sampled uniformly in the range for x and y dimension.
-            Default is (0.02, 0.02).
+            Default is (0.05, 0.05).
 
-        orientation_tol_bracket (2-tuple): the tolerance for the rotation of the bracket at the start of the episodes.
-            The rotation will be sampled uniformly in the range around the z axis.
-            Default is [-pi/8, pi/8].
-
-        position_tol_peg (2-tuple): the tolerance for the position of the peg at the start of the episodes.
-            The position will be sampled uniformly in the range for x and y dimension.
-            Default is (0.02, 0.02).
-
-        orientation_tol_peg (2-tuple): the tolerance for the rotation of the peg at the start of the episodes.
-            The rotation will be sampled uniformly in the range around the z axis.
-            Default is [-pi/8, pi/8].
+        orientation_tol (float): the tolerance for the rotation of the objects at the start of the episodes.
+            The rotation will be sampled uniformly in the range [-rotation_tol, rotation_tol] around the z axis.
+            Default is pi / 8.
 
         use_camera_obs (bool): if True, every observation includes rendered image(s)
 
@@ -166,11 +162,10 @@ class TwoArmQuadInsert(TwoArmEnv):
             initialization_noise="default",
             table_full_size=(0.8, 1.5, 0.05),
             table_friction=(1.0, 5e-3, 1e-4),
-            arm_distances=0.6,
-            position_tol_bracket=(0.02, 0.02),
-            orientation_tol_bracket=(-np.pi/8, np.pi/8),
-            position_tol_peg=(0.02, 0.02),
-            orientation_tol_peg=(-np.pi/8, np.pi/8),
+            arm_distance=0.5,
+            full_bin_size=(0.35, 0.35, 0.1),
+            position_tol=(0.05, 0.05),
+            orientation_tol=np.pi/8,
             use_camera_obs=True,
             use_object_obs=True,
             reward_scale=1.0,
@@ -194,8 +189,6 @@ class TwoArmQuadInsert(TwoArmEnv):
             renderer="mjviewer",
             renderer_config=None,
     ):
-        # fixed settings
-        self.handle_distance = 0.5
 
         # settings for table-top
         self.table_full_size = table_full_size
@@ -203,13 +196,15 @@ class TwoArmQuadInsert(TwoArmEnv):
         self.table_offset = np.array((0, 0, 0.8))
 
         # setting for arm position
-        self.arm_distances = arm_distances
+        self.arm_distance = arm_distance
+        self._initial_hammer_bin_dist = arm_distance
+
+        # settings for bin
+        self.full_bin_size = np.array(full_bin_size)
 
         # initial sampling range for object positions
-        self.position_tol_bracket = position_tol_bracket
-        self.orientation_tol_bracket = orientation_tol_bracket
-        self.position_tol_peg = position_tol_peg
-        self.orientation_tol_peg = orientation_tol_peg
+        self.position_tol = position_tol
+        self.orientation_tol = orientation_tol
 
         # reward configuration
         self.reward_scale = reward_scale
@@ -258,11 +253,13 @@ class TwoArmQuadInsert(TwoArmEnv):
         Reward function for the task.
 
         Sparse un-normalized reward:
-            0 if bracket is not inserted
-            1 if bracket is inserted
+            0 if hammer is not in the bin
+            1 if hammer is in the bin
 
         Un-normalized summed components if using reward shaping:
-            Not implemented for this task
+            Distance: in [-1, 0], the distance between the hammer and the bin, normalized
+                by initial distance (-1 at start), 0 when hammer is in the bin
+            Success: 0 if hammer is not in the bin, 1 if hammer is in the bin
 
         Note that the final reward is normalized and scaled by reward_scale / 1.0 as
         well so that the max score is equal to reward_scale
@@ -273,15 +270,25 @@ class TwoArmQuadInsert(TwoArmEnv):
         Returns:
             float: reward value
         """
-        reward_ = 0
 
-        # check for goal completion: hammer in the bin
+
+        if not self.reward_shaping:
+            return 1.0 if self._check_success() else 0.0
+
+        reward_ = 0.0
+
+        # check for goal completion: hammer in the bin and bin closed
+        if self._hammer_in_bin:
+            reward_ += 0.5
         if self._check_success():
-            reward_ += 1
+            reward_ += 0.5
 
         # if using reward shaping, add distance component
         if self.reward_shaping:
-            raise NotImplementedError("Reward shaping is not implemented for this task.")
+            # Compute distance between hammer and bin and normalize by initial distance
+            dist = np.linalg.norm(self._hammer_pos - self._bin_pos)
+            normed_dist = dist / self._initial_hammer_bin_dist
+            reward_ += -1*np.clip(normed_dist, 0, 1)
 
         if self.reward_scale is not None:
             reward_ *= self.reward_scale / 1.0
@@ -310,7 +317,7 @@ class TwoArmQuadInsert(TwoArmEnv):
                     robot.robot_model.set_base_ori(rot)
             else:  # "parallel" configuration setting
                 # Set up robots parallel to each other but offset from the center
-                half_arm_distance = self.arm_distances / 2.0
+                half_arm_distance = self.arm_distance / 2.0
                 offsets = (-half_arm_distance, half_arm_distance)
                 for robot, offset in zip(self.robots, offsets):
                     xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
@@ -335,8 +342,15 @@ class TwoArmQuadInsert(TwoArmEnv):
         )
 
         # initialize objects of interest
-        self.bracket = QuadBracket(name="bracket")
-        self.peg = QuadPeg(name="peg")
+        self.hammer = HammerObject(
+            name="hammer",
+            handle_length = (0.1, 0.15)
+        )
+
+        self.bin = HingedBin(
+            name="bin",
+            full_bin_size=self.full_bin_size,
+        )
 
         self.placement_initializer = self._get_placement_initializer()
 
@@ -344,7 +358,7 @@ class TwoArmQuadInsert(TwoArmEnv):
         self.model = ManipulationTask(
             mujoco_arena = mujoco_arena,
             mujoco_robots = [robot.robot_model for robot in self.robots],
-            mujoco_objects = [self.bracket, self.peg],
+            mujoco_objects = [self.hammer, self.bin],
         )
 
     def _get_placement_initializer(self):
@@ -356,29 +370,26 @@ class TwoArmQuadInsert(TwoArmEnv):
         placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
 
         # Pre-define settings for each object's placement
-        objects = [self.bracket, self.peg]
-        x_centers = [-0.05, -0.15]
-        y_centers = [-0.4, 0.35]
-        x_tols = [self.position_tol_bracket[0], self.position_tol_peg[0]]
-        y_tols = [self.position_tol_bracket[1], self.position_tol_peg[1]]
-        rot_tols = [self.orientation_tol_bracket, self.orientation_tol_peg]
-        rot_axes = ["z", "z"]
-        for obj, x, y, x_tol, y_tol, rot_tol, r_axis in zip(
-            objects,
-            x_centers, y_centers,
-            x_tols, y_tols,
-            rot_tols, rot_axes
+        objects = [self.hammer, self.bin]
+        half_arm_distance = self.arm_distance / 2.0
+        y_centers = [-half_arm_distance, half_arm_distance]
+        x_tol = self.position_tol[0]
+        y_tol = self.position_tol[1]
+        rot_tol = self.orientation_tol
+        rot_axes = ["y", "z"]
+        for obj, y, r_axis in zip(
+            objects, y_centers, rot_axes
         ):
             # Create a sampler for the object
             sampler = UniformRandomSampler(
                 name=f"{obj.name}ObjectSampler",
                 mujoco_objects=obj,
-                x_range=[x-x_tol, x+x_tol],
+                x_range=[-x_tol, x_tol],
                 y_range=[y-y_tol, y+y_tol],
-                rotation=[rot_tol[0], rot_tol[1]],
+                rotation=[-rot_tol, rot_tol],
                 rotation_axis=r_axis,
                 ensure_object_boundary_in_range=False,
-                ensure_valid_placement=True,
+                ensure_valid_placement=False,
                 reference_pos=self.table_offset,
             )
             placement_initializer.append_sampler(sampler)
@@ -394,7 +405,13 @@ class TwoArmQuadInsert(TwoArmEnv):
         super()._setup_references()
 
         # Hammer object references from this env
-        self.bracket_body_id = self.sim.model.body_name2id(self.bracket.root_body)
+        self.hammer_body_id = self.sim.model.body_name2id(self.hammer.root_body)
+        # bin object references from this env
+        self.bin_body_id = self.sim.model.body_name2id(self.bin.root_body)
+        # handle object references from this env
+        self.handle_body_id = self.sim.model.body_name2id("bin_handle_main")
+        # hinge object reference from this env
+        self.hinge_body_id = self.sim.model.body_name2id("bin_hinge_main")
 
         # General env references
         self.table_top_id = self.sim.model.site_name2id("table_top")
@@ -414,69 +431,35 @@ class TwoArmQuadInsert(TwoArmEnv):
 
             #position and rotation of hammer
             @sensor(modality=modality)
-            def bracket_xpos(_):
-                return np.array(self._bracket_xpos)
+            def hammer_pos(_):
+                return np.array(self._hammer_pos)
 
             @sensor(modality=modality)
-            def bracket_quat(_):
-                return np.array(self._bracket_quat)
+            def hammer_quat(_):
+                return np.array(self._hammer_quat)
 
-            #position and rotation of bracket handles
+            #position and rotation of bin
             @sensor(modality=modality)
-            def handle0_xpos(_):
-                return np.array(self._bracket_handle0_xpos)
-
-            @sensor(modality=modality)
-            def handle1_xpos(_):
-                return np.array(self._bracket_handle1_xpos)
+            def bin_pos(_):
+                return np.array(self._bin_pos)
 
             @sensor(modality=modality)
-            def target_xpos(_):
-                return np.array(self._peg_target_xpos)
+            def bin_quat(_):
+                return np.array(self._bin_quat)
 
             @sensor(modality=modality)
-            def target_quat(_):
-                return np.array(self._peg_target_quat)
+            def handle_pos(_):
+                return np.array(self._handle_pos)
 
             @sensor(modality=modality)
-            def flap_a_hole_xpos(_):
-                return np.array(self._flap_a_hole_xpos)
+            def handle_quat(_):
+                return np.array(self._handle_quat)
 
             @sensor(modality=modality)
-            def flap_b_hole_xpos(_):
-                return np.array(self._flap_b_hole_xpos)
+            def hinge_pos(_):
+                return np.array(self._hinge_pos)
 
-            @sensor(modality=modality)
-            def flap_c_hole_xpos(_):
-                return np.array(self._flap_c_hole_xpos)
-
-            @sensor(modality=modality)
-            def flap_d_hole_xpos(_):
-                return np.array(self._flap_d_hole_xpos)
-
-            @sensor(modality=modality)
-            def flap_a_peg_xpos(_):
-                return np.array(self._flap_a_peg_xpos)
-
-            @sensor(modality=modality)
-            def flap_b_peg_xpos(_):
-                return np.array(self._flap_b_peg_xpos)
-
-            @sensor(modality=modality)
-            def flap_c_peg_xpos(_):
-                return np.array(self._flap_c_peg_xpos)
-
-            @sensor(modality=modality)
-            def flap_d_peg_xpos(_):
-                return np.array(self._flap_d_peg_xpos)
-
-            sensors = [
-                bracket_xpos, bracket_quat,
-                handle0_xpos, handle1_xpos,
-                target_xpos, target_quat,
-                flap_a_hole_xpos, flap_b_hole_xpos, flap_c_hole_xpos, flap_d_hole_xpos,
-                flap_a_peg_xpos, flap_b_peg_xpos, flap_c_peg_xpos, flap_d_peg_xpos
-            ]
+            sensors = [hammer_pos, hammer_quat, bin_pos, bin_quat, handle_pos, handle_quat, hinge_pos]
             names = [s.__name__ for s in sensors]
 
             arm_sensor_fns = []
@@ -532,6 +515,9 @@ class TwoArmQuadInsert(TwoArmEnv):
                 )
             self.sim.step()
 
+        # reset initial distance between hammer and bin
+        self._initial_hammer_bin_distance = np.linalg.norm(self._hammer_pos - self._bin_pos)
+
     def _check_success(self):
         """
         Check if the task has been completed. For this task, this means the hammer is in the bin.
@@ -540,175 +526,126 @@ class TwoArmQuadInsert(TwoArmEnv):
             bool: True if task is successful (hammer is in the bin), False otherwise.
         """
 
-        return self._bracket_inserted and not self._grasping_bracket
+        return self._hammer_in_bin and self._bin_closed
 
     @property
-    def _bracket_xpos(self):
+    def _hammer_pos(self):
         """
         Returns the position of the hammer in the world frame.
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["center"])
-        ]
+        return self.sim.data.body_xpos[self.hammer_body_id]
 
     @property
-    def _bracket_quat(self):
+    def _hammer_quat(self):
         """
         Returns the orientation of the hammer in the world frame.
         """
-        xmat = self.sim.data.site_xmat[
-            self.sim.model.site_name2id(self.bracket.important_sites["center"])
-        ]
-
-        return mat2quat(xmat.reshape((3, 3)))
+        # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
+        return convert_quat(self.sim.data.body_xquat[self.hammer_body_id], to="xyzw")
 
     @property
-    def _bracket_handle0_xpos(self):
+    def _bin_pos(self):
         """
-        Returns the position of the first handle of the hammer in the world frame.
+        Returns the position of the bin in the world frame.
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["handle0"])
-        ]
+        return self.sim.data.body_xpos[self.bin_body_id]
 
     @property
-    def _bracket_handle1_xpos(self):
+    def _bin_quat(self):
         """
-        Returns the position of the second handle of the hammer in the world frame.
+        Returns the orientation of the bin in the world frame.
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["handle1"])
-        ]
+        # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
+        return convert_quat(self.sim.data.body_xquat[self.bin_body_id], to="xyzw")
 
     @property
-    def _peg_target_xpos(self):
+    def _handle_pos(self):
         """
-        Returns the position of the target peg in the world frame.
+        Returns the position of the handle in the world frame.
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.peg.important_sites["target"])
-        ]
+        return self.sim.data.body_xpos[self.handle_body_id]
 
     @property
-    def _peg_target_quat(self):
+    def _handle_quat(self):
         """
-        Returns the orientation of the target peg in the world frame.
+        Returns the orientation of the handle in the world frame.
         """
-        xmat = self.sim.data.site_xmat[
-            self.sim.model.site_name2id(self.peg.important_sites["target"])
-        ]
-        return mat2quat(xmat.reshape((3, 3)))
+        # ! convert from mujoco to robosuite convention [wxyz -> xyzw]
+        return convert_quat(self.sim.data.body_xquat[self.handle_body_id], to="xyzw")
 
     @property
-    def _flap_a_hole_xpos(self):
+    def _hinge_pos(self):
         """
-        Returns the position of the first hole of the bracket in the world frame.
+        Returns the position of the hinge in the world frame
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["flap_a_hole"])
-        ]
+        return self.sim.data.body_xpos[self.hinge_body_id]
 
     @property
-    def _flap_b_hole_xpos(self):
+    def _hammer_in_bin(self):
         """
-        Returns the position of the second hole of the bracket in the world frame.
+        Returns True if the hammer is in the bin, False otherwise.
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["flap_b_hole"])
-        ]
+        bin_pos = self._bin_pos
+        bin_quat = self._bin_quat
+
+        hammer_pos = self._hammer_pos
+
+        bin_aa = quat2axisangle(bin_quat)
+        bin_angle = np.linalg.norm(bin_aa)
+
+        # check if hammer has correct z position
+        hammer_center_z = hammer_pos[2]
+        bin_center_z = bin_pos[2]
+        bin_height = self.full_bin_size[2]
+        if hammer_center_z > bin_center_z + bin_height / 2:
+            return False
+
+        # Compute the corner coordinates of the bin in the xy-plane
+        def get_corners(center, angle, full_size):
+            # Rotation matrix from quaternion
+            rotation_matrix = quat2mat(axisangle2quat([0, 0, angle]))[:2, :2] # only xy rotation
+            half_size = full_size[:2] / 2
+
+            # Define local corners (relative to the center)
+            corners = np.array([
+                [-half_size[0], -half_size[1]],
+                [-half_size[0], half_size[1]],
+                [half_size[0], -half_size[1]],
+                [half_size[0], half_size[1]]
+            ])
+
+            # Rotate and translate corners to global position
+            rotated_corners = (rotation_matrix @ corners.T).T + center[:2]
+            return rotated_corners
+
+        # get bin corners
+        bin_corners = get_corners(bin_pos, bin_angle, self.full_bin_size)
+
+        bin_x_min, bin_x_max = np.min(bin_corners[:, 0]), np.max(bin_corners[:, 0])
+        bin_y_min, bin_y_max = np.min(bin_corners[:, 1]), np.max(bin_corners[:, 1])
+
+        hammer_in_bin = bin_x_min < hammer_pos[0] < bin_x_max \
+            and bin_y_min < hammer_pos[1] < bin_y_max
+
+        return hammer_in_bin
 
     @property
-    def _flap_c_hole_xpos(self):
+    def _bin_closed(self):
         """
-        Returns the position of the third hole of the bracket in the world frame.
+        Returns True if the hinged bin is closed, False otherwise.
         """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["flap_c_hole"])
-        ]
+        # check that the handle is aligned with the xy-plane
+        handle_quat = self._handle_quat
+        handle_euler = mat2euler(quat2mat(handle_quat))
+        e_x = handle_euler[0]
+        e_y = handle_euler[1]
 
-    @property
-    def _flap_d_hole_xpos(self):
-        """
-        Returns the position of the fourth hole of the bracket in the world frame.
-        """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.bracket.important_sites["flap_d_hole"])
-        ]
-
-    @property
-    def _flap_a_peg_xpos(self):
-        """
-        Returns the position of the first hole of the peg in the world frame.
-        """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.peg.important_sites["flap_a_peg"])
-        ]
-
-    @property
-    def _flap_b_peg_xpos(self):
-        """
-        Returns the position of the second hole of the peg in the world frame.
-        """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.peg.important_sites["flap_b_peg"])
-        ]
-
-    @property
-    def _flap_c_peg_xpos(self):
-        """
-        Returns the position of the third hole of the peg in the world frame.
-        """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.peg.important_sites["flap_c_peg"])
-        ]
-
-    @property
-    def _flap_d_peg_xpos(self):
-        """
-        Returns the position of the fourth hole of the peg in the world frame.
-        """
-        return self.sim.data.site_xpos[
-            self.sim.model.site_name2id(self.peg.important_sites["flap_d_peg"])
-        ]
-
-
-    @property
-    def _bracket_inserted(self):
-        """
-        Returns True if the bracket is inserted on the peg.
-        """
-        hole_pos = np.array([
-            self._flap_a_hole_xpos, self._flap_b_hole_xpos, self._flap_c_hole_xpos, self._flap_d_hole_xpos
-        ])
-
-        peg_pos = np.array([
-            self._flap_a_peg_xpos, self._flap_b_peg_xpos, self._flap_c_peg_xpos, self._flap_d_peg_xpos
-        ])
-
-        pos_ok = np.all(np.linalg.norm(hole_pos - peg_pos, axis=1) < 0.002) # 2mm tolerance
-
-        return pos_ok
-
-    @property
-    def _grasping_bracket(self):
-        """
-        Returns True if any arm is grasping the hammer, False otherwise.
-        """
-        # Check if any Arm's gripper is grasping the bracket
-        (g0, g1) = (
-            (self.robots[0].gripper["right"], self.robots[0].gripper["left"])
-            if self.env_configuration == "single-robot"
-            else (self.robots[0].gripper, self.robots[1].gripper)
-        )
-        return (
-                self._check_grasp(gripper=g0, object_geoms=self.bracket) or
-                self._check_grasp(gripper=g1, object_geoms=self.bracket)
-        )
+        return e_x < np.deg2rad(1) and e_y < np.deg2rad(1)
 
 if __name__ == "__main__":
     from src.environments.utils.visualize import visualize_static
 
-    visualize_static("TwoArmQuadInsert", robots=["Panda", "Panda"])
+    visualize_static("TwoArmHingedBin", robots=["Panda", "Panda"])
 
 
 
