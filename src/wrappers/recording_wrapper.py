@@ -43,7 +43,8 @@ class RecordingWrapper(Wrapper):
 
         time_stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         env_name = self.env.__class__.__name__
-        file_name = f"{env_name}_{time_stamp}.mp4"
+        robots = "-".join([robot.name for robot in self.env.robots])
+        file_name = f"{env_name}_{robots}_{time_stamp}.mp4"
         self.path = os.path.join(directory, file_name)
         #make sure the directory exists
         os.makedirs(directory, exist_ok=True)
