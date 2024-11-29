@@ -112,4 +112,4 @@ if __name__ == "__main__":
     #expert.example(f, robots=["Kinova3"]*2)
     #expert.example(f, robots=["IIWA"]*2)
     #expert.example(f, robots=["UR5e"]*2, gripper_types=["Robotiq85Gripper"]*2)
-    #expert.example(f, robots=["Panda", "UR5e"])
+    # expert.example(f, robots=["Panda", "IIWA"])
