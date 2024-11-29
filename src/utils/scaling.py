@@ -1,5 +1,5 @@
-import numpy as np
-from transforms3d.quaternions import quat2axangle, axangle2quat
+from robosuite.utils.transform_utils import quat2axisangle, axisangle2quat
+
 
 def scale_translation(vector, scaling):
     """
@@ -13,10 +13,9 @@ def scale_translation(vector, scaling):
 def scale_quat(quat, scaling):
     """
     Scale the rotation of quaternion
-    :param quat: Rotation quaternion [w, x, y, z]
+    :param quat: Rotation quaternion [x, y, z, w]
     :param scaling: Scaling factor
     :return: Scaled rotation quaternion
     """
-    axis, angle = quat2axangle(quat)
-    quat = axangle2quat(axis, angle * scaling)
-    return quat
+    aa = quat2axisangle(quat) * scaling
+    return axisangle2quat(aa)

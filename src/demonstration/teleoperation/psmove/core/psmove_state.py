@@ -1,7 +1,8 @@
 from enum import IntEnum
 
 import numpy as np
-from transforms3d.euler import euler2quat
+from robosuite.utils.transform_utils import axisangle2quat
+
 
 class PSMoveTarget(IntEnum):
     LEFT = 0
@@ -32,7 +33,7 @@ class PsMoveState:
         self._trigger = 0
 
         self._pos = np.array([0.0, 0.0, 0.0])
-        self._quat = euler2quat(0.0, 0.0, 0.0)
+        self._quat = axisangle2quat(np.array([0.0, 0.0, 0.0]))
 
     @property
     def color(self) -> tuple:

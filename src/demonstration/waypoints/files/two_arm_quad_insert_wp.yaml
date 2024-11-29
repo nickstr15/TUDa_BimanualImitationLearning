@@ -1,0 +1,98 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+
+################################################
+# PICK UP ######################################
+################################################
+- id: 1
+  description: "go to pre-pick up position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_pick_up_robot_right"
+    - device: "robot_left"
+      ee_target: "pre_pick_up_robot_left"
+
+- id: 2
+  description: "go into pre-pick up position"
+  targets:
+  - device: "robot_right"
+    pos: "wp_1 + [0, 0, -0.1]"
+    quat: "wp_1"
+    grip: "open"
+  - device: "robot_left"
+    pos: "wp_1 + [0, 0, -0.1]"
+    quat: "wp_1"
+    grip: "open"
+
+- id: 3
+  description: "close grippers"
+  targets:
+  - device: "robot_right"
+    pos: "wp_2"
+    quat: "wp_2"
+    grip: "closed"
+  - device: "robot_left"
+    pos: "wp_2"
+    quat: "wp_2"
+    grip: "closed"
+  min_duration: 1.0
+
+- id: 4
+  description: "pick up object"
+  targets:
+  - device: "robot_right"
+    pos: "wp_3 + [0, 0, 0.1]"
+    quat: "wp_3"
+    grip: "closed"
+  - device: "robot_left"
+    pos: "wp_3 + [0, 0, 0.1]"
+    quat: "wp_3"
+    grip: "closed"
+
+################################################
+# MOVE TO GOAL #################################
+################################################
+- id: 5
+  description: "go to pre-goal position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_goal_robot_right"
+    - device: "robot_left"
+      ee_target: "pre_goal_robot_left"
+
+- id: 7
+  description: "insertion"
+  targets:
+  - device: "robot_right"
+    ee_target: "goal_robot_right"
+    pos_tolerance: 0.0005
+    rot_tolerance: 0.1
+    max_vel_pos: 0.005
+    max_vel_ori: 0.1
+  - device: "robot_left"
+    ee_target: "goal_robot_left"
+    pos_tolerance: 0.0005
+    rot_tolerance: 0.1
+    max_vel_pos: 0.005
+    max_vel_ori: 0.1
+  uses_feedback: true
+
+- id: 7
+  description: "post insertion"
+  targets:
+  - device: "robot_right"
+    ee_target: "goal_robot_right_1"
+  - device: "robot_left"
+    ee_target: "goal_robot_left_1"
+  uses_feedback: true
+
+
+
+
+
+

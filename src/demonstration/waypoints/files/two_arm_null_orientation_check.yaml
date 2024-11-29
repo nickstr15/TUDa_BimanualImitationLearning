@@ -1,0 +1,10 @@
+- id: 0
+  description: "rotate to null orientation"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right_null_orientation"
+    - device: "robot_left"
+      ee_target: "initial_state_left_null_orientation"
+  min_duration: 5.0
+  max_duration: 10.0
+

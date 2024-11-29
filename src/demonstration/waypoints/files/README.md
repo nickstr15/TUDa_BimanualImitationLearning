@@ -28,7 +28,7 @@ This folder contains the waypoint files for the different tasks.
       # only one of the following fields should be used
       # if multiple fields are declared, the priority is as follows: 
       # quat > euler > ax_angle
-      quat: [w, x, y, z]             # desired orientation as quaternion
+      quat: [x, y, z, w]             # desired orientation as quaternion
       euler: [roll, pitch, yaw]      # desired orientation as euler angles in radians
       ax_angle: [vx, vy, vz, angle]  # desired orientation as axis-angle in radians
         
@@ -39,7 +39,10 @@ This folder contains the waypoint files for the different tasks.
     
     - device: <device_name>
       # ...
-      
+  
+  uses_feedback: <bool>              # if True, the waypoint uses feedback from the current observation (default: False)
+                                     # -> the waypoint is recomputed for every time step
+                                     # uses feedback is only applicable with a defined ee_target method 
   min_duration: <time>               # time [sec] before status "reached" is possible (default: 1.0)
   max_duration: <time>               # time [sec] max_time to reach target (default: 30.0)
   must_reach: <bool>                 # if True, the waypoint must be reached (default: True)
@@ -89,7 +92,7 @@ or a string with the following options:
 
 ### Details for the orientation `quat`/`euler`/`ax_angle`
 The orientation can be specified in different ways:
-- `quat`: a list of 4 elements `[w, x, y, z]` representing the quaternion
+- `quat`: a list of 4 elements `[x, y, z, w]` representing the quaternion
 - `euler`: a list of 3 elements `[roll, pitch, yaw]` representing the euler angles in radians
 - `ax_angle`: a list of 4 elements `[vx, vy, vz, angle]` representing the axis-angle in radians
 

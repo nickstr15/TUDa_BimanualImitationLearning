@@ -1,0 +1,115 @@
+- id: 0
+  description: "start in current position"
+  targets:
+    - device: "robot_right"
+      ee_target: "initial_state_right"
+    - device: "robot_left"
+      ee_target: "initial_state_left"
+
+################################################
+# PICK UP WITH RIGHT ARM #######################
+################################################
+- id: 1
+  description: "go to pre-pick up position"
+  targets:
+    - device: "robot_right"
+      ee_target: "pre_pick_up_hammer_right"
+    - device: "robot_left"
+      ee_target: "wp_0"
+
+- id: 2
+  description: "go down with right arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "pick_up_hammer_right"
+    - device: "robot_left"
+      ee_target: "wp_1"
+
+- id: 3
+  description: "close gripper of right arm"
+  targets:
+    - device: "robot_right"
+      pos: "wp_2"
+      quat: "wp_2"
+      grip: "closed"
+    - device: "robot_left"
+      ee_target: "wp_2"
+
+- id: 4
+  description: "pick up object with right arm"
+  targets:
+    - device: "robot_right"
+      pos: "wp_1"
+      quat: "wp_1"
+      grip: "closed"
+    - device: "robot_left"
+      ee_target: "wp_3"
+
+################################################
+# HAND OVER TO LEFT ARM ########################
+################################################
+- id: 5
+  description: "go to pre-hand over position (1/2)"
+  targets:
+    - device: "robot_right"
+      ee_target: "hand_over_robot_right"
+    - device: "robot_left"
+      ee_target: "wp_4"
+
+- id: 6
+  description: "go to pre-hand over position (2/2)"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_5"
+    - device: "robot_left"
+      ee_target: "pre_hand_over_robot_left"
+
+- id: 7
+  description: "both arms in hand over position"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_6"
+    - device: "robot_left"
+      pos: "wp_6 + [0, 0, -0.1]"
+      quat: "wp_6"
+      grip: "open"
+
+- id: 8
+  description: "close gripper of left arm"
+  targets:
+    - device: "robot_right"
+      ee_target: "wp_7"
+    - device: "robot_left"
+      pos: "wp_7"
+      quat: "wp_7"
+      grip: "closed"
+
+- id: 9
+  description: "open gripper of right arm"
+  targets:
+    - device: "robot_right"
+      pos: "wp_8"
+      quat: "wp_8"
+      grip: "open"
+    - device: "robot_left"
+      ee_target: "wp_8"
+
+- id: 10
+  description: "move arms apart"
+  targets:
+    - device: "robot_right"
+      pos: "wp_9 + [0, -0.1, 0]"
+      quat: "wp_9"
+      grip: "open"
+    - device: "robot_left"
+      pos: "wp_9"
+      quat: "wp_9"
+      grip: "closed"
+
+
+
+
+
+
+
+
