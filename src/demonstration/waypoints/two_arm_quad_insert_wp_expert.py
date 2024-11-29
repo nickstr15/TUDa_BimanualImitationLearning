@@ -155,28 +155,35 @@ class TwoArmQuadInsertWaypointExpert(TwoArmLiftWaypointExpert):
         T = np.linalg.inv(H_bracket) @ H_peg
         return T
 
-
 def example(
-    n_episodes: int = 10,
+    num_episodes: int = 10,
     robots: str | list[str] = ["Panda"]*2,
-    gripper_types: str | list[str] = ["default", "default"]
+    gripper_types: str | list[str] = ["default", "default"],
+    num_recording_episodes: int = 0,
 ):
-    two_arm_pick_place = suite.make(
+    env = suite.make(
         env_name="TwoArmQuadInsert",
-        robots=robots,
         gripper_types=gripper_types,
+        robots=robots,
         env_configuration="parallel",
         has_renderer=True,
-        has_offscreen_renderer=False,
-        use_camera_obs=False,
+        has_offscreen_renderer=num_recording_episodes > 0,
+        use_camera_obs=num_recording_episodes > 0,
     )
 
     expert = TwoArmQuadInsertWaypointExpert(
-        environment=two_arm_pick_place,
+        environment=env,
         waypoints_file="two_arm_quad_insert_wp.yaml",
     )
-    expert.visualize(n_episodes)
+    expert.visualize(
+        num_episodes=num_episodes,
+        num_recording_episodes=num_recording_episodes,
+    )
 
 
 if __name__ == "__main__":
     example()
+    #example(2, ["Kinova3", "Kinova3"])
+    #example(2, ["IIWA", "IIWA"])
+    #example(2, ["UR5e", "UR5e"], ["Robotiq85Gripper", "Robotiq85Gripper"])
+    #example(2, ["Panda", "IIWA"])

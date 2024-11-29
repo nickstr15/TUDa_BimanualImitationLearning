@@ -17,11 +17,12 @@ from robosuite.wrappers import DataCollectionWrapper
 from src.demonstration.waypoints.core.waypoint import Waypoint
 from src.demonstration.waypoints.utils.null_orientation import get_two_arm_null_orientation
 from src.utils.clipping import clip_translation, clip_quat_by_axisangle
-from src.utils.paths import WAYPOINTS_DIR
+from src.utils.paths import WAYPOINTS_DIR, RECORDING_DIR
 from src.utils.real_time import RealTimeHandler
 from src.utils.robot_states import TwoArmEEState, EEState
 from src.utils.robot_targets import GripperTarget
 from src.demonstration.utils.gather_demonstrations import gather_demonstrations_as_hdf5
+from src.wrappers.recording_wrapper import RecordingWrapper
 from src.wrappers.target_visualization_wrapper import TargetVisualizationWrapper
 
 def get_limits(
@@ -84,7 +85,9 @@ class TwoArmWaypointExpertBase(ABC):
         # get action mode + input/output ranges
         self._evaluate_controller_setup()
 
-        self._null_quat_right, self._null_quat_left = get_two_arm_null_orientation([r.name for r in self._env.robots])
+        self._null_quat_right, self._null_quat_left = get_two_arm_null_orientation(
+            [r.name for r in self._env.robots], self._env.env_configuration
+        )
 
         with open(full_waypoints_path, 'r') as f:
             self._waypoint_cfg = yaml.safe_load(f)
@@ -394,8 +397,6 @@ class TwoArmWaypointExpertBase(ABC):
                 print(f"[INFO] Waypoint {waypoint.id} ({waypoint.description}) could not be reached. Aborting this episode.")
                 break
 
-
-
         if success:
             print(f"[INFO] Episode finished successful.")
         else:
@@ -409,24 +410,41 @@ class TwoArmWaypointExpertBase(ABC):
     def visualize(
         self,
         num_episodes : int = 1,
-        visualize_targets : bool = False
+        visualize_targets : bool = False,
+        num_recording_episodes : int = 0,
+        recording_camera_name : str = "agentview"
     ) -> None:
         """
         Visualize the expert agent in the environment.
         :param num_episodes: Number of episodes to visualize
         :param visualize_targets: Whether to visualize the target positions
+        :param num_recording_episodes: Number of episodes to record
+        :param recording_camera_name: Name of the camera used for recording
         """
         if visualize_targets:
             self._env = TargetVisualizationWrapper(self._env)
 
-        for _ in range(num_episodes):
+        num_recording_episodes = min(num_recording_episodes, num_episodes)
+        if num_recording_episodes > 0:
+            self._env = RecordingWrapper(self._env)
+            self._env.start_recording(directory=RECORDING_DIR, camera_name=recording_camera_name)
+
+        for i in range(num_episodes):
+
+            if (num_recording_episodes > 0) and (i == num_recording_episodes):
+                self._env.stop_recording()
+
             _ = self._run_episode(
                 render=True,
                 target_real_time=True,
                 randomize=True
             )
 
-        if visualize_targets:
+        if visualize_targets and num_recording_episodes > 0:
+            self._env = self._env.unwrapped().unwrapped()
+        elif num_recording_episodes > 0:
+            self._env = self._env.unwrapped()
+        elif visualize_targets:
             self._env = self._env.unwrapped()
 
     def collect_data(self,

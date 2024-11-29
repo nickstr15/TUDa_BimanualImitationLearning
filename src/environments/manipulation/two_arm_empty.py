@@ -5,11 +5,7 @@ import numpy as np
 import robosuite.utils.transform_utils as tu
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.models.arenas import TableArena
-from robosuite.models.objects import HammerObject, Bin
 from robosuite.models.tasks import ManipulationTask
-from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat
 
 
 class TwoArmEmpty(TwoArmEnv):
@@ -298,6 +294,8 @@ class TwoArmEmpty(TwoArmEnv):
             mujoco_robots = [robot.robot_model for robot in self.robots],
             mujoco_objects = [],
         )
+
+
 
     def _check_success(self):
         return False

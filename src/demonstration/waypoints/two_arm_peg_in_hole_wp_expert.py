@@ -103,30 +103,32 @@ class TwoArmPegInHoleWaypointExpert(TwoArmWaypointExpertBase):
         }
 
 def example(
-    n_episodes: int = 10,
+    num_episodes: int = 10,
     robots: str | list[str] = ["Panda"]*2,
-    gripper_types: str | list[str] = ["default", "default"]
+    num_recording_episodes: int = 0,
 ):
-    two_arm_pick_place = suite.make(
+    env = suite.make(
         env_name="TwoArmPegInHole",
         robots=robots,
-        gripper_types=gripper_types,
         env_configuration="parallel",
         has_renderer=True,
-        has_offscreen_renderer=False,
-        use_camera_obs=False,
+        has_offscreen_renderer=num_recording_episodes > 0,
+        use_camera_obs=num_recording_episodes > 0,
     )
 
     expert = TwoArmPegInHoleWaypointExpert(
-        environment=two_arm_pick_place,
+        environment=env,
         waypoints_file="two_arm_peg_in_hole_wp.yaml",
     )
-    expert.visualize(n_episodes)
+    expert.visualize(
+        num_episodes=num_episodes,
+        num_recording_episodes=num_recording_episodes,
+    )
 
 
 if __name__ == "__main__":
     example()
     #example(2, ["Kinova3", "Kinova3"])
     #example(2, ["IIWA", "IIWA"])
-    #example(2, ["UR5e", "UR5e"], ["Robotiq140Gripper", "Robotiq140Gripper"])
+    #example(2, ["UR5e", "UR5e"], ["Robotiq85Gripper", "Robotiq85Gripper"])
     #example(2, ["Panda", "IIWA"])
