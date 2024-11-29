@@ -8,7 +8,7 @@ from collections import OrderedDict
 import numpy as np
 import yaml
 
-
+import robosuite as suite
 from robosuite.controllers.parts.arm import OperationalSpaceController
 from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
 from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, quat_inverse
@@ -68,6 +68,8 @@ class TwoArmWaypointExpertBase(ABC):
 
     Only applicable for two-arm environments with OSC for each arm.
     """
+    target_env_name = None
+
     def __init__(
         self,
         environment : TwoArmEnv,
@@ -412,14 +414,12 @@ class TwoArmWaypointExpertBase(ABC):
         num_episodes : int = 1,
         visualize_targets : bool = False,
         num_recording_episodes : int = 0,
-        recording_camera_name : str = "agentview"
     ) -> None:
         """
         Visualize the expert agent in the environment.
         :param num_episodes: Number of episodes to visualize
         :param visualize_targets: Whether to visualize the target positions
         :param num_recording_episodes: Number of episodes to record
-        :param recording_camera_name: Name of the camera used for recording
         """
         if visualize_targets:
             self._env = TargetVisualizationWrapper(self._env)
@@ -427,7 +427,7 @@ class TwoArmWaypointExpertBase(ABC):
         num_recording_episodes = min(num_recording_episodes, num_episodes)
         if num_recording_episodes > 0:
             self._env = RecordingWrapper(self._env)
-            self._env.start_recording(directory=RECORDING_DIR, camera_name=recording_camera_name)
+            self._env.start_recording(directory=RECORDING_DIR)
 
         for i in range(num_episodes):
 
@@ -530,6 +530,50 @@ class TwoArmWaypointExpertBase(ABC):
             "grip": GripperTarget.OPEN_VALUE
         }
         return dtc
+
+    @classmethod
+    def example(
+        cls,
+        waypoints_file: str,
+        num_episodes: int = 10,
+        robots: str | list[str] = ["Panda"] * 2,
+        gripper_types: str | list[str] = ["default", "default"],
+        num_recording_episodes: int = 0,
+    ):
+        """
+        Run an example for the expert agent in the environment.
+        :param waypoints_file: file containing the waypoints
+        :param num_episodes: Number of episodes to visualize
+        :param robots: robot configuration
+        :param gripper_types: gripper configuration
+        :param num_recording_episodes: number of episodes to record
+        """
+        if cls.__class__.__name__ == "TwoArmLiftWaypointExpertBase":
+            # exit because the TwoArmLiftWaypointExpertBase does not implement a task
+            print("[INFO] Skipping example for TwoArmLiftWaypointExpertBase.")
+            return
+
+        env = suite.make(
+            env_name=cls.target_env_name,
+            gripper_types=gripper_types,
+            robots=robots,
+            env_configuration="parallel",
+            has_renderer=True,
+            camera_names="frontview" if num_recording_episodes > 0 else "agentview",
+            has_offscreen_renderer=num_recording_episodes > 0,
+            use_camera_obs=num_recording_episodes > 0,
+            camera_widths=1280 if num_recording_episodes > 0 else 256,
+            camera_heights=720 if num_recording_episodes > 0 else 256,
+        )
+
+        expert = cls(
+            environment=env,
+            waypoints_file=waypoints_file,
+        )
+        expert.visualize(
+            num_episodes=num_episodes,
+            num_recording_episodes=num_recording_episodes,
+        )
 
 
 

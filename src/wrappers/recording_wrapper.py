@@ -30,16 +30,16 @@ class RecordingWrapper(Wrapper):
         self.path = None
         self.camera_name = None
 
-    def start_recording(self, directory: str, camera_name: str = "agentview"):
+    def start_recording(self, directory: str, camera_name: str = None):
         """
         Start recording the current episode
 
         Args:
             directory (str): Directory to save the recordings
-            camera_name (str): Name of the camera to record
+            camera_name (str): Name of the camera to record, if None, the first camera found will be used
         """
         self.recording = True
-        self.camera_name = camera_name
+        self.camera_name = camera_name if camera_name is not None else self.env.camera_names[0]
 
         time_stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         env_name = self.env.__class__.__name__

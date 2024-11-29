@@ -76,7 +76,7 @@ class TwoArmQuadInsert(TwoArmEnv):
 
         orientation_tol_peg (2-tuple): the tolerance for the rotation of the peg at the start of the episodes.
             The rotation will be sampled uniformly in the range around the z axis.
-            Default is [-pi/8, pi/8].
+            Default is [-pi/8, 0].
 
         use_camera_obs (bool): if True, every observation includes rendered image(s)
 
@@ -170,7 +170,7 @@ class TwoArmQuadInsert(TwoArmEnv):
             position_tol_bracket=(0.02, 0.02),
             orientation_tol_bracket=(-np.pi/8, np.pi/8),
             position_tol_peg=(0.02, 0.02),
-            orientation_tol_peg=(-np.pi/8, np.pi/8),
+            orientation_tol_peg=(-np.pi/8, 0),
             use_camera_obs=True,
             use_object_obs=True,
             reward_scale=1.0,

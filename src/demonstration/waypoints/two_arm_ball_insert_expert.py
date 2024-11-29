@@ -15,6 +15,8 @@ class TwoArmBallInsertWaypointExpert(TwoArmWaypointExpertBase):
     """
     Specific waypoint expert for the TwoArmLift environment.
     """
+    target_env_name = "TwoArmBallInsert"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._env: TwoArmBallInsert = self._env  # for type hinting in pycharm
@@ -196,35 +198,12 @@ class TwoArmBallInsertWaypointExpert(TwoArmWaypointExpertBase):
             "grip": GripperTarget.OPEN_VALUE,
         }
 
-def example(
-    num_episodes: int = 10,
-    robots: str | list[str] = ["Panda"]*2,
-    gripper_types: str | list[str] = ["default", "default"],
-    num_recording_episodes: int = 0,
-):
-    env = suite.make(
-        env_name="TwoArmBallInsert",
-        gripper_types=gripper_types,
-        robots=robots,
-        env_configuration="parallel",
-        has_renderer=True,
-        has_offscreen_renderer=num_recording_episodes > 0,
-        use_camera_obs=num_recording_episodes > 0,
-    )
-
-    expert = TwoArmBallInsertWaypointExpert(
-        environment=env,
-        waypoints_file="two_arm_ball_insert_wp.yaml",
-    )
-    expert.visualize(
-        num_episodes=num_episodes,
-        num_recording_episodes=num_recording_episodes,
-    )
-
-
 if __name__ == "__main__":
-    example()
-    #example(2, ["Kinova3", "Kinova3"])
-    #example(2, ["IIWA", "IIWA"])
-    #example(2, ["UR5e", "UR5e"], ["Robotiq85Gripper", "Robotiq85Gripper"])
-    #example(2, ["Panda", "IIWA"])
+    expert = TwoArmBallInsertWaypointExpert
+    f = "two_arm_ball_insert_wp.yaml"
+
+    expert.example(f, num_recording_episodes=1)
+    #expert.example(f, robots=["Kinova3"]*2)
+    #expert.example(f, robots=["IIWA"]*2)
+    #expert.example(f, robots=["UR5e"]*2, gripper_types=["Robotiq85Gripper"]*2)
+    #expert.example(f, robots=["Panda", "UR5e"])
