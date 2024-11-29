@@ -537,7 +537,7 @@ class TwoArmWaypointExpertBase(ABC):
         waypoints_file: str,
         num_episodes: int = 10,
         robots: str | list[str] = ["Panda"] * 2,
-        gripper_types: str | list[str] = ["default", "default"],
+        gripper_types: str | list[str] | None = ["default", "default"],
         num_recording_episodes: int = 0,
     ):
         """
