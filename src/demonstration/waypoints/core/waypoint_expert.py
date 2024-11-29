@@ -82,6 +82,10 @@ class TwoArmWaypointExpertBase(ABC):
         """
         full_waypoints_path = os.path.join(WAYPOINTS_DIR, waypoints_file)
         assert os.path.isfile(full_waypoints_path), f"Waypoints file {full_waypoints_path} not found"
+
+        assert environment.env_configuration in ["parallel", "single-robot"], \
+            f"Invalid env_configuration {environment.env_configuration}. Only 'parallel' or 'single-robot' supported."
+
         self._env = environment
 
         # get action mode + input/output ranges
