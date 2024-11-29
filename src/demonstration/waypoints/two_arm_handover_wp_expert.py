@@ -199,7 +199,7 @@ if __name__ == "__main__":
     expert = TwoArmHandoverWaypointExpert
     f = "two_arm_handover_wp.yaml"
 
-    expert.example(f, num_recording_episodes=1)
+    expert.example(f)
     #expert.example(f, robots=["Kinova3"]*2)
     #expert.example(f, robots=["IIWA"]*2)
     #expert.example(f, robots=["UR5e"]*2, gripper_types=["Robotiq85Gripper"]*2)

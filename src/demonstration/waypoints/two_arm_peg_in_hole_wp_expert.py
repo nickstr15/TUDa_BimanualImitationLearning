@@ -108,7 +108,7 @@ if __name__ == "__main__":
     expert = TwoArmPegInHoleWaypointExpert
     f = "two_arm_peg_in_hole_wp.yaml"
 
-    expert.example(f, num_recording_episodes=1, gripper_types=None)
+    expert.example(f)
     #expert.example(f, robots=["Kinova3"]*2, gripper_types=None)
     #expert.example(f, robots=["IIWA"]*2, gripper_types=None)
     #expert.example(f, robots=["UR5e"]*2, gripper_types=None)

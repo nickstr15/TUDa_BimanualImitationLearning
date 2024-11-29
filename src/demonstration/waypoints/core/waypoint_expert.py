@@ -92,7 +92,7 @@ class TwoArmWaypointExpertBase(ABC):
         self._evaluate_controller_setup()
 
         self._null_quat_right, self._null_quat_left = get_two_arm_null_orientation(
-            [r.name for r in self._env.robots], self._env.env_configuration
+            [r.name for r in self._env.robots]
         )
 
         with open(full_waypoints_path, 'r') as f:
