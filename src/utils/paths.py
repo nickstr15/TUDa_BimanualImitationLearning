@@ -10,6 +10,8 @@ SCENES_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "environments", "scenes")
 WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "demonstration", "waypoints", "files")
 MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "models")
 
+PSMOVEAPI_LIBRARY_PATH = os.path.join(PROJECT_ROOT_DIR, "external", "psmoveapi", "build")
+
 def asset_path_completion(asset_path: str, root: str = None) -> str:
     """
         Takes in a local asset path and returns a full path.
