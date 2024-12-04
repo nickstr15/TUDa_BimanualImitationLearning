@@ -37,7 +37,7 @@ class QWERTZKeyboard(Keyboard):
         print_command("e-r", "rotate (roll)")
         print_command("b", "toggle arm/base mode (if applicable)")
         print_command("s", "switch active arm (if multi-armed robot)")
-        print_command("=", "switch active robot (if multi-robot environment)")
+        print_command("#", "switch active robot (if multi-robot environment)")
         print("")
 
     @override
@@ -88,6 +88,40 @@ class QWERTZKeyboard(Keyboard):
                 drot = rotation_matrix(angle=-0.1 * self.rot_sensitivity, direction=[0.0, 0.0, 1.0])[:3, :3]
                 self.rotation = self.rotation.dot(drot)  # rotates z
                 self.raw_drotation[2] -= 0.1 * self.rot_sensitivity
+
+        except AttributeError as e:
+            pass
+
+    @override
+    def on_release(self, key):
+        """
+        Key handler for key releases.
+        Args:
+            key (str): key that was pressed
+        """
+
+        try:
+            # controls for grasping
+            if key == Key.space:
+                self.grasp_states[self.active_robot][self.active_arm_index] = not self.grasp_states[self.active_robot][
+                    self.active_arm_index
+                ]  # toggle gripper
+
+            # controls for mobile base (only applicable if mobile base present)
+            elif key.char == "b":
+                self.base_modes[self.active_robot] = not self.base_modes[self.active_robot]  # toggle mobile base
+
+            # user-commanded reset
+            elif key.char == "q":
+                self._reset_state = 1
+                self._enabled = False
+                self._reset_internal_state()
+
+            elif key.char == "s":
+                self.active_arm_index = (self.active_arm_index + 1) % len(self.all_robot_arms[self.active_robot])
+
+            elif key.char == "#":
+                self.active_robot = (self.active_robot + 1) % self.num_robots
 
         except AttributeError as e:
             pass
