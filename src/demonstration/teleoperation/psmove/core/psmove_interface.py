@@ -13,10 +13,6 @@ from src.utils.paths import PSMOVEAPI_LIBRARY_PATH
 ######################################################################################
 # Setup PSMove #######################################################################
 ######################################################################################
-
-if 'PSMOVEAPI_LIBRARY_PATH' not in os.environ:
-    os.environ['PSMOVEAPI_LIBRARY_PATH'] = PSMOVEAPI_LIBRARY_PATH
-
 full_config_path = os.path.join(os.path.dirname(__file__), "psmove_config.yml")
 with open(full_config_path, 'r') as f:
     PSMOVE_CONFIG = yaml.safe_load(f)
@@ -24,7 +20,11 @@ with open(full_config_path, 'r') as f:
 LEFT_ADDRESS = PSMOVE_CONFIG["left_controller_address"]
 RIGHT_ADDRESS = PSMOVE_CONFIG["right_controller_address"]
 
-import external.psmoveapi.build.psmove as psmove
+if 'PSMOVEAPI_LIBRARY_PATH' not in os.environ:
+    os.environ['PSMOVEAPI_LIBRARY_PATH'] = PSMOVEAPI_LIBRARY_PATH
+
+sys.path.insert(0, os.environ['PSMOVEAPI_LIBRARY_PATH'])
+import psmove
 ######################################################################################
 
 class PSMoveInterface:
@@ -78,7 +78,6 @@ class PSMoveInterface:
 
         for _ in range(move_count):
             controller = psmove.PSMove()
-            print(controller.this)
             while not controller.poll(): pass
             controller_serial = controller.get_serial()
             battery = controller.get_battery() / 5.0 * 100.0
