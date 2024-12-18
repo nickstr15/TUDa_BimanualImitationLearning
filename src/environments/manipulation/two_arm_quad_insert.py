@@ -151,6 +151,8 @@ class TwoArmQuadInsert(TwoArmEnv):
             [multiple / a single] segmentation(s) to use for all cameras. A list of list of str specifies per-camera
             segmentation setting(s) to use.
 
+        flipped (bool): Whether to flip the environment in such a way that the responsibilities of the two arms are swapped.
+
     Raises:
         ValueError: [Invalid number of robots specified]
         ValueError: [Invalid env configuration]
@@ -193,6 +195,7 @@ class TwoArmQuadInsert(TwoArmEnv):
             camera_segmentations=None,  # {None, instance, class, element}
             renderer="mjviewer",
             renderer_config=None,
+            flipped=False
     ):
         # fixed settings
         self.handle_distance = 0.5
@@ -223,6 +226,8 @@ class TwoArmQuadInsert(TwoArmEnv):
             env_configuration = "parallel"
 
         self.placement_initializer = None
+
+        self.flipped = flipped
 
         super().__init__(
             robots=robots,
@@ -358,7 +363,7 @@ class TwoArmQuadInsert(TwoArmEnv):
         # Pre-define settings for each object's placement
         objects = [self.bracket, self.peg]
         x_centers = [-0.05, -0.15]
-        y_centers = [-0.4, 0.35]
+        y_centers = [-0.4, 0.35] if not self.flipped else [0.4, -0.35]
         x_tols = [self.position_tol_bracket[0], self.position_tol_peg[0]]
         y_tols = [self.position_tol_bracket[1], self.position_tol_peg[1]]
         rot_tols = [self.orientation_tol_bracket, self.orientation_tol_peg]

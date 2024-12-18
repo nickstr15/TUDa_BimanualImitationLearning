@@ -147,6 +147,8 @@ class TwoArmHingedBin(TwoArmEnv):
             [multiple / a single] segmentation(s) to use for all cameras. A list of list of str specifies per-camera
             segmentation setting(s) to use.
 
+        flipped (bool): Whether to flip the environment in such a way that the responsibilities of the two arms are swapped.
+
     Raises:
         ValueError: [Invalid number of robots specified]
         ValueError: [Invalid env configuration]
@@ -188,6 +190,7 @@ class TwoArmHingedBin(TwoArmEnv):
             camera_segmentations=None,  # {None, instance, class, element}
             renderer="mjviewer",
             renderer_config=None,
+            flipped=False,
     ):
 
         # settings for table-top
@@ -218,6 +221,8 @@ class TwoArmHingedBin(TwoArmEnv):
             env_configuration = "parallel"
 
         self.placement_initializer = None
+
+        self.flipped = flipped
 
         super().__init__(
             robots=robots,
@@ -372,7 +377,7 @@ class TwoArmHingedBin(TwoArmEnv):
         # Pre-define settings for each object's placement
         objects = [self.hammer, self.bin]
         half_arm_distance = self.arm_distance / 2.0
-        y_centers = [-half_arm_distance, half_arm_distance]
+        y_centers = [half_arm_distance, -half_arm_distance] if self.flipped else [-half_arm_distance, half_arm_distance]
         x_tol = self.position_tol[0]
         y_tol = self.position_tol[1]
         rot_tol = self.orientation_tol
