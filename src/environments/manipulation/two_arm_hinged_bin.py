@@ -147,8 +147,6 @@ class TwoArmHingedBin(TwoArmEnv):
             [multiple / a single] segmentation(s) to use for all cameras. A list of list of str specifies per-camera
             segmentation setting(s) to use.
 
-        flipped (bool): Whether to flip the environment in such a way that the responsibilities of the two arms are swapped.
-
     Raises:
         ValueError: [Invalid number of robots specified]
         ValueError: [Invalid env configuration]
@@ -190,7 +188,6 @@ class TwoArmHingedBin(TwoArmEnv):
             camera_segmentations=None,  # {None, instance, class, element}
             renderer="mjviewer",
             renderer_config=None,
-            flipped=False,
     ):
 
         # settings for table-top
@@ -222,7 +219,7 @@ class TwoArmHingedBin(TwoArmEnv):
 
         self.placement_initializer = None
 
-        self.flipped = flipped
+        self.flipped = False
 
         super().__init__(
             robots=robots,
@@ -385,13 +382,17 @@ class TwoArmHingedBin(TwoArmEnv):
         for obj, y, r_axis in zip(
             objects, y_centers, rot_axes
         ):
+            rotation = np.array([-rot_tol, rot_tol])
+            if self.flipped:
+                rotation += np.deg2rad(180)
+
             # Create a sampler for the object
             sampler = UniformRandomSampler(
                 name=f"{obj.name}ObjectSampler",
                 mujoco_objects=obj,
                 x_range=[-x_tol, x_tol],
                 y_range=[y-y_tol, y+y_tol],
-                rotation=[-rot_tol, rot_tol],
+                rotation=rotation,
                 rotation_axis=r_axis,
                 ensure_object_boundary_in_range=False,
                 ensure_valid_placement=False,

@@ -170,9 +170,9 @@ class TwoArmQuadInsert(TwoArmEnv):
             table_friction=(1.0, 5e-3, 1e-4),
             arm_distances=0.6,
             position_tol_bracket=(0.02, 0.02),
-            orientation_tol_bracket=(-np.pi/8, np.pi/8),
+            orientation_tol_bracket=(-np.pi/12, np.pi/12),
             position_tol_peg=(0.02, 0.02),
-            orientation_tol_peg=(-np.pi/8, 0),
+            orientation_tol_peg=(-np.pi/12, np.pi/12),
             use_camera_obs=True,
             use_object_obs=True,
             reward_scale=1.0,
@@ -195,7 +195,6 @@ class TwoArmQuadInsert(TwoArmEnv):
             camera_segmentations=None,  # {None, instance, class, element}
             renderer="mjviewer",
             renderer_config=None,
-            flipped=False
     ):
         # fixed settings
         self.handle_distance = 0.5
@@ -227,7 +226,7 @@ class TwoArmQuadInsert(TwoArmEnv):
 
         self.placement_initializer = None
 
-        self.flipped = flipped
+        self.flipped = False
 
         super().__init__(
             robots=robots,

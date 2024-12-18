@@ -145,8 +145,6 @@ class TwoArmPickPlace(TwoArmEnv):
             [multiple / a single] segmentation(s) to use for all cameras. A list of list of str specifies per-camera
             segmentation setting(s) to use.
 
-        flipped (bool): Whether to flip the environment in such a way that the responsibilities of the two arms are swapped.
-
     Raises:
         ValueError: [Invalid number of robots specified]
         ValueError: [Invalid env configuration]
@@ -187,8 +185,7 @@ class TwoArmPickPlace(TwoArmEnv):
             camera_depths=False,
             camera_segmentations=None,  # {None, instance, class, element}
             renderer="mjviewer",
-            renderer_config=None,
-            flipped=False
+            renderer_config=None
     ):
 
         # settings for table-top
@@ -220,7 +217,7 @@ class TwoArmPickPlace(TwoArmEnv):
 
         self.placement_initializer = None
 
-        self.flipped = flipped
+        self.flipped = False
 
         super().__init__(
             robots=robots,
