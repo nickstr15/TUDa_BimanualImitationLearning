@@ -56,9 +56,13 @@ def main():
         has_offscreen_renderer=False,
     )
 
+    expert_args = {
+        "environment": env,
+        "waypoints_file": args.waypoints,
+    }
+
     expert: TwoArmWaypointExpertBase = ENV_TO_WAYPOINT_EXPERT[args.environment](
-        env,
-        waypoints_file=args.waypoints,
+        **expert_args
     )
 
     expert.collect_data(
