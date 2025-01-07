@@ -16,7 +16,8 @@ class HDF5Dataset(Dataset):
              observation_length : int = 1,
              action_length : int = 1,
              uses_state_obs : bool = True,
-             uses_image_obs : bool = False
+             uses_image_obs : bool = False,
+             specific_obs_keys : list = None
          ):
         """
         Dataset class for loading demonstrations from a hdf5 file.
@@ -25,16 +26,20 @@ class HDF5Dataset(Dataset):
         :param action_length: number of actions to be used for each state
         :param uses_state_obs: flag to use state observations
         :param uses_image_obs: flag to use image observations
+        :param specific_obs_keys: list of specific observation keys to use,
+            this is not compatible with state or image observations being used
         :return:
         """
         assert observation_length > 0, "observation_length must be greater than 0"
         assert action_length > 0, "action_length must be greater than 0"
+
 
         self.observation_length = observation_length
         self.action_length = action_length
 
         self.uses_state_obs = uses_state_obs
         self.uses_image_obs = uses_image_obs
+        self.specific_obs_keys = specific_obs_keys
 
         with h5py.File(hdf5_path, "r") as f:
             env_info = json.loads(f["data"].attrs["env_info"])
@@ -56,7 +61,10 @@ class HDF5Dataset(Dataset):
             use_camera_obs=False,
         )
 
-        #self.env.reset()
+        #print available observations
+        print("Available observations:")
+        for key in self.env._get_observations().keys():
+            print(key)
 
     def __len__(self):
         return sum(self.episode_lens)
@@ -133,6 +141,13 @@ class HDF5Dataset(Dataset):
 
         if self.uses_image_obs:
             raise NotImplementedError("Image observations are not yet supported")
+
+        if self.specific_obs_keys is not None and len(self.specific_obs_keys) > 0:
+            assert not self.uses_state_obs, "specific_obs_keys can only be used if state observations are not used"
+            assert not self.uses_image_obs, "specific_obs_keys can only be used if image observations are not used"
+
+            for key in self.specific_obs_keys:
+                o.extend(observation[key])
 
         return o
 

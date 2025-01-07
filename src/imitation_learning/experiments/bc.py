@@ -1,10 +1,4 @@
-import numpy as np
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-
 from src.imitation_learning.core.dataset import HDF5Dataset
-from src.imitation_learning.networks.mlp import PolicyNetwork
 
 dataset = HDF5Dataset(
         "<path>",

@@ -1,0 +1,1 @@
+WANDB_API_KEY = None # needed for automatic logging to wandb

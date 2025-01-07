@@ -2,6 +2,8 @@
 recordings/
 demonstrations/
 _research/
+trained_models/
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

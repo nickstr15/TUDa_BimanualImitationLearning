@@ -1,0 +1,29 @@
+environment:
+  name: "TwoArmPickPlace"
+  obs_length: 1
+  action_length: 1
+
+algorithm:
+  name: "BC"
+  model: "MLP"
+  model_params:
+    hidden_sizes: [256, 256]
+    activation: "ReLU"
+    output_activation: None
+  training:
+    ...
+  evaluation:
+    ...
+
+dataset:
+  hdf5_path: "wp/Panda_Panda_TwoArmPickPlace_2025-01-02_17-10-41/demo.hdf5"
+  uses_state_obs: false
+  uses_img_obs: false
+  specific_obs_keys: []
+  split_ratio: 0.8
+  batch_size: 32
+
+seed: 42
+model_out_dir: "bc_two_arm_pick_place"
+log_dir: "bc_two_arm_pick_place"
+log_wandb: true

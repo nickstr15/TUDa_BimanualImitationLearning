@@ -4,15 +4,16 @@ PROJECT_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(
 
 CONTROL_CONFIGS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "control", "control_configs")
 DEMOS_DIR = os.path.join(PROJECT_ROOT_DIR, "demonstrations")
+DATA_DIR = os.path.join(PROJECT_ROOT_DIR, "data")
 ENVIRONMENTS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "environments")
 RECORDING_DIR = os.path.join(PROJECT_ROOT_DIR, "recordings")
 SCENES_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "environments", "scenes")
 WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "demonstration", "waypoints", "files")
 MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "models")
+TRAINED_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "trained_models")
+LOG_DIR = os.path.join(PROJECT_ROOT_DIR, "logs")
 
-PSMOVEAPI_LIBRARY_PATH = os.path.join(os.path.expanduser("~"), "psmoveapi", "build")
-
-def asset_path_completion(asset_path: str, root: str = None) -> str:
+def path_completion(asset_path: str, root: str = None) -> str:
     """
         Takes in a local asset path and returns a full path.
             if @asset_path is absolute, do nothing
