@@ -12,6 +12,8 @@ WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "demonstration", "waypoint
 MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "src", "models")
 TRAINED_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "trained_models")
 LOG_DIR = os.path.join(PROJECT_ROOT_DIR, "logs")
+IL_PATH = os.path.join(PROJECT_ROOT_DIR, "src", "imitation_learning")
+
 
 def path_completion(asset_path: str, root: str = None) -> str:
     """

@@ -1,34 +1,70 @@
 import os
 import time
+import logging
+from abc import ABC, abstractmethod
 
 import wandb
 import yaml
 import torch
 import random
 import numpy as np
+import json
 from torch.utils.data import DataLoader
-import robosuite as suite
 
+from src.imitation_learning.algo.algorithm import AlgorithmBase
 from src.imitation_learning.core.dataset import HDF5Dataset
-from src.utils.paths import path_completion, DEMOS_DIR, TRAINED_MODELS_DIR, LOG_DIR
+from src.utils.paths import path_completion, DEMOS_DIR, TRAINED_MODELS_DIR, LOG_DIR, IL_PATH
 from src.utils.wandb import WANDB_API_KEY
 
+class ExperimentBase(ABC):
+    """
+    Base class for all experiments.
 
-class ExperimentBase:
+    Requires the following methods to be implemented:
+        - _setup_algorithm
+    """
     def __init__(self, config_path: str):
         """
         Base class for all experiments.
+
+        Requires the following methods to be implemented:
+            - _setup_algorithm
+
         :param config_path: path to the config file
         """
-
         self._config = self._load_config(config_path)
         self._setup_seed()
         self._setup_device()
         self._setup_paths()
         self._setup_dataset()
         self._setup_env()
-        self._setup_algorithm()
+
+        self.alg = self._setup_algorithm()
+
         self._setup_logging()
+
+    @abstractmethod
+    def _setup_algorithm(self) -> AlgorithmBase:
+        """
+        Set up the algorithm.
+        """
+        raise NotImplementedError
+
+    def run(self):
+        """
+        Run the experiment.
+        """
+        self.alg.train_loop(
+            self._train_loader,
+            self._eval_loader,
+            num_epochs=self._config["training"]["num_epochs"],
+            num_epochs_logging=self._config["training"]["num_epochs_logging"],
+            num_episodes_eval=self._config["training"]["num_episodes_eval"],
+            logger=self._logger,
+            log_wandb=self._log_wandb,
+            eval_env=self._env,
+            obs_keys=self._dataset.obs_keys
+        )
 
     @staticmethod
     def _load_config(config_path: str):
@@ -37,6 +73,7 @@ class ExperimentBase:
         :param config_path: path to the config file
         :return: configuration dictionary
         """
+        config_path = path_completion(config_path, os.path.join(IL_PATH, "configs"))
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
         return config
@@ -64,9 +101,10 @@ class ExperimentBase:
         self._log_dir = path_completion(self._config["log_dir"], LOG_DIR)
 
         # add timestamp in format YYYY-MM-DD_HH-MM-SS
-        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-        self._model_out_dir = os.path.join(self._model_out_dir, timestamp)
-        self._log_dir = os.path.join(self._log_dir, timestamp)
+        self._timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        self._model_out_dir = os.path.join(self._model_out_dir, self._timestamp)
+        self._log_dir = os.path.join(self._log_dir, self._timestamp)
+        self._log_path = os.path.join(self._log_dir, "log.log")
 
         os.makedirs(self._model_out_dir, exist_ok=False)
         os.makedirs(self._log_dir, exist_ok=False)
@@ -89,7 +127,7 @@ class ExperimentBase:
         self._train_loader = DataLoader(training, batch_size=self._config["dataset"]["batch_size"], shuffle=True)
         self._eval_loader = DataLoader(evaluation, batch_size=self._config["dataset"]["batch_size"], shuffle=True)
 
-        self._input_size = self._dataset.input_size
+        self._input_sizes = self._dataset.input_sizes
         self._output_size = self._dataset.output_size
 
     def _setup_env(self):
@@ -98,24 +136,43 @@ class ExperimentBase:
         """
         self._env = self._dataset.env
 
-        assert self._env.__name__ == self._config["env"]["name"], "Environment name mismatch"
+        #disable rendering depending on flag
+        self._env.has_renderer = self._config["environment"]["visualize_eval_runs"]
+        if not self._env.has_renderer:
+            self._env.viewer = None
 
-
-    def _setup_algorithm(self):
-        """
-        Set up the algorithm.
-        """
-        raise NotImplementedError
+        assert self._env.__class__.__name__ == self._config["environment"]["name"], "Environment name mismatch"
 
     def _setup_logging(self):
         """
         Set up the logging.
         """
 
-        self._log_wandb = self._config["log_wandb"]
+        self._log_wandb = self._config["wandb"]["log"]
 
         if self._log_wandb:
             assert WANDB_API_KEY is not None, "WANDB_API_KEY is not set"
-
             os.environ["WANDB_API_KEY"] = WANDB_API_KEY
+
+            wandb.init(
+                project=self._config["wandb"]["project"],
+                config=self._config,
+                dir=self._log_dir,
+                group=self._env.__class__.__name__,
+                name=self._env.__class__.__name__ + "_" + self._timestamp
+            )
+
+        # Configure logging
+        logging.basicConfig(
+            filename=self._log_path,
+            level=logging.INFO,  # Logging level
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+
+        self._logger = logging.getLogger()
+
+        config_string = json.dumps(self._config, indent=4)
+        self._logger.info(f"Config:\n{config_string}")
+
+
 

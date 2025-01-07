@@ -1,7 +1,9 @@
+import collections
 import json
 from typing import OrderedDict
 
 import h5py
+import numpy as np
 import robosuite as suite
 import torch
 
@@ -37,10 +39,6 @@ class HDF5Dataset(Dataset):
         self.observation_length = observation_length
         self.action_length = action_length
 
-        self.uses_state_obs = uses_state_obs
-        self.uses_image_obs = uses_image_obs
-        self.specific_obs_keys = specific_obs_keys
-
         with h5py.File(hdf5_path, "r") as f:
             env_info = json.loads(f["data"].attrs["env_info"])
 
@@ -62,20 +60,46 @@ class HDF5Dataset(Dataset):
         )
 
         #print available observations
+        print("-" * 50)
         print("Available observations:")
-        for key in self.env._get_observations().keys():
+        available_keys = self.env._get_observations().keys()
+        for key in available_keys:
             print(key)
+        print("-" * 50)
+
+        self._specific_obs_keys = specific_obs_keys if specific_obs_keys is not None else []
+        if uses_state_obs:
+            for key in available_keys:
+                if key.endswith("_pos") or key.endswith("_quat"): # or key.endswith("_qpos"):
+                    self._specific_obs_keys.extend(key)
+
+        if uses_image_obs:
+            raise NotImplementedError("Image observations are not yet supported")
+
+        # make list of specific observation keys unique
+        self.specific_obs_keys = list(set(self._specific_obs_keys))
+
+    @property
+    def obs_keys(self):
+        """
+        Get the used observation keys
+        :return: list of keys
+        """
+        return self.specific_obs_keys
 
     def __len__(self):
         return sum(self.episode_lens)
 
     @property
-    def input_size(self):
+    def input_sizes(self):
         """
         Get the size of the input
         :return: size of the input
         """
-        return self[0][0].shape
+        sizes = {}
+        for k in self.specific_obs_keys:
+            sizes[k] = self[0]["observations"][k].shape
+        return sizes
 
     @property
     def output_size(self):
@@ -83,7 +107,7 @@ class HDF5Dataset(Dataset):
         Get the size of the output
         :return: size of the output
         """
-        return self[0][1].shape
+        return self[0]["actions"].shape
 
     def __getitem__(self, idx):
         """
@@ -112,44 +136,40 @@ class HDF5Dataset(Dataset):
             actions = actions + [actions[-1]] * (self.action_length - len(actions))
 
         # collect observations
-        observations = []
+        observations = collections.OrderedDict()
         for state in states:
             self.env.sim.set_state_from_flattened(state)
             self.env.sim.forward()
             self.env.update_state()
 
             observation = self.env._get_observations(force_update=True)
-            observations.append(self._extract_observation(observation))
+            for k, v in self._extract_observation(observation).items():
+                if k not in observations:
+                    observations[k] = np.expand_dims(v, axis=0)
+                else:
+                    observations[k] = np.concatenate([observations[k], np.expand_dims(v, axis=0)])
 
-        # concatenate the actions and observations
-        observations = torch.tensor(observations, dtype=torch.float32).reshape(-1)
-        actions = torch.from_numpy(actions.reshape(-1)).type(torch.float32)
+        actions = torch.from_numpy(actions).type(torch.float32)
 
-        return observations, actions
+        for k, v in observations.items():
+            observations[k] = torch.from_numpy(v).type(torch.float32)
 
-    def _extract_observation(self, observation: OrderedDict):
+        return {
+            "observations": observations,
+            "actions": actions
+        }
+
+    def _extract_observation(self, observation: OrderedDict) -> OrderedDict:
         """
         Extract the relevant observations from the OrderedDict
         :param observation: OrderedDict containing the observations
         :return: extracted observations
         """
-        o = []
-        if self.uses_state_obs:
-            for key, comp in observation.items():
-                if key.endswith("_pos") or key.endswith("_quat"): # or key.endswith("_qpos"):
-                    o.extend(comp)
+        extracted_observation = collections.OrderedDict()
+        for key in self.specific_obs_keys:
+            extracted_observation[key] = observation[key]
 
-        if self.uses_image_obs:
-            raise NotImplementedError("Image observations are not yet supported")
-
-        if self.specific_obs_keys is not None and len(self.specific_obs_keys) > 0:
-            assert not self.uses_state_obs, "specific_obs_keys can only be used if state observations are not used"
-            assert not self.uses_image_obs, "specific_obs_keys can only be used if image observations are not used"
-
-            for key in self.specific_obs_keys:
-                o.extend(observation[key])
-
-        return o
+        return extracted_observation
 
     # get indexes for train and test rows
     def get_splits(self, split_ratio: float = 0.8):

@@ -1,42 +1,37 @@
-import numpy as np
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 
-from src.imitation_learning.core.dataset import HDF5Dataset
-from src.imitation_learning.networks.mlp import PolicyNetwork
+from src.imitation_learning.algo.algorithm import AlgorithmBase
 
-dataset = HDF5Dataset(
-        "<path>",
-        observation_length=1,
-        action_length=1,
-        uses_state_obs=True,
-        uses_image_obs=False,
-        specific_obs_keys=[...,...]
-)
 
-train, test = dataset.get_splits()
+class BehaviorCloning(AlgorithmBase):
+    """
+    Behavior Cloning implementation using supervised learning.
 
-train_loader = DataLoader(train, batch_size=32, shuffle=True)
-test_loader = DataLoader(test, batch_size=32, shuffle=True)
+    Args:
+        model (torch.nn.Module): Neural network model to learn the policy.
+        optimizer (torch.optim.Optimizer): Optimizer for model training.
+        criterion: Loss function to optimize.
+    """
+    def __init__(self, model, optimizer, criterion):
+        self.model = model
+        self.optimizer = optimizer
+        self.criterion = criterion
 
-policy_net = PolicyNetwork(np.prod(dataset.input_size), np.prod(dataset.output_size))
-optimizer = torch.optim.Adam(policy_net.parameters())
-loss_fn = nn.MSELoss()
-
-num_epochs = 32
-
-for epoch in range(num_epochs):
-    for obs, action in train_loader:
-        action_pred = policy_net(obs)
-        loss = loss_fn(action_pred, action)
-
-        optimizer.zero_grad()
+    def train_on_batch(self, batch) -> float:
+        self.model.train()
+        self.optimizer.zero_grad()
+        predictions = self.model(batch["observations"])
+        loss = self.criterion(predictions, batch["actions"])
         loss.backward()
-        optimizer.step()
+        self.optimizer.step()
+        return loss.item()
 
-    # TODO add evaluation
+    def eval_on_batch(self, batch) -> float:
+        self.model.eval()
+        predictions = self.model(batch["observations"])
+        loss = self.criterion(predictions, batch["actions"])
+        return loss.item()
 
-    # TODO add logging
+    def call_policy(self, obs):
+        return self.model(obs).detach().numpy()
 
-    print(f"Epoch: {epoch}/{num_epochs}, Loss: {loss.item()}")

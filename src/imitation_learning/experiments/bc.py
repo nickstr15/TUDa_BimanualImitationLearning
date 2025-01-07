@@ -1,36 +1,74 @@
-from src.imitation_learning.core.dataset import HDF5Dataset
+import numpy as np
+import torch
 
-dataset = HDF5Dataset(
-        "<path>",
-        observation_length=1,
-        action_length=1,
-        uses_state_obs=True,
-        uses_image_obs=False,
-        specific_obs_keys=[...,...]
-)
+from src.imitation_learning.algo.algorithm import AlgorithmBase
+from src.imitation_learning.algo.bc import BehaviorCloning
+from src.imitation_learning.experiments.experiment import ExperimentBase
+from src.imitation_learning.networks.helpers import get_loss_fn, get_optimizer_cls, get_network_cls
 
-train, test = dataset.get_splits()
 
-train_loader = DataLoader(train, batch_size=32, shuffle=True)
-test_loader = DataLoader(test, batch_size=32, shuffle=True)
+class BehaviorCloningExperiment(ExperimentBase):
+    """
+    Experiment class for behavior cloning.
+    """
+    def _setup_algorithm(self) -> AlgorithmBase:
+        """
+        Set up the algorithm.
+        """
+        assert self._config["algorithm"]["name"] == "BC", "Wrong algorithm name in config file."
 
-policy_net = PolicyNetwork(np.prod(dataset.input_size), np.prod(dataset.output_size))
-optimizer = torch.optim.Adam(policy_net.parameters())
-loss_fn = nn.MSELoss()
+        # Set up the model
+        model = self._setup_model(self._config["algorithm"]["model"])
+        optimizer = self._setup_optimizer(self._config["algorithm"]["optimizer"], model)
+        criterion = self._setup_criterion(self._config["algorithm"]["loss"])
 
-num_epochs = 32
+        return BehaviorCloning(model, optimizer, criterion)
 
-for epoch in range(num_epochs):
-    for obs, action in train_loader:
-        action_pred = policy_net(obs)
-        loss = loss_fn(action_pred, action)
+    def _setup_model(self, model_config: dict):
+        """
+        Set up the model.
+        """
+        model = get_network_cls(model_config["name"])
+        input_dim = np.sum([np.prod(s) for s in self._input_sizes.values()])
+        output_dim = np.prod(self._output_size)
+        return model(
+            input_dim=input_dim,
+            output_dim=output_dim,
+            **model_config["params"]
+        )
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
 
-    # TODO add evaluation
+    @staticmethod
+    def _setup_optimizer(optimizer_config: dict, model: torch.nn.Module):
+        """
+        Set up the optimizer.
+        """
+        optimizer = get_optimizer_cls(optimizer_config["name"])
+        return optimizer(model.parameters(), **optimizer_config["params"])
 
-    # TODO add logging
+    @staticmethod
+    def _setup_criterion(criterion_config: list):
+        """
+        Set up the criterion.
+        """
+        def composed_loss_fn(x, x_hat):
+            x = x.reshape(x.size(0), -1)
+            x_hat = x_hat.reshape(x_hat.size(0), -1)
+            loss = 0
+            for loss_cfg in criterion_config:
+                loss_fn = get_loss_fn(loss_cfg["name"])()
+                w = loss_cfg["weight"]
+                v = loss_fn(x, x_hat)
+                loss += w*v
+            return loss
 
-    print(f"Epoch: {epoch}/{num_epochs}, Loss: {loss.item()}")
+        return composed_loss_fn
+
+
+if __name__ == "__main__":
+    exp = BehaviorCloningExperiment(config_path="bc_two_arm_pick_place.yaml")
+    exp.run()
+
+
+
+

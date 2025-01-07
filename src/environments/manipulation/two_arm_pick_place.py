@@ -176,7 +176,7 @@ class TwoArmPickPlace(TwoArmEnv):
             render_gpu_device_id=-1,
             control_freq=20,
             lite_physics=True,
-            horizon=1000,
+            horizon=300, # equals 15 seconds for 20Hz control frequency
             ignore_done=False,
             hard_reset=True,
             camera_names="agentview",
