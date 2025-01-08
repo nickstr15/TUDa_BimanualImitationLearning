@@ -13,6 +13,7 @@ class BehaviorCloning(AlgorithmBase):
         criterion: Loss function to optimize.
     """
     def __init__(self, model, optimizer, criterion):
+        super().__init__()
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
@@ -34,4 +35,11 @@ class BehaviorCloning(AlgorithmBase):
 
     def call_policy(self, obs):
         return self.model(obs).detach().numpy()
+
+    def save_policy(self, path):
+        torch.save(self.model.state_dict(), path)
+
+    def load_policy(self, path):
+        self.model.load_state_dict(torch.load(path, weights_only=True))
+        self.model.eval()
 

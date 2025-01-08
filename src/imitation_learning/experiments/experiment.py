@@ -60,11 +60,23 @@ class ExperimentBase(ABC):
             num_epochs=self._config["training"]["num_epochs"],
             num_epochs_logging=self._config["training"]["num_epochs_logging"],
             num_episodes_eval=self._config["training"]["num_episodes_eval"],
+            model_out_dir=self._model_out_dir,
             logger=self._logger,
             log_wandb=self._log_wandb,
             eval_env=self._env,
             obs_keys=self._dataset.obs_keys
         )
+
+    def load_and_visualize_policy(self, model_path: str, num_episodes: int = 5):
+        """
+        Load a model and visualize the policy.
+        :param model_path: path to the model file
+        :param num_episodes: number of episodes to visualize
+        """
+        model_path = path_completion(model_path, TRAINED_MODELS_DIR)
+
+        self.alg.load_policy(model_path)
+        self.alg.visualize_policy(self._env, obs_keys=self._dataset.obs_keys, num_episodes=num_episodes)
 
     @staticmethod
     def _load_config(config_path: str):
