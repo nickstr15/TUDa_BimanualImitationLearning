@@ -1,11 +1,11 @@
 import numpy as np
 import torch
 
-from src.imitation_learning.networks.network import NetworkBase
+from src.imitation_learning.models.model import ModelBase
 from src.imitation_learning.policies.policy import PolicyBase
 from src.imitation_learning.policies.bc import BehaviorCloning
 from src.imitation_learning.experiments.experiment import ExperimentBase
-from src.imitation_learning.core.helpers import get_loss_fn, get_optimizer_cls, get_network_cls
+from src.imitation_learning.core.helpers import get_loss_fn, get_optimizer_cls, get_model_cls
 
 
 class BehaviorCloningExperiment(ExperimentBase):
@@ -29,7 +29,7 @@ class BehaviorCloningExperiment(ExperimentBase):
         """
         Set up the model.
         """
-        model : NetworkBase = get_network_cls(model_config["name"])
+        model : ModelBase = get_model_cls(model_config["name"])
         input_dim = np.sum([np.prod(s) for s in self._input_sizes.values()])
         output_dim = np.prod(self._output_size)
         return model(
@@ -67,7 +67,7 @@ class BehaviorCloningExperiment(ExperimentBase):
 
 
 if __name__ == "__main__":
-    exp = BehaviorCloningExperiment(config_path="bc_two_arm_pick_place.yaml")
+    exp = BehaviorCloningExperiment(config_path="bc_mlp_two_arm_lift.yaml")
     exp.run()
 
     # exp.load_and_visualize_policy(

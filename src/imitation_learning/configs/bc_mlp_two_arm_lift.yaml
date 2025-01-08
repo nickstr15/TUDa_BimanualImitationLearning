@@ -1,5 +1,5 @@
 environment:
-  name: "TwoArmPickPlace"
+  name: "TwoArmLift"
   obs_length: 1
   action_length: 1
   visualize_eval_runs: false
@@ -22,7 +22,7 @@ policy:
         weight: 1.0
 
 dataset:
-  hdf5_path: "wp/Panda_Panda_TwoArmPickPlace_2025-01-02_17-10-41/demo.hdf5"
+  hdf5_path: "wp/Panda_Panda_TwoArmLift_2025-01-08_14-46-48/demo.hdf5"
   uses_state_obs: false
   uses_image_obs: false
   specific_obs_keys:
@@ -32,22 +32,20 @@ dataset:
     - "robot1_eef_quat"
     - "robot0_gripper_qpos"
     - "robot1_gripper_qpos"
-    - "hammer_pos"
-    - "hammer_quat"
-    - "bin_pos"
-    - "bin_quat"
+    - "handle0_xpos"
+    - "handle1_xpos"
+    - "pot_quat"
   split_ratio: 0.8
   batch_size: 64
 
 training:
   num_epochs: 300
-  num_epochs_logging: 10
+  num_epochs_eval: 10
   num_episodes_eval: 2
 
-
 seed: 42
-model_out_dir: "bc_mlp_two_arm_pick_place"
-log_dir: "bc_mlp_two_arm_pick_place"
+model_out_dir: "bc_mlp_two_arm_lift"
+log_dir: "bc_mlp_two_arm_lift"
 wandb:
   log: true
   project: "imitation_learning"

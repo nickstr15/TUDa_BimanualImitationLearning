@@ -2,6 +2,8 @@ import collections
 import json
 import os
 from abc import ABC, abstractmethod
+from collections import OrderedDict
+from typing import Union
 
 import numpy as np
 import torch
@@ -10,6 +12,9 @@ from tqdm import tqdm
 
 from robosuite.environments import MujocoEnv
 
+from src.imitation_learning.models.normalizer import LinearNormalizer
+
+
 class PolicyBase(ABC):
     """
     Base class for all imitation learning policies.
@@ -17,23 +22,35 @@ class PolicyBase(ABC):
     Must implement the following methods:
     - train_on_batch
     - eval_on_batch
-    - __call__
+    - predict_action
     - save
     - load
 
     - __init__ should be used to set up the algorithm.
     """
-    def __init__(self):
+    def __init__(self, use_normalizer: bool = True):
+        """
+        Initializes the policy.
+        :param use_normalizer: Whether to use a normalizer for the observations.
+        """
         self.best_eval_loss = np.inf
         self.best_success_rate = -np.inf
         self.best_avg_steps = np.inf
+
+        self.normalizer: Union[LinearNormalizer | None] = LinearNormalizer() if use_normalizer else None
+
+    def _set_normalizer(self, normalizer: LinearNormalizer):
+        if self.normalizer is None: #if normalizer is not set, ignore
+            return
+
+        self.normalizer.load_state_dict(normalizer.state_dict())
 
     def train_loop(
             self,
             train_loader,
             test_loader,
             num_epochs=10,
-            num_epochs_logging=1,
+            num_epochs_eval=1,
             num_episodes_eval=10,
             model_out_dir=None,
             logger=None,
@@ -48,7 +65,7 @@ class PolicyBase(ABC):
             train_loader (DataLoader): DataLoader for training data.
             test_loader (DataLoader): DataLoader for evaluation data.
             num_epochs (int): Number of training epochs.
-            num_epochs_logging (int): Frequency of logging and evaluation in epochs.
+            num_epochs_eval (int): Frequency of logging and evaluation in epochs.
             num_episodes_eval (int): Number of episodes to evaluate in the environment.
             model_out_dir (str): Directory to save the best policy model.
             logger (Logger): Logger for training metrics.
@@ -56,6 +73,30 @@ class PolicyBase(ABC):
             eval_env: Environment for additional evaluation metrics.
             obs_keys: List of observation keys to extract from the environment observation.
         """
+        #prefit normalizer if not None
+        if self.normalizer is not None:
+            with torch.no_grad():
+                if logger is not None:
+                    logger.info("Fitting normalizer on training data...")
+                # get all observations from the training data in shape (N, *) and fit the normalizer
+                data = dict()
+                for batch in train_loader:
+                    raw_obs = batch["observations"] #collection.OrderedDict
+
+                    for k, v in raw_obs.items():
+                        if k not in data:
+                            data[k] = []
+                        data[k].append(v)
+
+                for k, v in data.items():
+                    data[k] = torch.cat(v, dim=0)
+
+                self.normalizer.fit(data)
+
+                if logger is not None:
+                    logger.info("Normalizer fitted.")
+
+
         #initial evaluation
         epoch = 0
         step = 0
@@ -71,23 +112,35 @@ class PolicyBase(ABC):
         for epoch in tqdm(range(1, num_epochs + 1), desc=f"Training (For {num_epochs} Epochs)", unit="epoch", leave=False):
             step = self.train(train_loader, epoch, step, logger=logger, log_wandb=log_wandb)
 
-            if epoch % num_epochs_logging == 0:
-                eval_loss, eval_metrics = self.evaluate(
-                    test_loader, eval_env=eval_env, obs_keys=obs_keys, num_episodes=num_episodes_eval
-                )
+            with torch.no_grad():
+                if epoch % num_epochs_eval == 0:
+                    eval_loss, eval_metrics = self.evaluate(
+                        test_loader, eval_env=eval_env, obs_keys=obs_keys, num_episodes=num_episodes_eval
+                    )
 
-                if logger is not None:
-                    logger.info(f"Epoch: {epoch}, Step: {step}, Evaluation Loss: {eval_loss:.4f}, {json.dumps(eval_metrics)}")
-                if log_wandb:
-                    wandb.log({"Evaluation Loss": eval_loss, **eval_metrics, "Epoch": epoch}, step=step)
+                    if logger is not None:
+                        logger.info(f"Epoch: {epoch}, Step: {step}, Evaluation Loss: {eval_loss:.4f}, {json.dumps(eval_metrics)}")
+                    if log_wandb:
+                        wandb.log({"Evaluation Loss": eval_loss, **eval_metrics, "Epoch": epoch}, step=step)
 
-                if self.check_is_best_policy(eval_loss, success_rate=eval_metrics.get("Success Rate"), avg_steps=eval_metrics.get("Average Steps")):
-                    if model_out_dir is not None:
-                        # delete previous best model
-                        for f in os.listdir(model_out_dir):
-                            if "best_policy" in f:
-                                os.remove(os.path.join(model_out_dir, f))
-                        self.save(os.path.join(model_out_dir, f"best_policy_e{epoch}.pt"))
+                    if self.check_is_best_policy(eval_loss, success_rate=eval_metrics.get("Success Rate"), avg_steps=eval_metrics.get("Average Steps")):
+                        if model_out_dir is not None:
+                            # delete previous best model
+                            for f in os.listdir(model_out_dir):
+                                if "best_policy" in f:
+                                    os.remove(os.path.join(model_out_dir, f))
+                            self.save(os.path.join(model_out_dir, f"best_policy_e{epoch}.pt"))
+
+                else: # only fast evaluation
+                    eval_loss, _ = self.evaluate(
+                        test_loader
+                    )
+
+                    if logger is not None:
+                        logger.info(
+                            f"Epoch: {epoch}, Step: {step}, Evaluation Loss: {eval_loss:.4f}")
+                    if log_wandb:
+                        wandb.log({"Evaluation Loss": eval_loss, "Epoch": epoch}, step=step)
 
     def train(self, train_loader, epoch, step, logger=None, log_wandb=False) -> int:
         """
@@ -167,21 +220,21 @@ class PolicyBase(ABC):
                 obs = collections.OrderedDict((k, obs[k]) for k in obs_keys)
 
             for k, v in obs.items():
-                obs[k] = torch.from_numpy(v).type(torch.float32)
+                obs[k] = torch.unsqueeze(torch.unsqueeze(torch.from_numpy(v).type(torch.float32), 0), 0) # (B, To, *)
 
             done = False
             episode_steps = 0
             while not done:
-                predicted_actions = self.__call__(obs)
+                predicted_actions = self.predict_action(obs)
                 if len(predicted_actions.shape) == 2 and predicted_actions.shape[0] == 1:
                     predicted_actions = predicted_actions.flatten()
 
-                obs, reward, done, info = env.step(predicted_actions)
+                obs, reward, done, info = env.step(predicted_actions.detach().numpy())
                 if obs_keys is not None:
                     obs = collections.OrderedDict((k, v) for k, v in obs.items() if k in obs_keys)
 
                 for k, v in obs.items():
-                    obs[k] = torch.from_numpy(v).type(torch.float32)
+                    obs[k] = torch.unsqueeze(torch.unsqueeze(torch.from_numpy(v).type(torch.float32), 0), 0) # (B, To, *)
 
                 episode_steps += 1
                 if done:
@@ -203,7 +256,6 @@ class PolicyBase(ABC):
         }
 
         return eval_metrics
-
 
     def check_is_best_policy(self, eval_loss, success_rate=None, avg_steps=None) -> bool:
         """
@@ -254,18 +306,45 @@ class PolicyBase(ABC):
 
         return is_best
 
+    def _normalize_obs(self, obs: collections.OrderedDict) -> collections.OrderedDict:
+        """
+        Normalizes the observation using the normalizer.
+
+        Args:
+            obs (collections.OrderedDict): Observation to normalize.
+
+        Returns:
+            collections.OrderedDict: Normalized observation.
+        """
+        if self.normalizer is not None:
+            obs = self.normalizer(obs)
+
+        return obs
+
     @abstractmethod
-    def __call__(self, obs):
+    def predict_action(self, obs: OrderedDict) -> torch.Tensor:
         """
         Predicts an action given an observation.
 
         Args:
-            obs (np.ndarray | OrderedDict): Observation.
+            obs OrderedDict: Observation.
 
         Returns:
-            np.ndarray: Predicted action.
+             torch.Tensor: Predicted action.
         """
-        raise NotImplementedError("Policy model must implement __call__ method.")
+        raise NotImplementedError("Policy model must implement predict_action method.")
+
+    def __call__(self, obs: OrderedDict) -> torch.Tensor:
+        """
+        Predicts an action given an observation.
+
+        Args:
+            obs OrderedDict: Observation.
+
+        Returns:
+             torch.Tensor: Predicted action.
+        """
+        return self.predict_action(obs)
 
     @abstractmethod
     def train_on_batch(self, batch) -> float:
@@ -280,6 +359,7 @@ class PolicyBase(ABC):
         """
         raise NotImplementedError("Policy model must implement train_on_batch method.")
 
+    @torch.no_grad()
     @abstractmethod
     def eval_on_batch(self, batch) -> float:
         """
@@ -313,6 +393,7 @@ class PolicyBase(ABC):
         """
         raise NotImplementedError
 
+    @torch.no_grad()
     def visualize(self, _env, obs_keys, num_episodes):
         """
         Visualizes the policy in the environment for a number of episodes.

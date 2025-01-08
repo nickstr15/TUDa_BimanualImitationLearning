@@ -57,7 +57,7 @@ class ExperimentBase(ABC):
             self._train_loader,
             self._eval_loader,
             num_epochs=self._config["training"]["num_epochs"],
-            num_epochs_logging=self._config["training"]["num_epochs_logging"],
+            num_epochs_eval=self._config["training"]["num_epochs_eval"],
             num_episodes_eval=self._config["training"]["num_episodes_eval"],
             model_out_dir=self._model_out_dir,
             logger=self._logger,
@@ -174,13 +174,27 @@ class ExperimentBase(ABC):
                 )
 
             # Configure logging
-            logging.basicConfig(
-                filename=self._log_path,
-                level=logging.INFO,  # Logging level
-                format='%(asctime)s - %(levelname)s - %(message)s'
-            )
+            self._logger = logging.getLogger("Experiment Logger")  # Use __name__ for module-specific logging
+            self._logger.setLevel(logging.INFO)  # Set the logging level
 
-            self._logger = logging.getLogger()
+            # Create a file handler
+            file_handler = logging.FileHandler(self._log_path)
+            file_handler.setLevel(logging.INFO)  # Set level for file logging
+
+            # Create a console handler
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)  # Set level for console logging
+
+            # Define a common formatter
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+            # Attach the formatter to the handlers
+            file_handler.setFormatter(formatter)
+            console_handler.setFormatter(formatter)
+
+            # Add the handlers to the logger
+            self._logger.addHandler(file_handler)
+            self._logger.addHandler(console_handler)
 
             config_string = json.dumps(self._config, indent=4)
             self._logger.info(f"Config:\n{config_string}")

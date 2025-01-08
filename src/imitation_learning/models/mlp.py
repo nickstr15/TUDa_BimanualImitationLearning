@@ -3,10 +3,12 @@ import collections
 import torch
 import torch.nn as nn
 
-from src.imitation_learning.networks.network import NetworkBase
+from src.imitation_learning.models.model import ModelBase
 from src.imitation_learning.core.helpers import get_activation_fn
+from src.imitation_learning.models.normalizer import LinearNormalizer
 
-class MLP(NetworkBase):
+
+class MLP(ModelBase):
     def __init__(self, input_dim, output_dim, hidden_sizes=None, activation="relu", output_activation=None):
         super().__init__(input_dim, output_dim)
 
@@ -39,18 +41,17 @@ class MLP(NetworkBase):
 
         self.model = nn.Sequential(*self.layers)
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
+        assert isinstance(x, collections.OrderedDict), \
+            f"Input must be ordered dict, got {type(x)}"
 
-        assert type(x) == torch.Tensor or isinstance(x, collections.OrderedDict), \
-            f"Input must be tensor or ordered dict, got {type(x)}"
+        #convert ordered dictionary {"key", (B, *)} to single tensor with batch size (B, *)
+        if len(list(x.values())[0].shape) == 1:
+            x = torch.cat(list(x.values()))
+        else:
+            x = torch.cat(list(x.values()), dim=-1)
 
-        #if x is ordered dictionary, convert to single tensor with batch size
-        if isinstance(x, collections.OrderedDict):
-            if len(list(x.values())[0].shape) == 1:
-                x = torch.cat(list(x.values()))
-            else:
-                x = torch.cat(list(x.values()), dim=-1)
-
+        # flatten the input
         if len(x.shape) == 1:
             x = torch.unsqueeze(x, dim=0)
         else:

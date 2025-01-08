@@ -46,6 +46,7 @@ def main():
     env_config = dict(
         env_name=args.environment,
         robots=robots,
+        env_configuration="parallel",
     )
 
     env = suite.make(

@@ -41,8 +41,8 @@ def get_optimizer_cls(opt: str) -> Callable[..., optim.Optimizer]:
     else:
         raise ValueError(f"Cannot find optimizer function for string <{opt}>")
 
-def get_network_cls(net: str):
-    from src.imitation_learning.networks import MLP
+def get_model_cls(net: str):
+    from src.imitation_learning.models import MLP
 
     net_dct = {
         "mlp": MLP,
