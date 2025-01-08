@@ -75,6 +75,7 @@ class AlgorithmBase(ABC):
                 eval_loss, eval_metrics = self.evaluate(
                     test_loader, eval_env=eval_env, obs_keys=obs_keys, num_episodes=num_episodes_eval
                 )
+
                 if logger is not None:
                     logger.info(f"Epoch: {epoch}, Step: {step}, Evaluation Loss: {eval_loss:.4f}, {json.dumps(eval_metrics)}")
                 if log_wandb:
@@ -82,7 +83,11 @@ class AlgorithmBase(ABC):
 
                 if self.check_is_best_policy(eval_loss, success_rate=eval_metrics.get("Success Rate"), avg_steps=eval_metrics.get("Average Steps")):
                     if model_out_dir is not None:
-                        self.save_policy(os.path.join(model_out_dir, f"policy_e{epoch}.pt"))
+                        # delete previous best model
+                        for f in os.listdir(model_out_dir):
+                            if "best_policy" in f:
+                                os.remove(os.path.join(model_out_dir, f))
+                        self.save_policy(os.path.join(model_out_dir, f"best_policy_e{epoch}.pt"))
 
     def train(self, train_loader, epoch, step, logger=None, log_wandb=False) -> int:
         """

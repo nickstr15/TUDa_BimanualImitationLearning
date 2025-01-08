@@ -35,13 +35,10 @@ class ExperimentBase(ABC):
         self._config = self._load_config(config_path)
         self._setup_seed()
         self._setup_device()
-        self._setup_paths()
         self._setup_dataset()
         self._setup_env()
 
         self.alg = self._setup_algorithm()
-
-        self._setup_logging()
 
     @abstractmethod
     def _setup_algorithm(self) -> AlgorithmBase:
@@ -54,6 +51,8 @@ class ExperimentBase(ABC):
         """
         Run the experiment.
         """
+        self._setup_logging_and_paths()
+
         self.alg.train_loop(
             self._train_loader,
             self._eval_loader,
@@ -73,6 +72,8 @@ class ExperimentBase(ABC):
         :param model_path: path to the model file
         :param num_episodes: number of episodes to visualize
         """
+        self._setup_logging_and_paths(False)
+
         model_path = path_completion(model_path, TRAINED_MODELS_DIR)
 
         self.alg.load_policy(model_path)
@@ -105,21 +106,7 @@ class ExperimentBase(ABC):
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def _setup_paths(self):
-        """
-        Set up the paths for saving models.
-        """
-        self._model_out_dir = path_completion(self._config["model_out_dir"], TRAINED_MODELS_DIR)
-        self._log_dir = path_completion(self._config["log_dir"], LOG_DIR)
 
-        # add timestamp in format YYYY-MM-DD_HH-MM-SS
-        self._timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-        self._model_out_dir = os.path.join(self._model_out_dir, self._timestamp)
-        self._log_dir = os.path.join(self._log_dir, self._timestamp)
-        self._log_path = os.path.join(self._log_dir, "log.log")
-
-        os.makedirs(self._model_out_dir, exist_ok=False)
-        os.makedirs(self._log_dir, exist_ok=False)
 
     def _setup_dataset(self):
         """
@@ -155,36 +142,51 @@ class ExperimentBase(ABC):
 
         assert self._env.__class__.__name__ == self._config["environment"]["name"], "Environment name mismatch"
 
-    def _setup_logging(self):
+    def _setup_logging_and_paths(self, training: bool = True):
         """
         Set up the logging.
         """
+        if training:
+            self._model_out_dir = path_completion(self._config["model_out_dir"], TRAINED_MODELS_DIR)
+            self._log_dir = path_completion(self._config["log_dir"], LOG_DIR)
 
-        self._log_wandb = self._config["wandb"]["log"]
+            # add timestamp in format YYYY-MM-DD_HH-MM-SS
+            self._timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+            self._model_out_dir = os.path.join(self._model_out_dir, self._timestamp)
+            self._log_dir = os.path.join(self._log_dir, self._timestamp)
+            self._log_path = os.path.join(self._log_dir, "log.log")
 
-        if self._log_wandb:
-            assert WANDB_API_KEY is not None, "WANDB_API_KEY is not set"
-            os.environ["WANDB_API_KEY"] = WANDB_API_KEY
+            os.makedirs(self._model_out_dir, exist_ok=False)
+            os.makedirs(self._log_dir, exist_ok=False)
 
-            wandb.init(
-                project=self._config["wandb"]["project"],
-                config=self._config,
-                dir=self._log_dir,
-                group=self._env.__class__.__name__,
-                name=self._env.__class__.__name__ + "_" + self._timestamp
+            self._log_wandb = self._config["wandb"]["log"]
+
+            if self._log_wandb:
+                assert WANDB_API_KEY is not None, "WANDB_API_KEY is not set"
+                os.environ["WANDB_API_KEY"] = WANDB_API_KEY
+
+                wandb.init(
+                    project=self._config["wandb"]["project"],
+                    config=self._config,
+                    dir=self._log_dir,
+                    group=self._env.__class__.__name__,
+                    name=self._env.__class__.__name__ + "_" + self._timestamp
+                )
+
+            # Configure logging
+            logging.basicConfig(
+                filename=self._log_path,
+                level=logging.INFO,  # Logging level
+                format='%(asctime)s - %(levelname)s - %(message)s'
             )
 
-        # Configure logging
-        logging.basicConfig(
-            filename=self._log_path,
-            level=logging.INFO,  # Logging level
-            format='%(asctime)s - %(levelname)s - %(message)s'
-        )
+            self._logger = logging.getLogger()
 
-        self._logger = logging.getLogger()
+            config_string = json.dumps(self._config, indent=4)
+            self._logger.info(f"Config:\n{config_string}")
 
-        config_string = json.dumps(self._config, indent=4)
-        self._logger.info(f"Config:\n{config_string}")
+        # disable robosuite logging
+        logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
 
 
 

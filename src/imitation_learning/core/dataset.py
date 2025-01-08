@@ -51,6 +51,9 @@ class HDF5Dataset(Dataset):
 
             f.close()
 
+        print("env_info")
+        print(env_info)
+
         self.env = suite.make(
             **env_info,
             has_renderer=True,

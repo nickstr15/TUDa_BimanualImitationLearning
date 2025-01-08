@@ -9,13 +9,13 @@ algorithm:
   model:
     name: "MLP"
     params:
-      hidden_sizes: [256, 512, 256]
+      hidden_sizes: [256, 256]
       activation: "ReLU"
       output_activation: null
   optimizer:
     name: "Adam"
     params:
-      lr: 0.0001
+      lr: 0.001
   loss:
     - name: "MSELoss"
       weight: 1.0
@@ -39,7 +39,7 @@ dataset:
   batch_size: 64
 
 training:
-  num_epochs: 500
+  num_epochs: 300
   num_epochs_logging: 10
   num_episodes_eval: 2
 
