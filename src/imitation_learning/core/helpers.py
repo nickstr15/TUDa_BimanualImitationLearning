@@ -4,8 +4,6 @@ from torch.nn.modules import activation
 from torch.nn.modules import loss
 import torch.optim as optim
 
-from src.imitation_learning.networks.Network import NetworkBase
-
 Activation = Callable[..., Module]
 def get_activation_fn(act: str) -> Activation:
     # get list from activation submodule as lower-case
@@ -43,7 +41,7 @@ def get_optimizer_cls(opt: str) -> Callable[..., optim.Optimizer]:
     else:
         raise ValueError(f"Cannot find optimizer function for string <{opt}>")
 
-def get_network_cls(net: str) -> NetworkBase:
+def get_network_cls(net: str):
     from src.imitation_learning.networks import MLP
 
     net_dct = {

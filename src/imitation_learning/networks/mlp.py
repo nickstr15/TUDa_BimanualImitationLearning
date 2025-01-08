@@ -3,8 +3,8 @@ import collections
 import torch
 import torch.nn as nn
 
-from src.imitation_learning.networks.Network import NetworkBase
-from src.imitation_learning.networks.helpers import get_activation_fn
+from src.imitation_learning.networks.network import NetworkBase
+from src.imitation_learning.core.helpers import get_activation_fn
 
 class MLP(NetworkBase):
     def __init__(self, input_dim, output_dim, hidden_sizes=None, activation="relu", output_activation=None):

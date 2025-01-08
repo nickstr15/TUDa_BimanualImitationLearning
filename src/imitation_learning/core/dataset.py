@@ -35,7 +35,6 @@ class HDF5Dataset(Dataset):
         assert observation_length > 0, "observation_length must be greater than 0"
         assert action_length > 0, "action_length must be greater than 0"
 
-
         self.observation_length = observation_length
         self.action_length = action_length
 
@@ -80,7 +79,7 @@ class HDF5Dataset(Dataset):
             raise NotImplementedError("Image observations are not yet supported")
 
         # make list of specific observation keys unique
-        self.specific_obs_keys = list(set(self._specific_obs_keys))
+        self._specific_obs_keys = list(set(self._specific_obs_keys))
 
     @property
     def obs_keys(self):
@@ -88,7 +87,7 @@ class HDF5Dataset(Dataset):
         Get the used observation keys
         :return: list of keys
         """
-        return self.specific_obs_keys
+        return self._specific_obs_keys
 
     def __len__(self):
         return sum(self.episode_lens)
@@ -100,7 +99,7 @@ class HDF5Dataset(Dataset):
         :return: size of the input
         """
         sizes = {}
-        for k in self.specific_obs_keys:
+        for k in self._specific_obs_keys:
             sizes[k] = self[0]["observations"][k].shape
         return sizes
 
@@ -169,7 +168,7 @@ class HDF5Dataset(Dataset):
         :return: extracted observations
         """
         extracted_observation = collections.OrderedDict()
-        for key in self.specific_obs_keys:
+        for key in self._specific_obs_keys:
             extracted_observation[key] = observation[key]
 
         return extracted_observation

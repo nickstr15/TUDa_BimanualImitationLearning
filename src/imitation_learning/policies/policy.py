@@ -10,16 +10,16 @@ from tqdm import tqdm
 
 from robosuite.environments import MujocoEnv
 
-class AlgorithmBase(ABC):
+class PolicyBase(ABC):
     """
-    Base class for all imitation learning algorithms.
+    Base class for all imitation learning policies.
 
     Must implement the following methods:
     - train_on_batch
     - eval_on_batch
-    - call_policy
-    - save_policy
-    - load_policy
+    - __call__
+    - save
+    - load
 
     - __init__ should be used to set up the algorithm.
     """
@@ -87,7 +87,7 @@ class AlgorithmBase(ABC):
                         for f in os.listdir(model_out_dir):
                             if "best_policy" in f:
                                 os.remove(os.path.join(model_out_dir, f))
-                        self.save_policy(os.path.join(model_out_dir, f"best_policy_e{epoch}.pt"))
+                        self.save(os.path.join(model_out_dir, f"best_policy_e{epoch}.pt"))
 
     def train(self, train_loader, epoch, step, logger=None, log_wandb=False) -> int:
         """
@@ -127,7 +127,7 @@ class AlgorithmBase(ABC):
         Args:
             eval_loader (DataLoader): DataLoader for evaluation data.
             eval_env: Environment for additional evaluation metrics.
-            obs_keys: List of observation keys to extract from the environment observation.
+            obs_keys: (ORDERED) List of observation keys to extract from the environment observation.
             num_episodes (int): Number of episodes to evaluate in the environment.
 
         Returns:
@@ -153,7 +153,7 @@ class AlgorithmBase(ABC):
 
         Args:
             env: Environment to run the policy in.
-            obs_keys: List of observation keys to extract from the environment observation.
+            obs_keys: ORDERED (!) List of observation keys to extract from the environment observation.
             num_episodes (int): Number of episodes to run the policy.
 
         Returns:
@@ -164,7 +164,7 @@ class AlgorithmBase(ABC):
         for _ in tqdm(range(num_episodes), desc="Evaluation in Environment", unit="episode", leave=False):
             obs = env.reset()
             if obs_keys is not None:
-                obs = collections.OrderedDict((k, v) for k, v in obs.items() if k in obs_keys)
+                obs = collections.OrderedDict((k, obs[k]) for k in obs_keys)
 
             for k, v in obs.items():
                 obs[k] = torch.from_numpy(v).type(torch.float32)
@@ -172,7 +172,7 @@ class AlgorithmBase(ABC):
             done = False
             episode_steps = 0
             while not done:
-                predicted_actions = self.call_policy(obs)
+                predicted_actions = self.__call__(obs)
                 if len(predicted_actions.shape) == 2 and predicted_actions.shape[0] == 1:
                     predicted_actions = predicted_actions.flatten()
 
@@ -255,7 +255,7 @@ class AlgorithmBase(ABC):
         return is_best
 
     @abstractmethod
-    def call_policy(self, obs):
+    def __call__(self, obs):
         """
         Predicts an action given an observation.
 
@@ -265,7 +265,7 @@ class AlgorithmBase(ABC):
         Returns:
             np.ndarray: Predicted action.
         """
-        raise NotImplementedError
+        raise NotImplementedError("Policy model must implement __call__ method.")
 
     @abstractmethod
     def train_on_batch(self, batch) -> float:
@@ -278,7 +278,7 @@ class AlgorithmBase(ABC):
         Returns:
             float: Training loss.
         """
-        raise NotImplementedError
+        raise NotImplementedError("Policy model must implement train_on_batch method.")
 
     @abstractmethod
     def eval_on_batch(self, batch) -> float:
@@ -291,10 +291,10 @@ class AlgorithmBase(ABC):
         Returns:
             float: Evaluation loss.
         """
-        raise NotImplementedError
+        raise NotImplementedError("Policy model must implement eval_on_batch method.")
 
     @abstractmethod
-    def save_policy(self, path):
+    def save(self, path):
         """
         Saves the policy model to a file.
 
@@ -304,7 +304,7 @@ class AlgorithmBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_policy(self, path):
+    def load(self, path):
         """
         Loads the policy model from a file.
 
@@ -313,13 +313,13 @@ class AlgorithmBase(ABC):
         """
         raise NotImplementedError
 
-    def visualize_policy(self, _env, obs_keys, num_episodes):
+    def visualize(self, _env, obs_keys, num_episodes):
         """
         Visualizes the policy in the environment for a number of episodes.
 
         Args:
             _env: Environment to visualize the policy in.
-            obs_keys: List of observation keys to extract from the environment observation.
+            obs_keys: ORDERED (!) list of observation keys to extract from the environment observation.
             num_episodes (int): Number of episodes to visualize.
         """
         _env.has_renderer = True

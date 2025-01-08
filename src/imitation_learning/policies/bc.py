@@ -1,9 +1,9 @@
 import torch
 
-from src.imitation_learning.algo.algorithm import AlgorithmBase
+from src.imitation_learning.policies.policy import PolicyBase
 
 
-class BehaviorCloning(AlgorithmBase):
+class BehaviorCloning(PolicyBase):
     """
     Behavior Cloning implementation using supervised learning.
 
@@ -33,13 +33,13 @@ class BehaviorCloning(AlgorithmBase):
         loss = self.criterion(predictions, batch["actions"])
         return loss.item()
 
-    def call_policy(self, obs):
+    def __call__(self, obs):
         return self.model(obs).detach().numpy()
 
-    def save_policy(self, path):
+    def save(self, path):
         torch.save(self.model.state_dict(), path)
 
-    def load_policy(self, path):
+    def load(self, path):
         self.model.load_state_dict(torch.load(path, weights_only=True))
         self.model.eval()
 

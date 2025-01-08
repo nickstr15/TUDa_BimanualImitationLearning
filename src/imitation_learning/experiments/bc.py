@@ -1,26 +1,27 @@
 import numpy as np
 import torch
 
-from src.imitation_learning.algo.algorithm import AlgorithmBase
-from src.imitation_learning.algo.bc import BehaviorCloning
+from src.imitation_learning.networks.network import NetworkBase
+from src.imitation_learning.policies.policy import PolicyBase
+from src.imitation_learning.policies.bc import BehaviorCloning
 from src.imitation_learning.experiments.experiment import ExperimentBase
-from src.imitation_learning.networks.helpers import get_loss_fn, get_optimizer_cls, get_network_cls
+from src.imitation_learning.core.helpers import get_loss_fn, get_optimizer_cls, get_network_cls
 
 
 class BehaviorCloningExperiment(ExperimentBase):
     """
     Experiment class for behavior cloning.
     """
-    def _setup_algorithm(self) -> AlgorithmBase:
+    def _setup_policy(self) -> PolicyBase:
         """
         Set up the algorithm.
         """
-        assert self._config["algorithm"]["name"] == "BC", "Wrong algorithm name in config file."
+        assert self._config["policy"]["name"] == "BC", "Wrong algorithm name in config file."
 
         # Set up the model
-        model = self._setup_model(self._config["algorithm"]["model"])
-        optimizer = self._setup_optimizer(self._config["algorithm"]["optimizer"], model)
-        criterion = self._setup_criterion(self._config["algorithm"]["loss"])
+        model = self._setup_model(self._config["policy"]["params"]["model"])
+        optimizer = self._setup_optimizer(self._config["policy"]["params"]["optimizer"], model)
+        criterion = self._setup_criterion(self._config["policy"]["params"]["loss"])
 
         return BehaviorCloning(model, optimizer, criterion)
 
@@ -28,7 +29,7 @@ class BehaviorCloningExperiment(ExperimentBase):
         """
         Set up the model.
         """
-        model = get_network_cls(model_config["name"])
+        model : NetworkBase = get_network_cls(model_config["name"])
         input_dim = np.sum([np.prod(s) for s in self._input_sizes.values()])
         output_dim = np.prod(self._output_size)
         return model(
@@ -68,6 +69,11 @@ class BehaviorCloningExperiment(ExperimentBase):
 if __name__ == "__main__":
     exp = BehaviorCloningExperiment(config_path="bc_two_arm_pick_place.yaml")
     exp.run()
+
+    # exp.load_and_visualize_policy(
+    #    "bc_mlp_two_arm_pick_place/2025-01-08_11-35-18/best_policy_e300.pt",
+    #    num_episodes=5
+    # )
 
 
 

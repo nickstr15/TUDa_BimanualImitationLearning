@@ -11,8 +11,8 @@ import numpy as np
 import json
 from torch.utils.data import DataLoader
 
-from src.imitation_learning.algo.algorithm import AlgorithmBase
 from src.imitation_learning.core.dataset import HDF5Dataset
+from src.imitation_learning.policies.policy import PolicyBase
 from src.utils.paths import path_completion, DEMOS_DIR, TRAINED_MODELS_DIR, LOG_DIR, IL_PATH
 from src.utils.wandb import WANDB_API_KEY
 
@@ -21,14 +21,14 @@ class ExperimentBase(ABC):
     Base class for all experiments.
 
     Requires the following methods to be implemented:
-        - _setup_algorithm
+        - _setup_policy
     """
     def __init__(self, config_path: str):
         """
         Base class for all experiments.
 
         Requires the following methods to be implemented:
-            - _setup_algorithm
+            - _setup_policy
 
         :param config_path: path to the config file
         """
@@ -38,12 +38,12 @@ class ExperimentBase(ABC):
         self._setup_dataset()
         self._setup_env()
 
-        self.alg = self._setup_algorithm()
+        self.policy = self._setup_policy()
 
     @abstractmethod
-    def _setup_algorithm(self) -> AlgorithmBase:
+    def _setup_policy(self) -> PolicyBase:
         """
-        Set up the algorithm.
+        Set up the policy.
         """
         raise NotImplementedError
 
@@ -53,7 +53,7 @@ class ExperimentBase(ABC):
         """
         self._setup_logging_and_paths()
 
-        self.alg.train_loop(
+        self.policy.train_loop(
             self._train_loader,
             self._eval_loader,
             num_epochs=self._config["training"]["num_epochs"],
@@ -76,8 +76,8 @@ class ExperimentBase(ABC):
 
         model_path = path_completion(model_path, TRAINED_MODELS_DIR)
 
-        self.alg.load_policy(model_path)
-        self.alg.visualize_policy(self._env, obs_keys=self._dataset.obs_keys, num_episodes=num_episodes)
+        self.policy.load(model_path)
+        self.policy.visualize(self._env, obs_keys=self._dataset.obs_keys, num_episodes=num_episodes)
 
     @staticmethod
     def _load_config(config_path: str):
