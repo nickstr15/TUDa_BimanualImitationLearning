@@ -14,15 +14,15 @@ import os
 
 import robosuite_ext.environments
 from robosuite_ext.demonstration.utils.play_back import play_back_from_hdf5
-from robosuite_ext.utils.paths import DEMOS_DIR
+from utils.paths import DEMOS_DIR
 
 
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--hdf5_folder", "-f", type=str, required=True,
-                        help="path to the hdf5 file in repo-root/data containing the demonstrations." + \
-                             "Example: -f 'sample' => root/data/sample/demo.hdf5")
+                        help="path to the hdf5 file in repo-root/data/demonstrations containing the demonstrations." + \
+                             "Example: -f 'sample' => root/data/demonstrations/sample/demo.hdf5")
     parser.add_argument("--use_actions", "-ua", action="store_true",
                         help="flag to use the actions for playback instead of loading the simulation states one by one")
     parser.add_argument("--target_real_time", "-rt", action="store_true",

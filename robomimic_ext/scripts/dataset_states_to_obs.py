@@ -39,7 +39,8 @@ from tqdm import tqdm
 
 import robomimic.utils.tensor_utils as tu
 import robomimic.utils.env_utils as eu
-from robomimic.envs.env_base import EnvBase, EnvType
+import robomimic_ext.utils.file_utils as fu
+from robomimic.envs.env_base import EnvBase
 
 from utils.paths import DEMOS_DIR, DATASET_DIR, path_completion
 
@@ -193,39 +194,13 @@ def get_camera_info(
         )
     return camera_info
 
-def get_env_metadata_from_dataset(dataset_path):
-    """
-    Retrieves env metadata from dataset.
-    This is different from the robomimic version to add the missing data.
 
-    Args:
-        dataset_path (str): path to dataset
-
-    Returns:
-        env_meta (dict): environment metadata. Contains 3 keys:
-
-            :`'env_name'`: name of environment
-            :`'type'`: type of environment, should be a value in EB.EnvType
-            :`'env_kwargs'`: dictionary of keyword arguments to pass to environment constructor
-    """
-    dataset_path = os.path.expanduser(dataset_path)
-    f = h5py.File(dataset_path, "r")
-    env_kwargs = json.loads(f["data"].attrs["env_info"])
-
-    env_meta = dict()
-    env_meta["env_name"] = env_kwargs.pop("env_name")
-    env_meta["env_kwargs"] = env_kwargs
-    env_meta["type"] = EnvType.ROBOSUITE_TYPE #HARD CODED. BECAUSE THIS IS MISSING
-
-    f.close()
-
-    return env_meta
 
 def dataset_states_to_obs(args):
     input_path = path_completion(args.input_path, DEMOS_DIR)
 
     # create environment to use for data processing
-    env_meta = get_env_metadata_from_dataset(dataset_path=input_path)
+    env_meta = fu.get_env_metadata_from_dataset(dataset_path=input_path)
     env = eu.create_env_for_data_processing(
         env_meta=env_meta,
         camera_names=args.camera_names,
