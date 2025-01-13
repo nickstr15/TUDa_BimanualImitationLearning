@@ -1,8 +1,8 @@
 import numpy as np
 
-from robosuite_ext.models.objects import CompositeBodyObject, BoxObject, CylinderObject
-from robosuite_ext.utils.mjcf_utils import CustomMaterial, add_to_dict, array_to_string
-from robosuite_ext.utils.transform_utils import convert_quat, axisangle2quat
+from robosuite.models.objects import CompositeBodyObject, BoxObject, CylinderObject
+from robosuite.utils.mjcf_utils import CustomMaterial, add_to_dict, array_to_string
+from robosuite.utils.transform_utils import convert_quat, axisangle2quat
 
 
 class HingedBin(CompositeBodyObject):

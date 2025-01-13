@@ -1,19 +1,23 @@
 import os
 
-PROJECT_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
 
-RS_CONTROL_CONFIGS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite", "control", "control_configs")
-RS_ENVIRONMENTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite", "environments")
-RS_SCENES_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite", "environments", "scenes")
-RS_WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite", "demonstration", "waypoints", "files")
-RS_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite", "models")
-
+# DATA
 DEMOS_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "demonstrations")
 RECORDING_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "recordings")
 TRAINED_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "trained_models")
 LOG_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "logs")
 
-IL_PATH = os.path.join(PROJECT_ROOT_DIR, "robosuite", "imitation_learning")
+# ROBOSUITE_EXT
+RS_CONTROL_CONFIGS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "control", "control_configs")
+RS_ENVIRONMENTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "environments")
+RS_SCENES_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "environments", "scenes")
+RS_WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "demonstration", "waypoints", "files")
+RS_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "models")
+
+# ROBOMIMIC_EXT
+...
+
 
 def path_completion(asset_path: str, root: str = None) -> str:
     """

@@ -1,1 +1,0 @@
-WANDB_API_KEY = "<KEY>" # needed for automatic logging to wandb

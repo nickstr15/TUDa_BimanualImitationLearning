@@ -1,7 +1,7 @@
 import numpy as np
-from robosuite_ext.models.objects import MujocoXMLObject
 
-from robosuite_ext.utils.paths import path_completion
+from robosuite.models.objects import MujocoXMLObject
+from utils.paths import path_completion
 
 class QuadBracket(MujocoXMLObject):
     def __init__(self, name: str):

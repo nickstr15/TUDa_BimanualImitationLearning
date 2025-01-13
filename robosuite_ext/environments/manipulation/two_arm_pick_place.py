@@ -2,13 +2,13 @@ from collections import OrderedDict
 
 import numpy as np
 
-from robosuite_ext.environments.manipulation.two_arm_env import TwoArmEnv
-from robosuite_ext.models.arenas import TableArena
-from robosuite_ext.models.objects import HammerObject, Bin
-from robosuite_ext.models.tasks import ManipulationTask
-from robosuite_ext.utils.observables import Observable, sensor
-from robosuite_ext.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite_ext.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat, euler2mat, convert_quat
+from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
+from robosuite.models.arenas import TableArena
+from robosuite.models.objects import HammerObject, Bin
+from robosuite.models.tasks import ManipulationTask
+from robosuite.utils.observables import Observable, sensor
+from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
+from robosuite.utils.transform_utils import quat2mat, quat2axisangle, axisangle2quat, euler2mat, convert_quat
 
 
 class TwoArmPickPlace(TwoArmEnv):

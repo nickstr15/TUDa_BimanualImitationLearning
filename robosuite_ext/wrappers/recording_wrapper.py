@@ -4,8 +4,8 @@ This file implements a wrapper for recording episodes in an environment.
 import os
 import imageio
 from datetime import datetime
-from robosuite_ext.wrappers import Wrapper
-import robosuite_ext.macros as macros
+from robosuite.wrappers import Wrapper
+import robosuite.macros as macros
 
 # Set the image convention to opencv so that the images are automatically rendered "right side up" when using imageio
 # (which uses opencv convention)

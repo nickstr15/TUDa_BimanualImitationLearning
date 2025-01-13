@@ -4,12 +4,11 @@ This file implements a wrapper for visualizing the end-effector targets in a rob
 
 import xml.etree.ElementTree as ET
 
-from robosuite_ext.controllers.parts.arm import OperationalSpaceController
-
-from robosuite_ext.utils.mjcf_utils import new_body, new_geom
-from robosuite_ext.utils.transform_utils import make_pose, pose_in_A_to_pose_in_B
-from robosuite_ext.wrappers import Wrapper
-from robosuite_ext.environments.robot_env import RobotEnv
+from robosuite.controllers.parts.arm import OperationalSpaceController
+from robosuite.utils.mjcf_utils import new_body, new_geom
+from robosuite.utils.transform_utils import make_pose, pose_in_A_to_pose_in_B
+from robosuite.wrappers import Wrapper
+from robosuite.environments.robot_env import RobotEnv
 
 DEFAULT_COLORS = [
     [1, 0, 0, 0.3],  # red

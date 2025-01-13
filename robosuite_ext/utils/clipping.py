@@ -1,5 +1,5 @@
 import numpy as np
-from robosuite_ext.utils.transform_utils import quat2axisangle, axisangle2quat
+from robosuite.utils.transform_utils import quat2axisangle, axisangle2quat
 
 
 def clip_translation(v: np.ndarray, v_min: np.ndarray, v_max: np.ndarray) -> np.ndarray:

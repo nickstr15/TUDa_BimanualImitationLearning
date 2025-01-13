@@ -1,4 +1,4 @@
-from robosuite_ext.environments.base import register_env
+from robosuite.environments.base import register_env
 
 from robosuite_ext.environments.manipulation.two_arm_pick_place import TwoArmPickPlace
 from robosuite_ext.environments.manipulation.two_arm_ball_insert import TwoArmBallInsert

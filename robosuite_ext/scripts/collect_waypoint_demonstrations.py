@@ -11,13 +11,12 @@ Arguments:
 import argparse
 import datetime
 import os
-import numpy as np
 
 import robosuite as suite
 
 from robosuite_ext.demonstration.waypoints import ENV_TO_WAYPOINT_EXPERT
 from robosuite_ext.demonstration.waypoints.core.waypoint_expert import TwoArmWaypointExpertBase
-from paths import DEMOS_DIR
+from utils.paths import DEMOS_DIR
 
 
 def main():
@@ -46,7 +45,7 @@ def main():
     env_config = dict(
         env_name=args.environment,
         robots=robots,
-        env_configuration="parallel",
+        env_configuration="parallel", #! important to keep this, otherwise some tasks are not solvable
     )
 
     env = suite.make(

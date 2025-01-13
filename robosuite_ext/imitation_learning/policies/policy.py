@@ -7,7 +7,7 @@ from typing import Union
 
 import numpy as np
 import torch
-import wandb
+from utils import wandb
 from tqdm import tqdm
 
 from robosuite_ext.environments import MujocoEnv

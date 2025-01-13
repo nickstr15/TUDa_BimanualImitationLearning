@@ -17,13 +17,14 @@ from robosuite.wrappers import DataCollectionWrapper
 from robosuite_ext.demonstration.waypoints.core.waypoint import Waypoint
 from robosuite_ext.demonstration.waypoints.utils.null_orientation import get_two_arm_null_orientation
 from robosuite_ext.utils.clipping import clip_translation, clip_quat_by_axisangle
-from robosuite_ext.utils.paths import WAYPOINTS_DIR, RECORDING_DIR
 from robosuite_ext.utils.real_time import RealTimeHandler
 from robosuite_ext.utils.robot_states import TwoArmEEState, EEState
 from robosuite_ext.utils.robot_targets import GripperTarget
 from robosuite_ext.demonstration.utils.gather_demonstrations import gather_demonstrations_as_hdf5
 from robosuite_ext.wrappers.recording_wrapper import RecordingWrapper
 from robosuite_ext.wrappers.target_visualization_wrapper import TargetVisualizationWrapper
+
+from utils.paths import RS_WAYPOINTS_DIR, RECORDING_DIR
 
 def get_limits(
         abs_limit: float | np.ndarray | list | None,
@@ -80,7 +81,7 @@ class TwoArmWaypointExpertBase(ABC):
         :param environment: Environment in which the expert agent acts. MUST use use_object_obs=True.
         :param waypoints_file: File containing the waypoints n $WAYPOINTS_DIR
         """
-        full_waypoints_path = os.path.join(WAYPOINTS_DIR, waypoints_file)
+        full_waypoints_path = os.path.join(RS_WAYPOINTS_DIR, waypoints_file)
         assert os.path.isfile(full_waypoints_path), f"Waypoints file {full_waypoints_path} not found"
 
         assert environment.env_configuration in ["parallel", "single-robot"], \

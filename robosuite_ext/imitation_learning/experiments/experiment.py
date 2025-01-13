@@ -3,7 +3,7 @@ import time
 import logging
 from abc import ABC, abstractmethod
 
-import wandb
+from utils import wandb
 import yaml
 import torch
 import random

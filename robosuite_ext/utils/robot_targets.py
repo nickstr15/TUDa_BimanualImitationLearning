@@ -1,5 +1,5 @@
 import numpy as np
-from robosuite_ext.utils.transform_utils import quat2axisangle, quat_multiply, quat_inverse
+from robosuite.utils.transform_utils import quat2axisangle, quat_multiply, quat_inverse
 
 from robosuite_ext.utils.robot_states import TwoArmEEState, EEState
 

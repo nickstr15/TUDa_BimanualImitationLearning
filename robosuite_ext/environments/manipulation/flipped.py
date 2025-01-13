@@ -1,18 +1,18 @@
 import numpy as np
-from robosuite_ext.environments.manipulation.two_arm_env import TwoArmEnv
-from robosuite_ext.models.arenas import EmptyArena, TableArena
-from robosuite_ext.models.objects import PlateWithHoleObject, CylinderObject, HammerObject
-from robosuite_ext.models.tasks import ManipulationTask
-from robosuite_ext.utils.mjcf_utils import find_elements, array_to_string, CustomMaterial
-from robosuite_ext.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
-from robosuite_ext.utils.transform_utils import euler2mat
 from typing_extensions import override
 
-from robosuite_ext.environments.manipulation.two_arm_peg_in_hole import TwoArmPegInHole, \
+from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
+from robosuite.models.arenas import EmptyArena, TableArena
+from robosuite.models.objects import PlateWithHoleObject, CylinderObject, HammerObject
+from robosuite.models.tasks import ManipulationTask
+from robosuite.utils.mjcf_utils import find_elements, array_to_string, CustomMaterial
+from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
+from robosuite.utils.transform_utils import euler2mat
+from robosuite.environments.manipulation.two_arm_peg_in_hole import TwoArmPegInHole, \
     _OBJECT_POS_OFFSET_FN as PEG_HOLE_OFFSET_FN
-from robosuite_ext.environments.manipulation.two_arm_lift import TwoArmLift
-from robosuite_ext.environments.manipulation.two_arm_handover import TwoArmHandover
-from robosuite_ext.environments.manipulation.two_arm_transport import TwoArmTransport
+from robosuite.environments.manipulation.two_arm_lift import TwoArmLift
+from robosuite.environments.manipulation.two_arm_handover import TwoArmHandover
+from robosuite.environments.manipulation.two_arm_transport import TwoArmTransport
 
 from robosuite_ext.environments.manipulation.two_arm_quad_insert import TwoArmQuadInsert
 from robosuite_ext.environments.manipulation.two_arm_ball_insert import TwoArmBallInsert
@@ -26,7 +26,7 @@ class TwoArmPegInHoleFlipped(TwoArmPegInHole):
     @override
     def _load_model(self):
         """
-        Loads an xml model, puts it in self.model
+        Loads a xml model, puts it in self.model
         """
         TwoArmEnv._load_model(self)
 
