@@ -1,9 +1,11 @@
 import json
+import logging
 import os.path
 import shutil
 import time
 from abc import ABC
 from collections import OrderedDict
+from tqdm import tqdm
 
 import numpy as np
 import yaml
@@ -468,6 +470,9 @@ class TwoArmWaypointExpertBase(ABC):
         :param render: Whether to render the environment
         :param target_real_time: Whether to render in real time
         """
+        # disable robosuite logging
+        logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
+
         tmp_dir = os.path.join("/tmp", "bil_wp", str(time.time()).replace(".", "_"))
 
         self._env = DataCollectionWrapper(
@@ -477,14 +482,21 @@ class TwoArmWaypointExpertBase(ABC):
 
         success_count = 0
         count = 0
-        while success_count < num_successes:
-            success_count += self._run_episode(
-                render=render,
-                target_real_time=target_real_time,
-                randomize=True
-            )
-            count += 1
-            print(f"[INFO] Collected {success_count}/{num_successes} successful demonstrations after {count} episodes.")
+        with tqdm(total=num_successes, leave=False) as pbar:
+            while success_count < num_successes:
+                count += 1
+                success =  self._run_episode(
+                    render=render,
+                    target_real_time=target_real_time,
+                    randomize=True
+                )
+                if success:
+                    success_count += 1
+                    pbar.update(1)
+
+                pbar.set_description(f"Current success rate: {np.round(100*success_count/count)}% ")
+
+        print(f"[INFO] Collected {success_count} successful episodes after {count} rollouts.")
 
         self._env.close()
 

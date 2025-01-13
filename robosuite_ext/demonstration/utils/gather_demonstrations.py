@@ -45,11 +45,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
     # store some metadata in the attributes of one group
     grp = f.create_group("data")
 
-    num_eps = 0
     num_successes = 0
     env_name = None  # will get populated at some point
 
-    for ep_directory in os.listdir(directory):
+    for i, ep_directory in enumerate(os.listdir(directory), start=1):
 
         state_paths = os.path.join(directory, ep_directory, "state_*.npz")
         states = []
@@ -77,8 +76,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
             del states[-1]
             assert len(states) == len(actions)
 
-            num_eps += 1
-            ep_data_grp = grp.create_group("demo_{}".format(num_eps))
+            ep_data_grp = grp.create_group("demo_{}".format(i))
 
             # store model xml as an attribute
             xml_path = os.path.join(directory, ep_directory, "model.xml")
@@ -100,4 +98,4 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info):
 
     f.close()
 
-    print("Gathered {} demonstrations, {} successful, into {}".format(num_eps, num_successes, hdf5_path))
+    print("Gathered {} successful demonstrations into {}".format(num_successes, hdf5_path))
