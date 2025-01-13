@@ -1,4 +1,4 @@
-from robosuite.models.grippers import gripper_factory
+from robosuite_ext.models.grippers import gripper_factory
 
 gripper = gripper_factory('PandaGripper')
 

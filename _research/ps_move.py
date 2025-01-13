@@ -1,8 +1,8 @@
-from robosuite.utils.transform_utils import quat2mat, mat2euler
+from robosuite_ext.utils.transform_utils import quat2mat, mat2euler
 
-from robosuite.demonstration.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget
+from robosuite_ext.demonstration.teleoperation.psmove.core.psmove_state import PsMoveState, PSMoveTarget
 
-from robosuite.demonstration.teleoperation.psmove.core.psmove_interface import PSMoveInterface
+from robosuite_ext.demonstration.teleoperation.psmove.core.psmove_interface import PSMoveInterface
 
 import numpy as np
 import pyqtgraph as pg
