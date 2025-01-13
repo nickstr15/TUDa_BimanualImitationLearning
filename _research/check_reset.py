@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import robosuite as suite
 
-import src.environments
+import robosuite.environments
 
 def reset_loop():
     env = suite.make(

@@ -2,8 +2,8 @@ import numpy as np
 import robosuite as suite
 from robosuite.utils.transform_utils import quat2axisangle, axisangle2quat, quat_multiply, quat_inverse
 
-from src.utils.robot_states import EEState
-from src.utils.robot_targets import EETarget, GripperTarget
+from robosuite.utils.robot_states import EEState
+from robosuite.utils.robot_targets import EETarget, GripperTarget
 
 
 def _generate_control(target, current):
