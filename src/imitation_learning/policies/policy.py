@@ -346,6 +346,13 @@ class PolicyBase(ABC):
         """
         return self.predict_action(obs)
 
+    def reset(self):
+        """
+        Resets the policy state for stateful policies.
+        :return:
+        """
+        pass
+
     @abstractmethod
     def train_on_batch(self, batch) -> float:
         """

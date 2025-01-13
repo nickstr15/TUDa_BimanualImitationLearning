@@ -2,8 +2,7 @@ import numpy as np
 import torch
 
 from src.imitation_learning.models.model import ModelBase
-from src.imitation_learning.policies.policy import PolicyBase
-from src.imitation_learning.policies.bc import BehaviorCloning
+from src.imitation_learning.policies.bc import BehaviorCloningPolicy
 from src.imitation_learning.experiments.experiment import ExperimentBase
 from src.imitation_learning.core.helpers import get_loss_fn, get_optimizer_cls, get_model_cls
 
@@ -12,7 +11,7 @@ class BehaviorCloningExperiment(ExperimentBase):
     """
     Experiment class for behavior cloning.
     """
-    def _setup_policy(self) -> PolicyBase:
+    def _setup_policy(self) -> BehaviorCloningPolicy:
         """
         Set up the algorithm.
         """
@@ -23,7 +22,7 @@ class BehaviorCloningExperiment(ExperimentBase):
         optimizer = self._setup_optimizer(self._config["policy"]["params"]["optimizer"], model)
         criterion = self._setup_criterion(self._config["policy"]["params"]["loss"])
 
-        return BehaviorCloning(model, optimizer, criterion)
+        return BehaviorCloningPolicy(model, optimizer, criterion)
 
     def _setup_model(self, model_config: dict):
         """

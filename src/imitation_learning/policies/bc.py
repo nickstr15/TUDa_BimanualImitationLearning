@@ -4,7 +4,7 @@ import torch
 from src.imitation_learning.policies.policy import PolicyBase
 
 
-class BehaviorCloning(PolicyBase):
+class BehaviorCloningPolicy(PolicyBase):
     """
     Behavior Cloning implementation using supervised learning.
 
