@@ -97,19 +97,12 @@ def experiment(
     # accept unknown arguments
     **kwargs
 ):
-    print("TESTING 0")
-
     time_str = datetime.datetime.fromtimestamp(time_float).strftime('%Y%m%d%H%M%S')
-
-    print("TESTING 1")
-
     config, device = prep_training_run_cluster(config_path, seed, time_str, debug)
-
-    print("TESTING 2")
-
     train(config, device=device)
 
-    print("TESTING 3")
-
+if __name__ == '__main__':
+    # Leave unchanged
+    run_experiment(experiment)
 
 
