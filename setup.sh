@@ -12,6 +12,8 @@ pip install wandb
 pip3 install torch torchvision torchaudio
 pip install experiment-launcher
 
+pip install -e .
+
 # C) Install MuJoCo
 cd ~ || exit
 mkdir .mujoco

@@ -1,23 +1,10 @@
 """
 Basic experiment for IL on the cluster.
-If running on the cluster, this script should be called from launch_train_ias.py.
+If running on the cluster, this experiment should be called from launch_train_ias.py.
 
-This script disables all rendering and does not save videos.
-The script always tries to use the GPU if available.
-
-Args:
-    config (str): path to a config json that will be used to override the default settings.
-        If omitted, default settings are used. This is the preferred way to run experiments.
-
-    debug (bool): set this flag to run a quick training run for debugging purposes
-
-Example usage (from the root directory of the project):
-
-$> python -m robomimic_ext.scripts.cluster.train_ias -c config.json
-
-with config.json being a config file in the robomimic_ext/exp_configs directory.
+This setup disables all rendering and does not save videos.
+The setup always tries to use the GPU if available.
 """
-import argparse
 import json
 import os.path
 import traceback
@@ -31,7 +18,6 @@ from robomimic.config import config_factory
 from utils.paths import path_completion, RM_EXP_CONFIG_DIR, RM_DEFAULT_OUTPUT_DIR, DATASET_DIR
 
 from robomimic_ext.scripts.train import train
-
 
 # noinspection DuplicatedCode
 def prep_training_run_cluster(
@@ -123,34 +109,5 @@ def experiment(
     except Exception as e:
         res_str = "Run failed with error:\n{}\n\n{}".format(e, traceback.format_exc())
     print(res_str)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--config", "-c",
-        type=str,
-        default=None,
-        required=True,
-        help="(MANDATORY) Path to a config json that will be used to override the default settings.",
-    )
-    # debug mode
-    parser.add_argument(
-        "--debug", "-d",
-        action='store_true',
-        help="Set this flag to run a quick training run for debugging purposes"
-    )
-    args = parser.parse_args()
-
-    args_dict = {
-        "config_path": args.config,
-        "seed": 0,
-        "time_float": time.time(),
-        "debug": args.debug,
-        "results_dir": "logs",
-    }
-
-    run_experiment(experiment, args_dict)
 
 
