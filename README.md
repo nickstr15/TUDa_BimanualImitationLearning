@@ -10,7 +10,10 @@ setup.sh
 ```
 
 If you later want to use [`wandb`](https://wandb.ai/site/) for logging, please set the `WANDB_API_KEY` variable
-to your API key in the file [utils/wandb.py](utils/wandb.py).
+to your API key by running the following command.
+```bash
+./config_wandb.sh <key>
+```
 
 -----
 

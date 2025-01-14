@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Create a new conda environment with Python 3.10
 conda create -n bil-py310 python=3.10
 conda activate bil-py310
