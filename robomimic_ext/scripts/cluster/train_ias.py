@@ -113,7 +113,7 @@ def experiment(
 ):
     time_str = datetime.datetime.fromtimestamp(time_float).strftime('%Y%m%d%H%M%S')
 
-    config, device = prep_training_run_cluster(config_path, seed, results_dir, time_str, debug)
+    config, device = prep_training_run_cluster(config_path, seed, time_str, debug)
 
     print(config.train.output_dir)
     # catch error during training and print it
