@@ -2,7 +2,6 @@
 logs/
 data/
 _research/
-utils/wandb.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
