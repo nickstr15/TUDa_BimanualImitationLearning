@@ -28,7 +28,7 @@ import robomimic.utils.torch_utils as torch_utils
 from experiment_launcher import single_experiment, run_experiment
 from robomimic.config import config_factory
 
-from utils.paths import path_completion, RM_EXP_CONFIG_DIR, RM_DEFAULT_OUTPUT_DIR, DATASET_DIR, DATA_DIR
+from utils.paths import path_completion, RM_EXP_CONFIG_DIR, RM_DEFAULT_OUTPUT_DIR, DATASET_DIR
 
 from robomimic_ext.scripts.train import train
 

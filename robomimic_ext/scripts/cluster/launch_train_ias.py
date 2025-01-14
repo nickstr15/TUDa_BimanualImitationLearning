@@ -27,8 +27,6 @@ import argparse
 
 from experiment_launcher import Launcher, is_local
 
-from utils.paths import DATA_DIR
-
 IS_LOCAL = is_local()
 N_EXPS_IN_PARALLEL = 1
 N_CORES = N_EXPS_IN_PARALLEL
