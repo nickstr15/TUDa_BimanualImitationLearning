@@ -4,9 +4,9 @@ Master Thesis about Bimanual Imitation Learning (Intelligent Autonomous Systems 
 -----
 
 # Installation & Setup
-Install the required packages by running the following command from the root directory of this repository.
+Run
 ```bash
-conda env create -f environment_bil_py310.yml
+setup.sh
 ```
 
 If you later want to use [`wandb`](https://wandb.ai/site/) for logging, please set the `WANDB_API_KEY` variable
