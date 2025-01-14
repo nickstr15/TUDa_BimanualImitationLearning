@@ -148,6 +148,7 @@ if __name__ == "__main__":
         "seed": 0,
         "time_float": time.time(),
         "debug": args.debug,
+        "results_dir": "logs",
     }
 
     run_experiment(experiment, args_dict)
