@@ -1,28 +1,68 @@
-# TUDa - BimanualImitationLearning
+# TUDa - Bimanual Imitation Learning
 Master Thesis about Bimanual Imitation Learning (Intelligent Autonomous Systems Group - TU Darmstadt)
 
 -----
 
-# Structure
+# Installation & Setup
+Install the required packages by running the following command from the root directory of this repository.
+```bash
+conda env create -f environment_bil_py310.yml
+```
+
+If you later want to use [`wandb`](https://wandb.ai/site/) for logging, please set the `WANDB_API_KEY` variable
+to your API key in the file [utils/wandb.py](utils/wandb.py).
+
+-----
+
+# Structure & Usage
 - **robosuite_ext** extends the the [robosuite](https://robosuite.ai/) library with new bimanual environments and
 additionally adds *flipped* versions for each environment.
 - **robomimic_ext** extends the [robomimic](https://robomimic.github.io/) library.
 
 Both libraries are part of the [ARISE Initiative](https://github.com/ARISE-Initiative).
 
+---- 
+
 ## Robosuite Extension
-### Different environments:
+### Different environments
 - red: robosuite environments
 - blue: new environments
 
 ![demo_envs](https://github.com/user-attachments/assets/54137f13-fce7-411b-a208-fe3fcc22db53)
 
-
-### Support for various robots (by default):
+### Support for various robots (by default)
 
 ![demo_robots](https://github.com/user-attachments/assets/db3df7d7-c4d5-4a82-9d10-4bcfa8994f03)
 
+-----
+
+
+## Robosuite Usage
+### Create environment
+TODO
+### Setup new waypoints expert
+TODO
+### Run waypoint expert to collect data
+TODO
+
+-----
+
 ## Robomimic Extension
 Coming soon...
+
+---
+
+## Robomimic Usage
+### Prepare dataset
+TODO
+### Train policy
+TODO (normal + on cluster)
+### Evaluate/Run policy
+TODO
+
+-----
+
+
+
 
 

@@ -6,28 +6,31 @@ This script is an extension of https://github.com/ARISE-Initiative/robomimic/blo
 It is used to convert the state-based demonstrations collected with robosuite to robomimic-compatible datasets
 that include the observations.
 
-Example usage:
+Example usage (from the root of the project):
 
     # extract low-dimensional observations for pure imitation learning
-    python dataset_states_to_obs.py -i /path/to/demo.hdf5 --o low_dim.hdf5 -eno
+    $> python -m robomimic_ext.scripts.dataset_states_to_obs -i /path/to/demo.hdf5 -o low_dim.hdf5 -eno
 
     # extract low-dimensional observations
-    python dataset_states_to_obs.py --input_path /path/to/demo.hdf5 --output_path low_dim.hdf5 --done_mode 2
+    $> python -m robomimic_ext.scripts.dataset_states_to_obs --input_path /path/to/demo.hdf5 \
+    --output_path low_dim.hdf5 --done_mode 2
 
     # extract 84x84 image observations
-    python dataset_states_to_obs.py --input_path /path/to/demo.hdf5 --output_path image.hdf5 \
+    $> python -m robomimic_ext.scripts.dataset_states_to_obs --input_path /path/to/demo.hdf5 --output_path image.hdf5 \
         --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 
-    # (space saving option) extract 84x84 image observations with compression and without
+    # (space-saving option) extract 84x84 image observations with compression and without
     # extracting next obs (not needed for pure imitation learning algos)
-    python dataset_states_to_obs.py --input_path /path/to/demo.hdf5 --output_path image.hdf5 \
+    $> python -m robomimic_ext.scripts.dataset_states_to_obs --input_path /path/to/demo.hdf5 --output_path image.hdf5 \
         --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 \
         --compress --exclude-next-obs
 
     # use dense rewards, and only annotate the end of trajectories with done signal
-    python dataset_states_to_obs.py --input_path /path/to/demo.hdf5 --output_path image_dense_done_1.hdf5 \
-        --done_mode 1 --dense --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
+    $> python -m robomimic_ext.scripts.dataset_states_to_obs --input_path /path/to/demo.hdf5 \
+        --output_path image_dense_done_1.hdf5 --done_mode 1 --dense --camera_names agentview robot0_eye_in_hand \
+        --camera_height 84 --camera_width 84
 """
+
 import logging
 import os
 import json

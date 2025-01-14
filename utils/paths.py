@@ -8,6 +8,7 @@ DATASET_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "datasets")
 RECORDING_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "recordings")
 TRAINED_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "trained_models")
 LOG_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "logs")
+DATA_DIR = os.path.join(PROJECT_ROOT_DIR, "data")
 
 # ROBOSUITE_EXT
 RS_CONTROL_CONFIGS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "control", "control_configs")
@@ -17,7 +18,8 @@ RS_WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "demonstratio
 RS_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "models")
 
 # ROBOMIMIC_EXT
-...
+RM_DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "robomimic_output")
+RM_EXP_CONFIG_DIR = os.path.join(PROJECT_ROOT_DIR, "robomimic_ext", "exp_configs")
 
 
 def path_completion(path: str, root: str = None) -> str:
