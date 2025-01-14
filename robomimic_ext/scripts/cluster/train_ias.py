@@ -37,7 +37,6 @@ from robomimic_ext.scripts.train import train
 def prep_training_run_cluster(
     config_path: str = None,
     seed: int = -1,
-    results_dir: str = 'FROM_CONFIG',
     time_str: str = None,
     debug: bool = False
 ):
@@ -146,11 +145,9 @@ if __name__ == "__main__":
 
     args_dict = {
         "config_path": args.config,
-        "debug": args.debug,
-        "time_float": time.time(),
-
         "seed": 0,
-        "results_dir": 'FROM_CONFIG',
+        "time_float": time.time(),
+        "debug": args.debug,
     }
 
     run_experiment(experiment, args_dict)
