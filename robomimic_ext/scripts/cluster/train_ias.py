@@ -87,6 +87,7 @@ def experiment(
     config_path: str,
     debug: bool = False,
     time_float: float = time.time(),
+
     #######################################
     # MANDATORY
     seed: int = 0,
@@ -98,16 +99,9 @@ def experiment(
     **kwargs
 ):
     time_str = datetime.datetime.fromtimestamp(time_float).strftime('%Y%m%d%H%M%S')
-
     config, device = prep_training_run_cluster(config_path, seed, time_str, debug)
 
-    print(config.train.output_dir)
-    # catch error during training and print it
-    res_str = "Finished run successfully!"
-    try:
-        train(config, device=device)
-    except Exception as e:
-        res_str = "Run failed with error:\n{}\n\n{}".format(e, traceback.format_exc())
-    print(res_str)
+    train(config, device=device)
+
 
 
