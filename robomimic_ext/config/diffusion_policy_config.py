@@ -57,7 +57,7 @@ class DiffusionPolicyConfig(BaseConfig):
         ## Transformer parameters
         self.algo.transformer.enabled = True
         self.algo.transformer.num_layers = 8 # number of transformer layers
-        self.algo.transformer.num_heads = 6 # number of attention heads
+        self.algo.transformer.num_heads = 4 # number of attention heads
         self.algo.transformer.embed_dim = 256 # dimension of the input embedding
         self.algo.transformer.p_drop_embed = 0.0 # dropout probability for the input embedding
         self.algo.transformer.p_drop_attn = 0.3 # dropout probability for the attention layers

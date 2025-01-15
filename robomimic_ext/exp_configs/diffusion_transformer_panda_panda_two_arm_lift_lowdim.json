@@ -1,7 +1,7 @@
 {
-    "algo_name": "bc",
+    "algo_name": "diffusion_policy",
     "experiment": {
-        "name": "BC_Panda_Panda_TwoArmLift_LowDim",
+        "name": "Diffusion_UNet_Panda_Panda_TwoArmLift_LowDim",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -47,7 +47,7 @@
         "hdf5_validation_filter_key": null,
         "seq_length": 1,
         "pad_seq_length": true,
-        "frame_stack": 1,
+        "frame_stack": 4,
         "pad_frame_stack": true,
         "dataset_keys": [
             "actions"
@@ -61,11 +61,11 @@
     "algo": {
         "optim_params": {
             "policy": {
-                "optimizer_type": "adam",
+                "optimizer_type": "adamw",
                 "learning_rate": {
                     "initial": 0.0001,
                     "decay_factor": 0.1,
-                    "epoch_schedule": [],
+                    "epoch_schedule": [100],
                     "scheduler_type": "multistep"
                 },
                 "regularization": {
@@ -73,30 +73,23 @@
                 }
             }
         },
-        "loss": {
-            "l2_weight": 1.0,
-            "l1_weight": 0.0,
-            "cos_weight": 0.0
+        "horizon": {
+            "observation_horizon": 4,
+            "action_horizon": 1,
+            "prediction_horizon": 4
         },
-        "actor_layer_dims": [
-            1024,
-            1024,
-            1024
-        ],
-        "gaussian": {
-            "enabled": false
-        },
-        "gmm": {
-            "enabled": false
-        },
-        "vae": {
-            "enabled": false
-        },
-        "rnn": {
+        "unet": {
             "enabled": false
         },
         "transformer": {
-            "enabled": false
+            "enabled": true,
+            "num_layers": 8,
+            "num_heads": 4,
+            "embed_dim": 256,
+            "p_drop_embed": 0.0,
+            "p_drop_attn": 0.3,
+            "causal_attn": true,
+            "n_cond_layers": 0
         }
     },
     "observation": {
@@ -128,30 +121,7 @@
                 "core_kwargs": {},
                 "obs_randomizer_class": null,
                 "obs_randomizer_kwargs": {}
-            },
-            "rgb": {
-                "core_class": "VisualCore",
-                "core_kwargs": {},
-                "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {}
-            },
-            "depth": {
-                "core_class": "VisualCore",
-                "core_kwargs": {},
-                "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {}
-            },
-            "scan": {
-                "core_class": "ScanCore",
-                "core_kwargs": {},
-                "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {}
             }
         }
-    },
-    "meta": {
-        "hp_base_config_file": null,
-        "hp_keys": [],
-        "hp_values": []
     }
 }

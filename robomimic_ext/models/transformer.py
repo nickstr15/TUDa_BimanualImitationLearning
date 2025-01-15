@@ -21,7 +21,7 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
         cond_dim: int,
         cond_horizon: int,
         num_layers: int = 8,
-        num_heads: int = 6,
+        num_heads: int = 4,
         embed_dim: int = 256,
         p_drop_embed: float = 0.0,
         p_drop_attn: float = 0.3,
@@ -30,7 +30,7 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
     ):
         super().__init__()
 
-        T_cond = cond_horizon # input has size (B, T_cond, input_dim)
+        T_cond = cond_horizon # cond in forward pass has size (B, T_cond, input_dim)
         T_cond_total = 1 + T_cond # time is the first token in cond
 
         # input embedding

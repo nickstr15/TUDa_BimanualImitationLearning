@@ -1,7 +1,7 @@
 {
     "algo_name": "diffusion_policy",
     "experiment": {
-        "name": "Diffusion_Panda_Panda_TwoArmLift_LowDim",
+        "name": "Diffusion_UNet_Panda_Panda_TwoArmLift_LowDim",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -90,15 +90,7 @@
             "n_groups": 8
         },
         "transformer": {
-            "enabled": false,
-            "num_layers": 8,
-            "num_heads": 4,
-            "embed_dim": 256,
-            "p_drop_embed": 0.0,
-            "p_drop_attn": 0.3,
-            "causal_attn": true,
-            "time_as_condition": true,
-            "n_cond_layers": 0
+            "enabled": false
         }
     },
     "observation": {
