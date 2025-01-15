@@ -6,8 +6,13 @@ Master Thesis about Bimanual Imitation Learning (Intelligent Autonomous Systems 
 # Installation & Setup
 Run
 ```bash
+setup.sh --install-mujoco
+```
+to set up the environment. If you already have a working mujoco installation, running
+```bash
 setup.sh
 ```
+is sufficient.
 
 If you later want to use [`wandb`](https://wandb.ai/site/) for logging, please set the `WANDB_API_KEY` variable
 to your API key by running the following command.
