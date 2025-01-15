@@ -20,6 +20,7 @@ import robomimic.utils.obs_utils as obs_utils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
+from robomimic_ext.models.transformer import ConditionalTransformerForDiffusion
 from robomimic_ext.models.u_net import ConditionalUnet1DForDiffusion
 from robomimic_ext.utils.net_utils import replace_bn_with_gn
 
@@ -467,7 +468,7 @@ class DiffusionUnetPolicy(DiffusionPolicyBase):
         :param encoded_obs_dim: dimension of the encoded observation (@self.obs_encoder)
         :return: noise prediction network (nn.Module)
         """
-        net = ConditionalUnet1DForDiffusion(
+        unet = ConditionalUnet1DForDiffusion(
             input_dim=self.ac_dim,
             cond_dim=encoded_obs_dim*self.algo_config.horizon.observation_horizon,
             diffusion_step_embed_dim=self.algo_config.unet.diffusion_step_embed_dim,
@@ -475,7 +476,7 @@ class DiffusionUnetPolicy(DiffusionPolicyBase):
             kernel_size=self.algo_config.unet.kernel_size,
             n_groups=self.algo_config.unet.n_groups
         )
-        return net
+        return unet
 
 class DiffusionTransformerPolicy(DiffusionPolicyBase):
     """
@@ -487,13 +488,26 @@ class DiffusionTransformerPolicy(DiffusionPolicyBase):
         :param encoded_obs_dim: dimension of the encoded observation (@self.obs_encoder)
         :return: noise prediction network (nn.Module)
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        transformer = ConditionalTransformerForDiffusion(
+            input_dim=self.ac_dim,
+            cond_dim=encoded_obs_dim,
+            cond_horizon=self.algo_config.horizon.observation_horizon,
+            num_layers=self.algo_config.transformer.num_layers,
+            num_heads=self.algo_config.transformer.num_heads,
+            embed_dim=self.algo_config.transformer.embed_dim,
+            p_drop_embed=self.algo_config.transformer.p_drop_embed,
+            p_drop_attn=self.algo_config.transformer.p_drop_attn,
+            causal_attn=self.algo_config.transformer.causal_attn,
+            n_cond_layers=self.algo_config.transformer.n_cond_layers
+        )
+        return transformer
 
     def _create_optimizers(self):
         """
         Creates optimizers using @self.optim_params and places them into @self.optimizers.
         """
-        # TODO
+        super()._create_optimizers()
+        # TODO replace 'super()._create_optimizers()' with the following code:
         ## 1) LowDim
         ## 1a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
         ## 1b) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197

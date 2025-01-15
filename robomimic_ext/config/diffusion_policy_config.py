@@ -13,7 +13,7 @@ class DiffusionPolicyConfig(BaseConfig):
 
         # optimization parameters
         ## optimizer parameters
-        self.algo.optim_params.policy.optimizer_type = "adamw"
+        self.algo.optim_params.policy.optimizer_type = "adamw" # optimizer type ("adam", "adamw")
         self.algo.optim_params.policy.regularization.L2 = 0.00  # L2 regularization strength
 
         ## learning rate parameters
@@ -50,25 +50,24 @@ class DiffusionPolicyConfig(BaseConfig):
         # Basic Network architecture
         ## UNet parameters
         self.algo.unet.enabled = False
-        self.algo.unet.diffusion_step_embed_dim = 256
-        self.algo.unet.down_dims = [256, 512, 1024]
-        self.algo.unet.kernel_size = 5
-        self.algo.unet.n_groups = 8
+        self.algo.unet.diffusion_step_embed_dim = 256 # dimension of the diffusion step embedding
+        self.algo.unet.down_dims = [256, 512, 1024] # list of dimensions for the down-sampling layers
+        self.algo.unet.kernel_size = 5 # kernel size for the convolutional layers
+        self.algo.unet.n_groups = 8 # number of groups for the group normalization layers
         ## Transformer parameters
         self.algo.transformer.enabled = True
-        self.algo.transformer.num_layers = 8
-        self.algo.transformer.num_heads = 4
-        self.algo.transformer.embed_dim = 256
-        self.algo.transformer.p_drop_embed = 0.0
-        self.algo.transformer.p_drop_attn = 0.3
-        self.algo.transformer.causal_attn = True
-        self.algo.transformer.time_as_condition = True # if false, use BERT like encoder only arch, time as input
+        self.algo.transformer.num_layers = 8 # number of transformer layers
+        self.algo.transformer.num_heads = 6 # number of attention heads
+        self.algo.transformer.embed_dim = 256 # dimension of the input embedding
+        self.algo.transformer.p_drop_embed = 0.0 # dropout probability for the input embedding
+        self.algo.transformer.p_drop_attn = 0.3 # dropout probability for the attention layers
+        self.algo.transformer.causal_attn = True # if true, use causal attention
         self.algo.transformer.n_cond_layers = 0 # >0: use transformer encoder for cond, otherwise use MLP
 
 
         # EMA
-        self.algo.ema.enabled = True
-        self.algo.ema.update_after_step = 0
+        self.algo.ema.enabled = True # enable EMA
+        self.algo.ema.update_after_step = 0 # start updating EMA after this step, NOT USED AT THE MOMENT
         self.algo.ema.inv_gamma = 1.0
         self.algo.ema.power = 0.75
         self.algo.ema.min_value = 0.0
@@ -76,19 +75,19 @@ class DiffusionPolicyConfig(BaseConfig):
 
         # Noise Scheduler
         ## DDPM
-        self.algo.ddpm.enabled = True
-        self.algo.ddpm.num_train_timesteps = 100
-        self.algo.ddpm.num_inference_timesteps = 100
+        self.algo.ddpm.enabled = True # enable DDPM
+        self.algo.ddpm.num_train_timesteps = 100 # number of training timesteps
+        self.algo.ddpm.num_inference_timesteps = 100 # number of inference timesteps, should equal num_train_timesteps
         self.algo.ddpm.beta_start = 0.0001
         self.algo.ddpm.beta_end = 0.02
         self.algo.ddpm.beta_schedule = 'squaredcos_cap_v2'
         self.algo.ddpm.variance_type = 'fixed_small'
         self.algo.ddpm.clip_sample = True
         self.algo.ddpm.prediction_type = 'epsilon'
-        ## DDIM
-        self.algo.ddim.enabled = False
-        self.algo.ddim.num_train_timesteps = 100
-        self.algo.ddim.num_inference_timesteps = 100
+        ## DDIM (faster inference with less inference timesteps)
+        self.algo.ddim.enabled = False # enable DDIM
+        self.algo.ddim.num_train_timesteps = 100 # number of training timesteps
+        self.algo.ddim.num_inference_timesteps = 100 # can be smaller than num_train_timesteps for faster inference
         self.algo.ddim.beta_start = 0.0001
         self.algo.ddim.beta_end = 0.02
         self.algo.ddim.beta_schedule = 'squaredcos_cap_v2'
