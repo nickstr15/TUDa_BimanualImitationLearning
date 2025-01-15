@@ -1,6 +1,6 @@
 setuptools~=75.1.0
 robosuite~=1.5.0
-torch~=2.5.1
+torch~=2.5.1+cpu
 numpy~=1.26.4
 robomimic~=0.3.0
 h5py~=3.12.1
@@ -10,3 +10,5 @@ tqdm~=4.67.1
 opencv-python~=4.10.0.84
 pynput~=1.7.7
 pyyaml~=6.0.2
+diffusers~=0.32.1
+packaging~=24.2

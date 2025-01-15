@@ -12,15 +12,40 @@ class DiffusionPolicyConfig(BaseConfig):
         """
 
         # optimization parameters # TODO
+        ## optimizer parameters
         self.algo.optim_params.policy.optimizer_type = "adamw"
-        self.algo.optim_params.policy.weight_decay = 1e-3  # weight decay
-        self.algo.optim_params.policy.betas = (0.9, 0.95)  # betas for Adam
+        self.algo.optim_params.policy.regularization.L2 = 0.00  # L2 regularization strength
+
+        ## learning rate parameters
         self.algo.optim_params.policy.learning_rate.initial = 1e-4  # policy learning rate
         self.algo.optim_params.policy.learning_rate.decay_factor = 0.1  # factor to decay LR by (if epoch schedule non-empty)
         self.algo.optim_params.policy.learning_rate.epoch_schedule = []  # epochs where LR decay occurs
         self.algo.optim_params.policy.learning_rate.scheduler_type = "multistep"  # learning rate scheduler ("multistep", "linear", etc)
 
-        # general diffusion parameters # TODO (horizon, obs_as_cond, pred_action_steps_only, etc)
+        # horizon parameters
+        self.algo.horizon.observation_horizon = 4 # must be smaller or equal to @self.train.frame_stack
+        self.algo.horizon.action_horizon = 1      # length of action sequence applied to the environment, must be smaller or equal to @self.algo.horizon.observation_horizon
+        self.algo.horizon.prediction_horizon = 4  # must be smaller or equal to @self.train.frame_stack
+        ## example
+        # T = frame_stack = 20
+        # To = observation_horizon = 2
+        # Ta = action_horizon = 8
+        # Tp = prediction_horizon = 16
+        # during training the model receives observation action pairs (o_1, a_1), (o_2, a_2), ..., (o_20, a_20):
+        # | o_1 | o_2 | ... | o_20 |
+        # | a_1 | a_2 | ... | a_20 |
+        # the only first To=2 observations are used to predict the next Tp=16 actions/noises.
+        # during inference the model receives the last To=2 observations and uses them to predict Tp=16 actions:
+        # | o_1 | o_2 | => model => | a_1' | a_2' | ... | a_16' |
+        # from these actions the Ta=8 actions starting from the last observation are used to interact with the environment:
+        # | o_1 | o_2  |
+        # | --- | a_2' | a_3' | ... | a_9' |
+        # inference loop
+        # observation sequence 1: | o_1 | o_2  |                                                    # observe with horizon To=2
+        # action sequence 1:            | a_2' | a_3' | ... | a_9' |                                # execute Ta=8 actions
+        # observation sequence 2:                                  | o_10  | o_11  |                # observe with horizon To=2
+        # action sequence 2:                                               | a_11' | ... | a_18' |  # execute Ta=8 actions
+        # ...
 
         # Basic Network architecture
         ## UNet parameters

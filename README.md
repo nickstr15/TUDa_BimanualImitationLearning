@@ -18,7 +18,7 @@ to your API key by running the following command.
 -----
 
 # Structure & Usage
-- **robosuite_ext** extends the the [robosuite](https://robosuite.ai/) library with new bimanual environments and
+- **robosuite_ext** extends the [robosuite](https://robosuite.ai/) library with new bimanual environments and
 additionally adds *flipped* versions for each environment.
 - **robomimic_ext** extends the [robomimic](https://robomimic.github.io/) library.
 
