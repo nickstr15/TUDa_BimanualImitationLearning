@@ -20,8 +20,13 @@ Example usage (from the root directory of the project):
 $> python -m robomimic_ext.scripts.cluster.launch_train_ias -c config.json
 
 with config.json being a config file in the robomimic_ext/exp_configs directory.
+
+
+EXPERIENCES FOR MEMORY ALLOCATION (DEFAULT_MEMORY_SINGLE_JOB):
+- BC: 3000
+- BC_TRANSFORMER: 4000
+- DIFFUSION_UNET: 4000
 """
-import os
 import time
 import argparse
 
