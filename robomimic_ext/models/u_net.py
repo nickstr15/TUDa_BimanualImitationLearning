@@ -114,7 +114,7 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
         self,
         sample: torch.Tensor,
         timestep: Union[torch.Tensor, float, int],
-        cond: Union[torch.Tensor, None] = None
+        cond: torch.Tensor
     ) -> torch.Tensor:
         """
         Forward pass for the Conditional UNet.
@@ -142,9 +142,8 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
         timesteps = timesteps.expand(sample.shape[0])
 
         # build total condition
-        total_cond = self.diffusion_step_encoder(timesteps)
-        if cond is not None:
-            total_cond = torch.cat((total_cond, cond), dim=-1)
+        time_cond = self.diffusion_step_encoder(timesteps)
+        total_cond = torch.cat((time_cond, cond), dim=-1)
 
         x = sample
 

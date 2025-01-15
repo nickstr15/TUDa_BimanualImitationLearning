@@ -62,7 +62,7 @@ class ModuleForDiffusion(ABC, nn.Module):
         self,
         sample: torch.Tensor,
         timestep: Union[torch.Tensor, float, int],
-        cond: Union[torch.Tensor, None] = None
+        cond: torch.Tensor
     ) -> torch.Tensor:
         """
         Forward pass.
