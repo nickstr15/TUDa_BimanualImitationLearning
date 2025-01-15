@@ -154,7 +154,7 @@ class TwoArmHandoverWaypointExpert(TwoArmWaypointExpertBase):
         #apply additional angle adjustment
         target_quat = quat_multiply(adjustment_quat, target_quat)
 
-        # FIXME: invert z offset for correct behavior
+        # invert z offset for correct behavior
         offset[2] *= -1
 
         # Calculate target position with offset

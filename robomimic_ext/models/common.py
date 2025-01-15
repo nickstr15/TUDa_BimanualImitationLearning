@@ -1,4 +1,6 @@
 import math
+from abc import ABC, abstractmethod
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -42,3 +44,36 @@ class SinusoidalPosEmb(nn.Module):
         # Concatenate sine and cosine embeddings
         emb = torch.cat([emb.sin(), emb.cos()], dim=-1)
         return emb
+
+class ModuleForDiffusion(ABC, nn.Module):
+    """
+    Module for diffusion models.
+
+    This class defines the base module structure for diffusion models.
+    """
+    def __init__(self):
+        """
+        Initialize the diffusion module.
+        """
+        super().__init__()
+
+    @abstractmethod
+    def forward(
+        self,
+        sample: torch.Tensor,
+        timestep: Union[torch.Tensor, float, int],
+        cond: Union[torch.Tensor, None] = None
+    ) -> torch.Tensor:
+        """
+        Forward pass.
+
+        Args:
+            sample (torch.Tensor): Input tensor of shape (B, T, input_dim), where B is the batch size,
+                                   T is the sequence length, and input_dim is the feature dimension.
+            timestep (Union[torch.Tensor, float, int]): Diffusion step. Can be a scalar or a tensor of shape (B,).
+            cond (torch.Tensor, optional): Conditioning vector of shape (B, cond_dim). Default is None.
+
+        Returns:
+            torch.Tensor: Output tensor of shape (B, T, input_dim).
+        """
+        raise NotImplementedError("Must implement forward method in derived class.")

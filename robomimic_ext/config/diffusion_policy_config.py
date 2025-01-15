@@ -11,7 +11,7 @@ class DiffusionPolicyConfig(BaseConfig):
         training and test-time behavior should be populated here.
         """
 
-        # optimization parameters # TODO
+        # optimization parameters
         ## optimizer parameters
         self.algo.optim_params.policy.optimizer_type = "adamw"
         self.algo.optim_params.policy.regularization.L2 = 0.00  # L2 regularization strength
@@ -63,7 +63,7 @@ class DiffusionPolicyConfig(BaseConfig):
         self.algo.transformer.p_drop_attn = 0.3
         self.algo.transformer.causal_attn = True
         self.algo.transformer.time_as_condition = True # if false, use BERT like encoder only arch, time as input
-        self.algo.n_cond_layers = 0 # >0: use transformer encoder for cond, otherwise use MLP
+        self.algo.transformer.n_cond_layers = 0 # >0: use transformer encoder for cond, otherwise use MLP
 
 
         # EMA

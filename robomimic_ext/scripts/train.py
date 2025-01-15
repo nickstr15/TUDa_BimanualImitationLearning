@@ -45,7 +45,10 @@ from robomimic.utils.log_utils import flush_warnings
 from robomimic_ext.utils.log_utils import DataLogger, PrintLogger
 from utils.paths import path_completion, RM_EXP_CONFIG_DIR, RM_DEFAULT_OUTPUT_DIR, DATA_DIR, DATASET_DIR
 
+#! do not remove this imports, needed to get registered components
 import robosuite_ext.environments
+import robomimic_ext.algo
+import robomimic_ext.config
 
 def train(config: BaseConfig, device: torch.device):
     """
@@ -392,8 +395,8 @@ def prep_training_run(args: Namespace):
         config.experiment.rollout.n = 2
         config.experiment.rollout.horizon = 10
 
-        # send output to a temporary directory
-        config.train.output_dir = path_completion("tmp/robomimic_output", DATA_DIR)
+        # send output to a debug directory
+        config.train.output_dir = path_completion("robomimic_output/debug", DATA_DIR)
 
     # lock config to prevent further modifications and ensure missing keys raise errors
     config.lock()

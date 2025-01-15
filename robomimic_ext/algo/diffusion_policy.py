@@ -84,8 +84,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             device=device
         )
 
-        self.obs_queue = None
-        self.action_queue = None
+        self.action_queue = None # queue of actions to execute
 
     def _create_networks(self) -> None:
         """
@@ -236,7 +235,8 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             }
             for k in self.obs_shapes:
                 # first two dimensions should be [B, T] for inputs
-                assert inputs['obs'][k].ndim - 2 == len(self.obs_shapes[k])
+                assert inputs['obs'][k].ndim - 2 == len(self.obs_shapes[k]), \
+                f"Expected {len(self.obs_shapes[k])} dimensions for {k}, got {inputs['obs'][k].ndim - 2}"
             obs_features = tensor_utils.time_distributed(
                 inputs,
                 self.nets['policy']['obs_encoder'],
@@ -253,9 +253,10 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
                 size=(B,),
                 device=self.device
             ).long()
+
             # noinspection PyTypeChecker
             noisy_actions = self.noise_scheduler.add_noise(
-                original_samples=action_dim,
+                original_samples=actions,
                 noise=noise,
                 timesteps=timesteps,
             )
@@ -323,12 +324,9 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         """
         Reset algo state to prepare for environment rollouts.
         """
-        # setup inference queues
-        To = self.algo_config.horizon.observation_horizon
+        # setup inference queue
         Ta = self.algo_config.horizon.action_horizon
-        obs_queue = deque(maxlen=To)
         action_queue = deque(maxlen=Ta)
-        self.obs_queue = obs_queue
         self.action_queue = action_queue
 
     def get_action(self, obs_dict, goal_dict=None):
@@ -344,23 +342,24 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         """
         To = self.algo_config.horizon.observation_horizon
 
-        # add observation to the queue
-        self.obs_queue.append(obs_dict)
-        # make sure we have at least To observations in obs_queue
-        # if not enough, repeat
-        if len(self.obs_queue) < To:
-            self.obs_queue.extend([obs_dict] * (To - len(self.obs_queue)))
+        # ! obs_queue is already handled by stack_frame
+        # # add observation to the queue
+        # self.obs_queue.append(obs_dict)
+        # # make sure we have at least To observations in obs_queue
+        # # if not enough, repeat
+        # if len(self.obs_queue) < To:
+        #     self.obs_queue.extend([obs_dict] * (To - len(self.obs_queue)))
 
 
         if len(self.action_queue) == 0:
             # no actions left, run inference
             # turn obs_queue into dict of tensors (concat at T dim)
-            obs_dict_list = tensor_utils.list_of_flat_dict_to_dict_of_list(list(self.obs_queue))
-            obs_dict_tensor = dict((k, torch.cat(v, dim=0).unsqueeze(0)) for k,v in obs_dict_list.items())
+            # obs_dict_list = tensor_utils.list_of_flat_dict_to_dict_of_list(list(self.obs_queue))
+            # obs_dict_tensor = dict((k, torch.cat(v, dim=0).unsqueeze(0)) for k,v in obs_dict_list.items())
 
             # run inference and put actions into the queue
             # output_shape (1,Ta,action_dim)
-            action_sequence = self._get_action_trajectory(obs_dict=obs_dict_tensor)
+            action_sequence = self._get_action_trajectory(obs_dict=obs_dict, goal_dict=goal_dict)
             self.action_queue.extend(action_sequence[0])
 
         # has action, execute from left to right => output has shape action_dim
@@ -388,9 +387,13 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             'obs': obs_dict,
             'goal': goal_dict
         }
+
+
         for k in self.obs_shapes:
             # first two dimensions should be [B, T] for inputs
-            assert inputs['obs'][k].ndim - 2 == len(self.obs_shapes[k])
+            assert inputs['obs'][k].ndim - 2 == len(self.obs_shapes[k]), \
+                f"Expected {len(self.obs_shapes[k])} dimensions for {k}, got {inputs['obs'][k].ndim - 2}"
+
         obs_features = tensor_utils.time_distributed(
             inputs,
             nets['policy']['obs_encoder'],
@@ -413,7 +416,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             noise_pred = nets['policy']['noise_pred_net'](
                 sample=action,
                 timestep=k,
-                global_cond=obs_cond
+                cond=obs_cond
             )
 
             # inverse diffusion step (remove noise)

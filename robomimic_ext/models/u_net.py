@@ -2,10 +2,12 @@ from typing import Union
 
 import torch
 import torch.nn as nn
+from typing_extensions import override
 
-from robomimic_ext.models.common import SinusoidalPosEmb
+from robomimic_ext.models.common import SinusoidalPosEmb, ModuleForDiffusion
 
-class ConditionalUnet1DForDiffusion(nn.Module):
+
+class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
     """
     A 1D Conditional UNet architecture designed for diffusion models.
     The network is structured with down-sampling,mid-level, and up-sampling modules,
@@ -107,6 +109,7 @@ class ConditionalUnet1DForDiffusion(nn.Module):
         self.down_modules = down_modules
         self.final_conv = final_conv
 
+    @override
     def forward(
         self,
         sample: torch.Tensor,
