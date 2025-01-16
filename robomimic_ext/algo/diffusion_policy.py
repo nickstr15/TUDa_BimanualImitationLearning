@@ -37,9 +37,9 @@ def algo_config_to_class(algo_config):
         algo_class: subclass of Algo
         algo_kwargs (dict): dictionary of additional kwargs to pass to algorithm
     """
-    if algo_config.unet.enabled:
+    if ("unet" in algo_config) and algo_config.unet.enabled:
         return DiffusionUnetPolicy, {}
-    elif algo_config.transformer.enabled:
+    elif ("transformer" in algo_config) and algo_config.transformer.enabled:
         return DiffusionTransformerPolicy, {}
     else:
         raise RuntimeError()
@@ -84,6 +84,20 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             ac_dim=ac_dim,
             device=device
         )
+
+        # check the horizon parameters
+        ## example
+        ## To = 3, Tp = 3, Ta = 2
+        ## => minimum stack_frame = To + Tp - 1 = 5 and check that Ta <= Tp
+        ## |-|-|-|-|-| <= this is the minimal stack_frame
+        ## |o|o|o|
+        ##     |p|p|p|
+        ##     |a|a|
+        To = self.algo_config.horizon.observation_horizon
+        Tp = self.algo_config.horizon.prediction_horizon
+        Ta = self.algo_config.horizon.action_horizon
+        assert To + Tp - 1 <= self.global_config.train.frame_stack, f"Frame stack must be at least {To + Tp - 1}"
+        assert Ta <= Tp, f"Action horizon must be less than or equal to prediction horizon"
 
         self.action_queue = None # queue of actions to execute
 
@@ -197,10 +211,17 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         Tp = self.algo_config.horizon.prediction_horizon
 
         input_batch = dict()
-        input_batch["obs"] = {k: batch["obs"][k][:, :To, :] for k in batch["obs"]}
+        input_batch["obs"] = {k: batch["obs"][k][:, :To, :] for k in batch["obs"]} # only use first To observations
         input_batch["goal_obs"] = batch.get("goal_obs", None)  # goals may not be present
-        input_batch["actions"] = batch["actions"][:, :Tp, :]
 
+        # the policy should learn to predict the next Tp actions
+        # starting in the current time_step
+        start = To - 1
+        end = start + Tp
+        input_batch["actions"] = batch["actions"][:, start:end, :]
+
+        # we move to device first before float conversion because image observation modalities will be uint8 -
+        # this minimizes the amount of data transferred to GPU
         return tensor_utils.to_device(tensor_utils.to_float(input_batch), self.device)
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -341,30 +362,22 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         Returns:
             action (torch.Tensor): action tensor [1, action_dim]
         """
-        To = self.algo_config.horizon.observation_horizon
-
-        # ! obs_queue is already handled by stack_frame
-        # # add observation to the queue
-        # self.obs_queue.append(obs_dict)
-        # # make sure we have at least To observations in obs_queue
-        # # if not enough, repeat
-        # if len(self.obs_queue) < To:
-        #     self.obs_queue.extend([obs_dict] * (To - len(self.obs_queue)))
-
-
         if len(self.action_queue) == 0:
-            # no actions left, run inference
-            # turn obs_queue into dict of tensors (concat at T dim)
-            # obs_dict_list = tensor_utils.list_of_flat_dict_to_dict_of_list(list(self.obs_queue))
-            # obs_dict_tensor = dict((k, torch.cat(v, dim=0).unsqueeze(0)) for k,v in obs_dict_list.items())
+            # no actions left, run inference and put actions into the queue
 
-            # run inference and put actions into the queue
+            To = self.algo_config.horizon.observation_horizon
+            # incoming observation sequence has entries of shape (1, stack_frame, obs_dim)
+            # => the last 'stack_frame' observations are included
+            # => we only need the last 'To' observations
+            # => the last observation is the current observation
+            obs_dict = {k: obs_dict[k][:, -To:, :] for k in obs_dict}  # only use last 'To' observations
+
             # output_shape (1,Ta,action_dim)
             action_sequence = self._get_action_trajectory(obs_dict=obs_dict, goal_dict=goal_dict)
-            self.action_queue.extend(action_sequence[0])
+            self.action_queue.extend(action_sequence[0]) # add action sequence of length Ta to the queue
 
         # has action, execute from left to right => output has shape action_dim
-        action = self.action_queue.popleft()
+        action = self.action_queue.popleft() # one dimensional action tensor
 
         # => add batch dimension => shape (1, action_dim)
         action = action.unsqueeze(0)
@@ -372,7 +385,6 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
 
     def _get_action_trajectory(self, obs_dict, goal_dict=None):
         assert not self.nets.training
-        To = self.algo_config.horizon.observation_horizon
         Ta = self.algo_config.horizon.action_horizon
         Tp = self.algo_config.horizon.prediction_horizon
         action_dim = self.ac_dim
@@ -389,7 +401,6 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             'goal': goal_dict
         }
 
-
         for k in self.obs_shapes:
             # first two dimensions should be [B, T] for inputs
             assert inputs['obs'][k].ndim - 2 == len(self.obs_shapes[k]), \
@@ -400,13 +411,13 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             nets['policy']['obs_encoder'],
             inputs_as_kwargs=True
         )
-        assert obs_features.ndim == 3  # [B, T, D]
+        assert obs_features.ndim == 3  # (batch, horizon, dim)
         B = obs_features.shape[0]
         # flatten obs
         obs_cond = obs_features.flatten(start_dim=1)
 
         # initialize action from Gaussian noise
-        action = torch.randn(
+        prediction = torch.randn(
             (B, Tp, action_dim), device=self.device)
 
         # init scheduler
@@ -415,22 +426,22 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         for k in self.noise_scheduler.timesteps:
             # predict noise
             noise_pred = nets['policy']['noise_pred_net'](
-                sample=action,
+                sample=prediction,
                 timestep=k,
                 cond=obs_cond
             )
 
             # inverse diffusion step (remove noise)
-            action = self.noise_scheduler.step(
+            prediction = self.noise_scheduler.step(
                 model_output=noise_pred,
                 timestep=k,
-                sample=action
+                sample=prediction
             ).prev_sample
 
-            # process action using Ta
-            start = To - 1
-            end = start + Ta
-            return action[:, start:end]
+            # only return the next 'Ta' action predictions
+            action_seq = prediction[:, :Ta, :] # shape (B, Ta, action_dim)
+            return action_seq
+
 
     def serialize(self):
         """

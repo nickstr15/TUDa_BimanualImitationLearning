@@ -22,30 +22,40 @@ class DiffusionPolicyConfig(BaseConfig):
         self.algo.optim_params.policy.learning_rate.epoch_schedule = []  # epochs where LR decay occurs
         self.algo.optim_params.policy.learning_rate.scheduler_type = "multistep"  # learning rate scheduler ("multistep", "linear", etc)
 
-        # horizon parameters
-        self.algo.horizon.observation_horizon = 4 # must be smaller or equal to @self.train.frame_stack
-        self.algo.horizon.action_horizon = 1      # length of action sequence applied to the environment, must be smaller or equal to @self.algo.horizon.observation_horizon
-        self.algo.horizon.prediction_horizon = 4  # must be smaller or equal to @self.train.frame_stack
+        # horizon parameters (To, Tp, Ta)
+        ## length of observation sequence used to predict the next action sequence, short: To
+        self.algo.horizon.observation_horizon = 2
+        ## length of action sequence predicted by the model based on the observation sequence, short Tp
+        self.algo.horizon.prediction_horizon = 4
+        ## length of action sequence used to interact with the environment, short Ta
+        ## must be less than or equal to prediction horizon
+        ## these number of actions are executed before new action sequence of length Tp is predicted
+        self.algo.horizon.action_horizon = 1
         ## example
-        # T = frame_stack = 20
-        # To = observation_horizon = 2
-        # Ta = action_horizon = 8
-        # Tp = prediction_horizon = 16
-        # during training the model receives observation action pairs (o_1, a_1), (o_2, a_2), ..., (o_20, a_20):
-        # | o_1 | o_2 | ... | o_20 |
-        # | a_1 | a_2 | ... | a_20 |
-        # the only first To=2 observations are used to predict the next Tp=16 actions/noises.
-        # during inference the model receives the last To=2 observations and uses them to predict Tp=16 actions:
-        # | o_1 | o_2 | => model => | a_1' | a_2' | ... | a_16' |
-        # from these actions the Ta=8 actions starting from the last observation are used to interact with the environment:
-        # | o_1 | o_2  |
-        # | --- | a_2' | a_3' | ... | a_9' |
-        # inference loop
-        # observation sequence 1: | o_1 | o_2  |                                                    # observe with horizon To=2
-        # action sequence 1:            | a_2' | a_3' | ... | a_9' |                                # execute Ta=8 actions
-        # observation sequence 2:                                  | o_10  | o_11  |                # observe with horizon To=2
-        # action sequence 2:                                               | a_11' | ... | a_18' |  # execute Ta=8 actions
-        # ...
+        ### To = 3, Tp = 3, Ta = 2
+        ### (o) |o|o|o|        # incoming observation sequence
+        ### (p)     |p|p|p|    # policy predicts this action sequence
+        ### (a)     |a|a|      # these actions are executed before new action sequence is predicted
+        ### ! the data of (o) and (p) is needed during training, so the frame_stack (@self.train.frame_stack) parameter
+        ###   must be larger or equal to frame_stack >= (To + Tp - 1)
+        ### (a) is only used during inference, the actions in (a)
+        ###   correspond to the respective predictions in (p)
+        ### example with three prediction steps
+        ### (t) |1|2|3|4|5|6|7|8|...
+        ### ----|-------------------------------------------
+        ### (o) |o|o|o|
+        ### (p)     |p|p|p|
+        ### (a)     |a|a|
+        ### ------------|-----------------------------------
+        ### (o)         |o|o|o|
+        ### (p)             |p|p|p|
+        ### (a)             |a|a|
+        ### --------------------|---------------------------
+        ### (o)                 |o|o|o|
+        ### (p)                     |p|p|p|
+        ### (a)                     |a|a|
+        ### ----------------------------|-------------------
+
 
         # Basic Network architecture
         ## UNet parameters
