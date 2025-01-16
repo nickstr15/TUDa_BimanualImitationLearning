@@ -54,11 +54,13 @@ def lr_scheduler_from_optim_params(scheduler_params, optimizer):
     Returns:
         lr_scheduler (torch.optim.lr_scheduler or None): learning rate scheduler
     """
-    lr_scheduler_type = scheduler_params["learning_rate"].get("scheduler_type", "multistep")
-    epoch_schedule = scheduler_params["learning_rate"]["epoch_schedule"]
+    scheduler_type = scheduler_params.get("type", "cosine")
+    warmup_steps = scheduler_params.get("warmup_steps", 0)
+    epoch_schedule = scheduler_params.get("epoch_schedule", [])
+    decay_factor = scheduler_params.get("decay_factor", 0.1)
 
     # linear scheduler
-    if lr_scheduler_type == "linear":
+    if scheduler_type == "linear":
         if len(epoch_schedule) == 0:
             return None
 
@@ -67,26 +69,26 @@ def lr_scheduler_from_optim_params(scheduler_params, optimizer):
         return optim.lr_scheduler.LinearLR(
             optimizer,
             start_factor=1.0,
-            end_factor=scheduler_params["learning_rate"]["decay_factor"],
+            end_factor=decay_factor,
             total_iters=end_epoch,
         )
 
     # multistep scheduler
-    elif lr_scheduler_type == "multistep":
+    elif scheduler_type == "multistep":
         if len(epoch_schedule) <= 0:
             return None
 
         return optim.lr_scheduler.MultiStepLR(
             optimizer=optimizer,
             milestones=epoch_schedule,
-            gamma=scheduler_params["learning_rate"]["decay_factor"],
+            gamma=decay_factor,
         )
 
     # cosine scheduler
-    elif lr_scheduler_type == "cosine":
+    elif scheduler_type == "cosine":
         raise NotImplementedError("Cosine scheduler not implemented yet.")
         # TODO: which Cosine scheduler to use? What additional params? How to handle warmup?
 
 
     else:
-        raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
+        raise ValueError("Invalid LR scheduler scheduler_type: {}".format(scheduler_type))

@@ -466,14 +466,6 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         """
         Creates optimizers using @self.optim_params and places them into @self.optimizers.
         """
-        # TODO replace 'super()._create_optimizers()' with the following code:
-        ## 1) LowDim
-        ## 1a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
-        ## 1b) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
-        ## 1c) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/policy/diffusion_transformer_lowdim_policy.py#L169
-        ## 2) With Images:
-        ## 2a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/policy/diffusion_transformer_hybrid_image_policy.py#L296
-
         self.optimizers = dict()
         self.lr_schedulers = dict()
 
