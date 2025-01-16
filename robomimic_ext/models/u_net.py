@@ -15,7 +15,8 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
 
     Args:
         input_dim (int): Dimensionality of the input features.
-        cond_dim (int): Dimensionality of the global conditioning vector, typically obs_horizon * obs_dim.
+        cond_dim (int): Dimensionality of the condition
+        cond_horizon (int): Length of the conditioning sequence.
         diffusion_step_embed_dim (int, optional): Dimensionality of the diffusion step embedding. Default is 256.
         down_dims (list of int, optional): Channel sizes for each level of the UNet during down-sampling. The length of
                                            this list determines the number of levels. Default is [256, 512, 1024].
@@ -28,20 +29,13 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
         mid_modules (nn.ModuleList): Contains mid-level processing modules with conditional residual blocks.
         up_modules (nn.ModuleList): Contains modules for up-sampling, including conditional residual blocks.
         final_conv (nn.Sequential): Final convolutional layers for reconstructing the output.
-
-    Example:
-        model = ConditionalUnet1DForDiffusion(input_dim=64, cond_dim=128)
-        sample = torch.randn(16, 128, 64)  # Batch size 16, sequence length 128, input_dim 64
-        timestep = 50  # Diffusion step
-        cond = torch.randn(16, 128)  # Conditioning vector
-        output = model(sample, timestep, cond)
-        print(output.shape)  # Output shape: (16, 128, 64)
     """
 
     def __init__(
         self,
         input_dim: int,
         cond_dim: int,
+        cond_horizon: int,
         diffusion_step_embed_dim: int = 256,
         down_dims: tuple[int] = (256, 512, 1024),
         kernel_size: int = 5,
@@ -58,17 +52,18 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
             nn.Mish(),
             nn.Linear(dsed * 4, dsed),
         )
-        cond_dim = dsed + cond_dim
+        
+        total_cond_dim = dsed + cond_dim * cond_horizon
 
         in_out = list(zip(all_dims[:-1], all_dims[1:]))
         mid_dim = all_dims[-1]
         self.mid_modules = nn.ModuleList([
             ConditionalResidualBlock1D(
-                mid_dim, mid_dim, cond_dim=cond_dim,
+                mid_dim, mid_dim, cond_dim=total_cond_dim,
                 kernel_size=kernel_size, n_groups=n_groups
             ),
             ConditionalResidualBlock1D(
-                mid_dim, mid_dim, cond_dim=cond_dim,
+                mid_dim, mid_dim, cond_dim=total_cond_dim,
                 kernel_size=kernel_size, n_groups=n_groups
             ),
         ])
@@ -78,10 +73,10 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
             is_last = ind >= (len(in_out) - 1)
             down_modules.append(nn.ModuleList([
                 ConditionalResidualBlock1D(
-                    dim_in, dim_out, cond_dim=cond_dim,
+                    dim_in, dim_out, cond_dim=total_cond_dim,
                     kernel_size=kernel_size, n_groups=n_groups),
                 ConditionalResidualBlock1D(
-                    dim_out, dim_out, cond_dim=cond_dim,
+                    dim_out, dim_out, cond_dim=total_cond_dim,
                     kernel_size=kernel_size, n_groups=n_groups),
                 Downsample1d(dim_out) if not is_last else nn.Identity()
             ]))
@@ -91,10 +86,10 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
             is_last = ind >= (len(in_out) - 1)
             up_modules.append(nn.ModuleList([
                 ConditionalResidualBlock1D(
-                    dim_out * 2, dim_in, cond_dim=cond_dim,
+                    dim_out * 2, dim_in, cond_dim=total_cond_dim,
                     kernel_size=kernel_size, n_groups=n_groups),
                 ConditionalResidualBlock1D(
-                    dim_in, dim_in, cond_dim=cond_dim,
+                    dim_in, dim_in, cond_dim=total_cond_dim,
                     kernel_size=kernel_size, n_groups=n_groups),
                 Upsample1d(dim_in) if not is_last else nn.Identity()
             ]))
@@ -123,7 +118,7 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
             sample (torch.Tensor): Input tensor of shape (B, T, input_dim), where B is the batch size,
                                    T is the sequence length, and input_dim is the feature dimension.
             timestep (Union[torch.Tensor, float, int]): Diffusion step. Can be a scalar or a tensor of shape (B,).
-            cond (torch.Tensor, optional): Conditioning vector of shape (B, cond_dim). Default is None.
+            cond (torch.Tensor): Conditioning vector of shape (B, Tc, cond_dim).
 
         Returns:
             torch.Tensor: Output tensor of shape (B, T, input_dim).
@@ -142,8 +137,11 @@ class ConditionalUnet1DForDiffusion(ModuleForDiffusion):
         timesteps = timesteps.expand(sample.shape[0])
 
         # build total condition
-        time_cond = self.diffusion_step_encoder(timesteps)
-        total_cond = torch.cat((time_cond, cond), dim=-1)
+        time_cond = self.diffusion_step_encoder(timesteps) # (B, diffusion_step_embed_dim)
+        # flatten condition 
+        cond = cond.flatten(start_dim=1) #(B, Tc, cond_dim) -> (B,Tc*cond_dim)
+        # concatenate time and condition
+        total_cond = torch.cat((time_cond, cond), dim=-1) # (B, total_cond_dim)
 
         x = sample
 

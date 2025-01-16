@@ -264,9 +264,8 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
                 self.nets['policy']['obs_encoder'],
                 inputs_as_kwargs=True
             )
-            assert obs_features.ndim == 3  # [B, T, D]
-            obs_cond = obs_features.flatten(start_dim=1)
-
+            assert obs_features.ndim == 3  # [B, To, obs_feature_dim]
+            
             # forward diffusion process
             noise = torch.randn(actions.shape, device=self.device)
             timesteps = torch.randint(
@@ -285,7 +284,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
 
             # predict the noise residual
             pred = self.nets['policy']['noise_pred_net'](
-                noisy_actions, timesteps, obs_cond
+                noisy_actions, timesteps, obs_features
             )
 
             if self.prediction_type == 'epsilon':
@@ -413,8 +412,6 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         )
         assert obs_features.ndim == 3  # (batch, horizon, dim)
         B = obs_features.shape[0]
-        # flatten obs
-        obs_cond = obs_features.flatten(start_dim=1)
 
         # initialize action from Gaussian noise
         prediction = torch.randn(
@@ -428,7 +425,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             noise_pred = nets['policy']['noise_pred_net'](
                 sample=prediction,
                 timestep=k,
-                cond=obs_cond
+                cond=obs_features
             )
 
             # inverse diffusion step (remove noise)
@@ -481,7 +478,8 @@ class DiffusionUnetPolicy(DiffusionPolicyBase):
         """
         unet = ConditionalUnet1DForDiffusion(
             input_dim=self.ac_dim,
-            cond_dim=encoded_obs_dim*self.algo_config.horizon.observation_horizon,
+            cond_dim=encoded_obs_dim,
+            cond_horizon=self.algo_config.horizon.observation_horizon,
             diffusion_step_embed_dim=self.algo_config.unet.diffusion_step_embed_dim,
             down_dims=self.algo_config.unet.down_dims,
             kernel_size=self.algo_config.unet.kernel_size,

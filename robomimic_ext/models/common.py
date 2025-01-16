@@ -18,12 +18,13 @@ class SinusoidalPosEmb(nn.Module):
         """
         Initialize the sinusoidal positional embedding.
 
-        :param dim: Total dimension of the positional embedding.
+        :param dim: Total dimension of the positional embedding, must be even.
         """
         super().__init__()
 
-        self._half_dim = dim // 2
+        assert dim % 2 == 0, "Dimension of positional embedding must be even."
 
+        self._half_dim = dim // 2
         # Precompute frequencies
         scale = math.log(1000) / (self._half_dim - 1)
         self._frequencies = torch.exp(-scale * torch.arange(self._half_dim))
