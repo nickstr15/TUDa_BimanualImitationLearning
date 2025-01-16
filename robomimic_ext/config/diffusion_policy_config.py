@@ -15,18 +15,18 @@ class DiffusionPolicyConfig(BaseConfig):
         self.algo.optim_params.noise_pred_net.optimizer.optimizer_type = "adamw"      # optimizer type ("adam", "adamw")
         self.algo.optim_params.noise_pred_net.optimizer.weight_decay = 1e-3           # L2 regularization strength
         self.algo.optim_params.noise_pred_net.optimizer.learning_rate.initial = 1e-4  # policy learning rate
-        self.algo.optim.params.noise_pred_net.optimizer.betas = (0.9, 0.95)           # betas for Adam(W) optimizer
-        self.algo.optim.params.noise_pred_net.lr_scheduler.type = "cosine"            # learning rate scheduler ("multistep", "linear", "cosine")
-        self.algo.optim.params.noise_pred_net.lr_scheduler.warmup_steps = 1000        # number of warmup steps for learning rate
+        self.algo.optim.params.noise_pred_net.optimizer.betas = [0.9, 0.95]           # betas for Adam(W) optimizer
+        self.algo.optim.params.noise_pred_net.lr_scheduler.scheduler_type = "cosine"  # learning rate scheduler ("multistep", "linear", "cosine")
+        self.algo.optim.params.noise_pred_net.lr_scheduler.warmup_epochs = 5          # number of warmup steps for learning rate
         self.algo.optim_params.noise_pred_net.lr_scheduler.decay_factor = 0.1         # factor to decay LR by (if epoch schedule non-empty)
         self.algo.optim_params.noise_pred_net.lr_scheduler.epoch_schedule = []        # epochs where LR decay occurs (for multistep and linear scheduler)
         ## observation encoder
         self.algo.optim_params.obs_encoder.optimizer.optimizer_type = "adamw"      # optimizer type ("adam", "adamw")
         self.algo.optim_params.obs_encoder.optimizer.weight_decay = 1e-6           # L2 regularization strength
         self.algo.optim_params.obs_encoder.optimizer.learning_rate.initial = 1e-4  # policy learning rate
-        self.algo.optim.params.obs_encoder.optimizer.betas = (0.9, 0.95)           # betas for Adam(W) optimizer
-        self.algo.optim.params.obs_encoder.lr_scheduler.type = "cosine"            # learning rate scheduler ("multistep", "linear", "cosine")
-        self.algo.optim.params.obs_encoder.lr_scheduler.warmup_steps = 1000        # number of warmup steps for learning rate
+        self.algo.optim.params.obs_encoder.optimizer.betas = [0.9, 0.95]           # betas for Adam(W) optimizer
+        self.algo.optim.params.obs_encoder.lr_scheduler.scheduler_type = "cosine"  # learning rate scheduler ("multistep", "linear", "cosine")
+        self.algo.optim.params.obs_encoder.lr_scheduler.warmup_epochs = 5          # number of warmup steps for learning rate
         self.algo.optim_params.obs_encoder.lr_scheduler.decay_factor = 0.1         # factor to decay LR by (if epoch schedule non-empty)
         self.algo.optim_params.obs_encoder.lr_scheduler.epoch_schedule = []        # epochs where LR decay occurs (for multistep and linear scheduler)
 

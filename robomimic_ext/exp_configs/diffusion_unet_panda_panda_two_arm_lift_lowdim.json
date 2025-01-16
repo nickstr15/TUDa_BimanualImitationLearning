@@ -66,12 +66,11 @@
                     "weight_decay": 0.001,
                     "learning_rate": {
                         "initial": 0.0001
-                    },
-                    "betas": [0.9, 0.95]
+                    }
                 },
                 "lr_scheduler": {
-                    "type": "cosine",
-                    "warmup_steps": 1000,
+                    "scheduler_type": "cosine",
+                    "warmup_epochs": 5,
                     "decay_factor": 0.1,
                     "epoch_schedule": []
                 }
@@ -82,12 +81,11 @@
                     "weight_decay": 0.000001,
                     "learning_rate": {
                         "initial": 0.0001
-                    },
-                    "betas": [0.9, 0.95]
+                    }
                 },
                 "lr_scheduler": {
-                    "type": "cosine",
-                    "warmup_steps": 1000,
+                    "scheduler_type": "cosine",
+                    "warmup_epochs": 5,
                     "decay_factor": 0.1,
                     "epoch_schedule": []
                 }

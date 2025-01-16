@@ -500,14 +500,17 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         )
 
         # create lr_schedulers
+        num_epochs = self.global_config.train.num_epochs
         self.lr_schedulers["policy/obs_encoder"] = torch_utils_ext.lr_scheduler_from_optim_params(
             scheduler_params=self.algo_config.optim_params.obs_encoder.lr_scheduler,
-            optimizer=self.optimizers["policy/obs_encoder"]
+            optimizer=self.optimizers["policy/obs_encoder"],
+            num_epochs=num_epochs
         )
 
         self.lr_schedulers["policy/noise_pred_net"] = torch_utils_ext.lr_scheduler_from_optim_params(
             scheduler_params=self.algo_config.optim_params.noise_pred_net.lr_scheduler,
-            optimizer=self.optimizers["policy/noise_pred_net"]
+            optimizer=self.optimizers["policy/noise_pred_net"],
+            num_epochs=num_epochs
         )
 
 #####################################################################################
