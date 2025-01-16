@@ -306,9 +306,15 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
 
             if not validate:
                 # gradient step
-                policy_grad_norms = torch_utils.backprop_for_loss(
-                    net=self.nets,
-                    optim=self.optimizers["policy"],
+                policy_grad_norms_obs_encoder = torch_utils.backprop_for_loss(
+                    net=self.nets['policy']['obs_encoder'],
+                    optim=self.optimizers["policy/obs_encoder"],
+                    loss=loss,
+                    retain_graph=True
+                )
+                policy_grad_norms_noise_pred_net = torch_utils.backprop_for_loss(
+                    net=self.nets['policy']['noise_pred_net'],
+                    optim=self.optimizers["policy/noise_pred_net"],
                     loss=loss,
                 )
 
@@ -317,7 +323,9 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
                     self.ema_model.step(self.nets.parameters())
 
                 step_info = {
-                    'policy_grad_norms': policy_grad_norms
+                    'policy_grad_norms': policy_grad_norms_obs_encoder + policy_grad_norms_noise_pred_net,
+                    'policy_grad_norms_obs_encoder': policy_grad_norms_obs_encoder,
+                    'policy_grad_norms_noise_pred_net': policy_grad_norms_noise_pred_net
                 }
                 info.update(step_info)
 
@@ -478,37 +486,37 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         # create optim_groups
         optim_groups_obs_encoder = [{
             "params": obs_encoder_net.parameters(),
-            "weight_decay": self.algo_config.optim_params.obs_encoder.optimizer.weight_decay
+            "weight_decay": self.algo_config.optim_params.obs_encoder.weight_decay
         }]
         optim_groups_noise_pred_net = noise_pred_net.get_optim_groups(
-            weight_decay=self.algo_config.optim_params.noise_pred_net.optimizer.weight_decay
+            weight_decay=self.algo_config.optim_params.noise_pred_net.weight_decay
         )
         if optim_groups_noise_pred_net is None: # all parameters in one group
             optim_groups_noise_pred_net = [{
                 "params": noise_pred_net.parameters(),
-                "weight_decay": self.algo_config.optim_params.noise_pred_net.optimizer.weight_decay
+                "weight_decay": self.algo_config.optim_params.noise_pred_net.weight_decay
             }]
 
         # create optimizers
         self.optimizers["policy/obs_encoder"] = torch_utils_ext.optimizer_from_optim_params(
-            optim_params=self.algo_config.optim_params.obs_encoder.optimizer,
+            optim_params=self.algo_config.optim_params.obs_encoder,
             thetas=optim_groups_obs_encoder
         )
         self.optimizers["policy/noise_pred_net"] = torch_utils_ext.optimizer_from_optim_params(
-            optim_params=self.algo_config.optim_params.noise_pred_net.optimizer,
+            optim_params=self.algo_config.optim_params.noise_pred_net,
             thetas=optim_groups_noise_pred_net
         )
 
         # create lr_schedulers
         num_epochs = self.global_config.train.num_epochs
         self.lr_schedulers["policy/obs_encoder"] = torch_utils_ext.lr_scheduler_from_optim_params(
-            scheduler_params=self.algo_config.optim_params.obs_encoder.lr_scheduler,
+            scheduler_params=self.algo_config.optim_params.obs_encoder,
             optimizer=self.optimizers["policy/obs_encoder"],
             num_epochs=num_epochs
         )
 
         self.lr_schedulers["policy/noise_pred_net"] = torch_utils_ext.lr_scheduler_from_optim_params(
-            scheduler_params=self.algo_config.optim_params.noise_pred_net.lr_scheduler,
+            scheduler_params=self.algo_config.optim_params.noise_pred_net,
             optimizer=self.optimizers["policy/noise_pred_net"],
             num_epochs=num_epochs
         )

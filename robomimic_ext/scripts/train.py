@@ -366,6 +366,7 @@ def prep_training_run(args: Namespace):
         # update config with external json - this will throw errors if
         # the external config has keys not present in the base algo config
         with config.values_unlocked():
+            print("CONFIG", config.algo.optim_params)
             config.update(ext_cfg)
             config.train.data = path_completion(config.train.data, DATASET_DIR)
 

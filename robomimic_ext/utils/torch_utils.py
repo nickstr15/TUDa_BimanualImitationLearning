@@ -114,8 +114,6 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_epochs, end_epoch,
     Returns:
         SequentialLR: A PyTorch SequentialLR scheduler.
     """
-    assert num_warmup_epochs < end_epoch, \
-        "num_warmup_epochs must be less than end_epoch"
     # Warmup scheduler
     warmup_scheduler = optim.lr_scheduler.LinearLR(
         optimizer, start_factor=warmup_start_factor, total_iters=num_warmup_epochs
@@ -150,8 +148,6 @@ def get_multistep_schedule_with_warmup(optimizer, num_warmup_epochs, milestones,
     Returns:
         SequentialLR: A PyTorch SequentialLR scheduler.
     """
-    assert len(milestones) > 0, "Milestones must be non-empty"
-
     # Warmup scheduler
     warmup_scheduler = optim.lr_scheduler.LinearLR(
         optimizer, start_factor=warmup_start_factor, total_iters=num_warmup_epochs
@@ -199,9 +195,6 @@ def get_cosine_schedule_with_warmup(
     Return:
         `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
     """
-    assert num_warmup_episodes < num_epochs, \
-        "num_warmup_episodes must be less than num_epochs"
-
     def lr_lambda(current_episode):
         if current_episode < num_warmup_episodes:
             return max(float(current_episode) / float(max(1, num_warmup_episodes)), warmup_start_factor)

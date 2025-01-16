@@ -288,11 +288,9 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
                     # weights of blacklist modules will NOT be weight decayed
                     no_decay.add(fpn)
 
-        # special case the position embedding parameter in the root GPT module as not decayed
-        no_decay.add("pos_emb")
-        no_decay.add("_dummy_variable")
-        if self.cond_pos_emb is not None:
-            no_decay.add("cond_pos_emb")
+        # special case the position embedding parameters in the root GPT module as not decayed
+        no_decay.add("input_pos_embed")
+        no_decay.add("time_cond_pos_embed")
 
         # validate that we considered every parameter
         param_dict = {pn: p for pn, p in self.named_parameters()}
