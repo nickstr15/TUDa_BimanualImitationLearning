@@ -78,3 +78,15 @@ class ModuleForDiffusion(ABC, nn.Module):
             torch.Tensor: Output tensor of shape (B, Ti, input_dim).
         """
         raise NotImplementedError("Must implement forward method in derived class.")
+
+    def get_optim_groups(self, weight_decay: float = 1e-3) -> Union[list[dict], None]:
+        """
+        Returns the parameter groups for the optimizer and sets the weight decay strength for regularization.
+
+        Args:
+            weight_decay (float): Weight decay strength for regularization.
+
+        Returns:
+            list[dict]: List of parameter groups for the optimizer, or None if no special parameter groups are needed.
+        """
+        return None # no special parameter groups for this model

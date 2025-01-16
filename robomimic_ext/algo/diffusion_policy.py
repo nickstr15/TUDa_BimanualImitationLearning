@@ -17,6 +17,7 @@ import robomimic.models.obs_nets as obs_nets
 import robomimic.utils.tensor_utils as tensor_utils
 import robomimic.utils.torch_utils as torch_utils
 import robomimic.utils.obs_utils as obs_utils
+import robomimic_ext.utils.torch_utils as torch_utils_ext
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
@@ -461,6 +462,62 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         if model_dict.get("ema", None) is not None:
             self.ema_model.load_state_dict(model_dict["ema"])
 
+    def _create_optimizers(self):
+        """
+        Creates optimizers using @self.optim_params and places them into @self.optimizers.
+        """
+        # TODO replace 'super()._create_optimizers()' with the following code:
+        ## 1) LowDim
+        ## 1a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
+        ## 1b) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
+        ## 1c) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/policy/diffusion_transformer_lowdim_policy.py#L169
+        ## 2) With Images:
+        ## 2a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/policy/diffusion_transformer_hybrid_image_policy.py#L296
+
+        self.optimizers = dict()
+        self.lr_schedulers = dict()
+
+        # self.nets contains the 'policy' module
+        # the policy itself consists of the 'obs_encoder' and 'noise_pred_net' modules
+        # => need to set the optimizers and lr_schedulers of both modules
+        obs_encoder_net = self.nets['policy']['obs_encoder']
+        noise_pred_net = self.nets['policy']['noise_pred_net']
+
+        # create optim_groups
+        optim_groups_obs_encoder = [{
+            "params": obs_encoder_net.parameters(),
+            "weight_decay": self.algo_config.optim_params.obs_encoder.optimizer.weight_decay
+        }]
+        optim_groups_noise_pred_net = noise_pred_net.get_optim_groups(
+            weight_decay=self.algo_config.optim_params.noise_pred_net.optimizer.weight_decay
+        )
+        if optim_groups_noise_pred_net is None: # all parameters in one group
+            optim_groups_noise_pred_net = [{
+                "params": noise_pred_net.parameters(),
+                "weight_decay": self.algo_config.optim_params.noise_pred_net.optimizer.weight_decay
+            }]
+
+        # create optimizers
+        self.optimizers["policy/obs_encoder"] = torch_utils_ext.optimizer_from_optim_params(
+            optim_params=self.algo_config.optim_params.obs_encoder.optimizer,
+            thetas=optim_groups_obs_encoder
+        )
+        self.optimizers["policy/noise_pred_net"] = torch_utils_ext.optimizer_from_optim_params(
+            optim_params=self.algo_config.optim_params.noise_pred_net.optimizer,
+            thetas=optim_groups_noise_pred_net
+        )
+
+        # create lr_schedulers
+        self.lr_schedulers["policy/obs_encoder"] = torch_utils_ext.lr_scheduler_from_optim_params(
+            scheduler_params=self.algo_config.optim_params.obs_encoder.lr_scheduler,
+            optimizer=self.optimizers["policy/obs_encoder"]
+        )
+
+        self.lr_schedulers["policy/noise_pred_net"] = torch_utils_ext.lr_scheduler_from_optim_params(
+            scheduler_params=self.algo_config.optim_params.noise_pred_net.lr_scheduler,
+            optimizer=self.optimizers["policy/noise_pred_net"]
+        )
+
 #####################################################################################
 # Explicit implementations of the DiffusionPolicyUNet class
 #####################################################################################
@@ -512,15 +569,4 @@ class DiffusionTransformerPolicy(DiffusionPolicyBase):
         )
         return transformer
 
-    def _create_optimizers(self):
-        """
-        Creates optimizers using @self.optim_params and places them into @self.optimizers.
-        """
-        super()._create_optimizers()
-        # TODO replace 'super()._create_optimizers()' with the following code:
-        ## 1) LowDim
-        ## 1a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
-        ## 1b) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/model/diffusion/transformer_for_diffusion.py#L197
-        ## 1c) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/policy/diffusion_transformer_lowdim_policy.py#L169
-        ## 2) With Images:
-        ## 2a) https://github.com/real-stanford/diffusion_policy/blob/5ba07ac6661db573af695b419a7947ecb704690f/diffusion_policy/policy/diffusion_transformer_hybrid_image_policy.py#L296
+
