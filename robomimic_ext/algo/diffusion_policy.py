@@ -410,7 +410,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             nets['policy']['obs_encoder'],
             inputs_as_kwargs=True
         )
-        assert obs_features.ndim == 3  # (batch, horizon, dim)
+        assert obs_features.ndim == 3  # (B, To, obs_feature_dim)
         B = obs_features.shape[0]
 
         # initialize action from Gaussian noise
@@ -499,6 +499,7 @@ class DiffusionTransformerPolicy(DiffusionPolicyBase):
         """
         transformer = ConditionalTransformerForDiffusion(
             input_dim=self.ac_dim,
+            input_horizon=self.algo_config.horizon.prediction_horizon,
             cond_dim=encoded_obs_dim,
             cond_horizon=self.algo_config.horizon.observation_horizon,
             num_layers=self.algo_config.transformer.num_layers,

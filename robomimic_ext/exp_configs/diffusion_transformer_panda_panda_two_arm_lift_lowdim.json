@@ -1,7 +1,7 @@
 {
     "algo_name": "diffusion_policy",
     "experiment": {
-        "name": "Diffusion_UNet_Panda_Panda_TwoArmLift_LowDim",
+        "name": "Diffusion_Transformer_Panda_Panda_TwoArmLift_LowDim",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -38,7 +38,7 @@
     "train": {
         "data": "Panda_Panda_TwoArmLift_lowdim.hdf5",
         "output_dir": "DEFAULT",
-        "num_data_workers": 0,
+        "num_data_workers": 4,
         "hdf5_cache_mode": "all",
         "hdf5_use_swmr": true,
         "hdf5_load_next_obs": false,
@@ -47,7 +47,7 @@
         "hdf5_validation_filter_key": null,
         "seq_length": 1,
         "pad_seq_length": true,
-        "frame_stack": 4,
+        "frame_stack": 5,
         "pad_frame_stack": true,
         "dataset_keys": [
             "actions"
@@ -74,9 +74,9 @@
             }
         },
         "horizon": {
-            "observation_horizon": 4,
-            "action_horizon": 1,
-            "prediction_horizon": 4
+            "observation_horizon": 2,
+            "prediction_horizon": 4,
+            "action_horizon": 1
         },
         "unet": {
             "enabled": false

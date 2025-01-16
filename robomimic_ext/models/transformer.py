@@ -5,19 +5,51 @@ from torch import nn
 
 from robomimic_ext.models.common import ModuleForDiffusion, SinusoidalPosEmb
 
-
 class ConditionalTransformerForDiffusion(ModuleForDiffusion):
     """
-    Conditional Transformer for diffusion models.
+    Conditional Transformer for Diffusion Models.
 
-    Adapted version of https://github.com/real-stanford/diffusion_policy/blob/main/diffusion_policy/model/diffusion/transformer_for_diffusion.py
-    with two fixed parameters (in the original implementation):
-    - time_as_cond = True
-    - obs_as_cond = True
+    This implementation is adapted from the original source:
+    https://github.com/real-stanford/diffusion_policy/blob/main/diffusion_policy/model/diffusion/transformer_for_diffusion.py
+
+    It incorporates two fixed parameters:
+        - time_as_cond = True
+        - obs_as_cond = True
+
+    Args:
+        input_dim (int): Dimensionality of the input data.
+        input_horizon (int): Horizon length for input data.
+        cond_dim (int): Dimensionality of the conditional data.
+        cond_horizon (int): Horizon length for conditional data.
+        num_layers (int, optional): Number of decoder layers in the Transformer. Default is 8.
+        num_heads (int, optional): Number of attention heads. Default is 4.
+        embed_dim (int, optional): Dimension of embeddings. Default is 256.
+        p_drop_embed (float, optional): Dropout probability for embeddings. Default is 0.0.
+        p_drop_attn (float, optional): Dropout probability for attention layers. Default is 0.3.
+        causal_attn (bool, optional): Whether to use causal attention masks. Default is True.
+        n_cond_layers (int, optional): Number of encoder layers for conditional embeddings. Default is 0.
+
+    Attributes:
+        input_embed (nn.Linear): Embedding layer for input data.
+        input_pos_embed (nn.Parameter): Positional embedding for inputs.
+        drop_embed (nn.Dropout): Dropout layer for input embeddings.
+        time_embed (nn.Linear): Embedding layer for time conditioning.
+        cond_embed (nn.Linear): Embedding layer for conditional data.
+        time_cond_pos_embed (nn.Parameter): Positional embedding for time-cond data.
+        encoder (nn.Module): Encoder for processing conditional data.
+        decoder (nn.TransformerDecoder): Decoder for generating outputs based on encoded conditions.
+        mask (torch.Tensor): Causal attention mask for the decoder.
+        memory_mask (torch.Tensor): Mask for the decoder's attention over the encoder's outputs.
+        ln_f (nn.LayerNorm): Layer normalization applied to decoder outputs.
+        head (nn.Linear): Final output projection layer.
+        Ti (int): Horizon length for input data.
+        Tc (int): Horizon length for conditional data.
+        Ttc (int): Total number of tokens in the conditional input (time + condition = 1 + Tc).
     """
     def __init__(
         self,
         input_dim: int,
+        input_horizon: int,
         cond_dim: int,
         cond_horizon: int,
         num_layers: int = 8,
@@ -30,21 +62,21 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
     ):
         super().__init__()
 
-        T_cond = cond_horizon # cond in forward pass has size (B, T_cond, input_dim)
-        T_cond_total = 1 + T_cond # time is the first token in cond
+        Ti = input_horizon  # Horizon length for input data
+        Tc = cond_horizon  # Horizon length for conditional data
+        Ttc = 1 + Tc  # Total tokens in the conditional input (time + condition)
 
-        # input embedding
+        # Input embedding layers
         self.input_embed = nn.Linear(input_dim, embed_dim)
-        self.pos_emb = nn.Parameter(torch.zeros(1, T_cond, embed_dim))
+        self.input_pos_embed = nn.Parameter(torch.zeros(1, Ti, embed_dim))
         self.drop_embed = nn.Dropout(p_drop_embed)
 
-        # conditional embedding
-        self.time_embed = nn.Linear(input_dim, embed_dim)
+        # Conditional embedding layers
+        self.time_embed = SinusoidalPosEmb(embed_dim)
         self.cond_embed = nn.Linear(cond_dim, embed_dim)
+        self.time_cond_pos_embed = nn.Parameter(torch.zeros(1, Ttc, embed_dim))
 
-        self.cond_pos_embed = nn.Parameter(torch.zeros(1, T_cond_total, embed_dim))
-
-        # encoder
+        # Encoder setup
         if n_cond_layers > 0:
             encoder_layer = nn.TransformerEncoderLayer(
                 d_model=embed_dim,
@@ -66,7 +98,7 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
                 nn.Linear(4 * embed_dim, embed_dim)
             )
 
-        # decoder
+        # Decoder setup
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
@@ -74,25 +106,26 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
             dropout=p_drop_attn,
             activation='gelu',
             batch_first=True,
-            norm_first=True  # important for stability
+            norm_first=True # important for stability
         )
         self.decoder = nn.TransformerDecoder(
             decoder_layer=decoder_layer,
             num_layers=num_layers
         )
 
-        # attention mask
+        # Attention masks
         if causal_attn:
             # causal mask to ensure that attention is only applied to the left in the input sequence
             # torch.nn.Transformer uses additive mask as opposed to multiplicative mask in minGPT
             # therefore, the upper triangle should be -inf and others (including diag) should be 0.
-            mask = (torch.triu(torch.ones(T_cond, T_cond)) == 1).transpose(0, 1)
+            mask = (torch.triu(torch.ones(Ti, Ti)) == 1).transpose(0, 1)
             mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
             self.register_buffer("mask", mask)
 
+            # Memory mask
             t, s = torch.meshgrid(
-                torch.arange(T_cond),
-                torch.arange(T_cond_total),
+                torch.arange(Ti),
+                torch.arange(Ttc),
                 indexing='ij'
             )
             mask = t >= (s - 1)  # add one dimension since time is the first token in cond
@@ -102,28 +135,37 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
             self.mask = None
             self.memory_mask = None
 
-        # decoder head
+        # Decoder head
         self.ln_f = nn.LayerNorm(embed_dim)
         self.head = nn.Linear(embed_dim, input_dim)
 
-        # constants
-        self.T_cond = T_cond
-        self.T_cond_total = T_cond_total
+        # Constants
+        self.Ti = Ti
+        self.Tc = Tc
+        self.Ttc = Ttc
 
-        # init
+        # Initialize weights
         self.apply(self._init_weights)
 
     @staticmethod
     def _init_weights(module):
-        ignore_types = (nn.Dropout,
-                        SinusoidalPosEmb,
-                        nn.TransformerEncoderLayer,
-                        nn.TransformerDecoderLayer,
-                        nn.TransformerEncoder,
-                        nn.TransformerDecoder,
-                        nn.ModuleList,
-                        nn.Mish,
-                        nn.Sequential)
+        """
+        Initialize weights for the model.
+
+        Args:
+            module (nn.Module): Module whose weights need to be initialized.
+        """
+        ignore_types = (
+            nn.Dropout,
+            SinusoidalPosEmb,
+            nn.TransformerEncoderLayer,
+            nn.TransformerDecoderLayer,
+            nn.TransformerEncoder,
+            nn.TransformerDecoder,
+            nn.ModuleList,
+            nn.Mish,
+            nn.Sequential
+        )
         if isinstance(module, (nn.Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
             if isinstance(module, nn.Linear) and module.bias is not None:
@@ -145,14 +187,12 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
         elif isinstance(module, ConditionalTransformerForDiffusion):
-            torch.nn.init.normal_(module.pos_emb, mean=0.0, std=0.02)
-            if module.cond_obs_emb is not None:
-                torch.nn.init.normal_(module.cond_pos_emb, mean=0.0, std=0.02)
+            torch.nn.init.normal_(module.input_pos_embed, mean=0.0, std=0.02)
+            torch.nn.init.normal_(module.time_cond_pos_embed, mean=0.0, std=0.02)
         elif isinstance(module, ignore_types):
-            # no param
             pass
         else:
-            raise RuntimeError("Unaccounted module {}".format(module))
+            raise RuntimeError(f"Unaccounted module {module}")
 
     def forward(
         self,
@@ -161,65 +201,59 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
         cond: torch.Tensor
     ) -> torch.Tensor:
         """
-        Forward pass for the Conditional UNet.
+        Forward pass for the Conditional Transformer.
 
         Args:
-            sample (torch.Tensor): Input tensor of shape (B, T, input_dim), where B is the batch size,
-                                   T is the sequence length, and input_dim is the feature dimension.
+            sample (torch.Tensor): Input tensor of shape (B, Ti, input_dim), where B is the batch size,
+                                   Ti is the sequence length, and input_dim is the feature dimension.
             timestep (Union[torch.Tensor, float, int]): Diffusion step. Can be a scalar or a tensor of shape (B,).
-            cond (torch.Tensor, optional): Conditioning vector of shape (B, cond_dim). Default is None.
+            cond (torch.Tensor): Conditioning vector of shape (B, Tc, cond_dim).
 
         Returns:
-            torch.Tensor: Output tensor of shape (B, T, input_dim).
+            torch.Tensor: Output tensor of shape (B, Ti, input_dim).
         """
-        # process timestep input
+        # Process timestep input
         timesteps = timestep
         if not torch.is_tensor(timesteps):
-            # this requires sync between CPU and GPU. So try to pass timesteps as tensors if you can
             timesteps = torch.tensor([timesteps], dtype=torch.long, device=sample.device)
         elif torch.is_tensor(timesteps) and len(timesteps.shape) == 0:
             timesteps = timesteps[None].to(sample.device)
-        # broadcast to batch dimension
-        timesteps = timesteps.expand(sample.shape[0])
+        # broadcast to batch dimension if necessary
+        timesteps = timesteps.expand(sample.shape[0]) #(B,)
 
-        # time embedding
-        time_emb = self.time_emb(timesteps).unsqueeze(1) # (B,1,emb_dim)
+        # Embeddings
+        ## Time embedding
+        time_emb = self.time_embed(timesteps).unsqueeze(1) # (B,) -> (B,1,emb_dim)
 
-        # input embedding
-        input_emb = self.input_emb(sample)
+        ## Condition embedding
+        cond_emb = self.cond_embed(cond)  # (B,Tc,cond_dim) -> (B,Tc,emb_dim)
+        total_cond_emb = torch.cat([time_emb, cond_emb], dim=1) # (B,1,emd_dim)+(B,Tc,emb_dim) -> (B,Ttc,emb_dim)
+        assert total_cond_emb.shape[1] == self.Ttc
 
-        # encoder
-        ## condition embedding
-        cond_emb = self.cond_embed(cond) # (B, T_cond, emb_dim)
-        total_cond_emb = torch.cat([time_emb, cond_emb], dim=1) # (B, T_cond_total, emb_dim)
-        assert total_cond_emb.shape[1] == self.T_cond_total
+        ## Input embedding
+        input_emb = self.input_embed(sample) # (B,T,input_dim) -> (B,T,emb_dim)
 
-        ## position embedding
-        position_emb = self.cond_pos_embed[
-            :, :self.T_cond_total, :
-        ] # each position maps to a (learnable) vector
+        # Encoder
+        total_cond_emb = total_cond_emb + self.time_cond_pos_embed # (B,Ttc,emb_dim)
+        x = self.drop_embed(total_cond_emb) # (B,Ttc,emb_dim)
+        x_enc = self.encoder(x)
 
-        x = self.drop(total_cond_emb + position_emb)
-        x_enc = self.encoder(x) # (B, T_cond_total, emb_dim)
-
-        # decoder
-        ti = input_emb.shape[1]
-        position_emb = self.pos_emb[
-           :, :ti, :
-        ] # each position maps to a (learnable) vector
-        x = self.drop(input_emb + position_emb) # (B, T_cond, emb_dim)
+        # Decoder
+        total_input_emb = input_emb + self.input_pos_embed # (B,Ti,emb_dim)
+        x = self.drop_embed(total_input_emb) # (B,Ti,emb_dim)
         x_dec = self.decoder(
             tgt=x,
             memory=x_enc,
             tgt_mask=self.mask,
             memory_mask=self.memory_mask
-        ) # (B, T_cond, emb_dim)
+        ) # (B,Ti,emb_dim)
 
-        # head
-        x = self.ln_f(x_dec)
-        x = self.head(x) # (B, T_cond, input_dim)
+        # Final output
+        x = self.ln_f(x_dec) # (B,Ti,emb_dim)
+        out = self.head(x) # (B,Ti,input_dim)
 
-        return x
+        return out
+
 
 
 

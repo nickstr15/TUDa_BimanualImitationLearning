@@ -69,12 +69,12 @@ class ModuleForDiffusion(ABC, nn.Module):
         Forward pass.
 
         Args:
-            sample (torch.Tensor): Input tensor of shape (B, T, input_dim), where B is the batch size,
-                                   T is the sequence length, and input_dim is the feature dimension.
+            sample (torch.Tensor): Input tensor of shape (B, Ti, input_dim), where B is the batch size,
+                                   Ti is the sequence length, and input_dim is the feature dimension.
             timestep (Union[torch.Tensor, float, int]): Diffusion step. Can be a scalar or a tensor of shape (B,).
-            cond (torch.Tensor, optional): Conditioning vector of shape (B, cond_dim). Default is None.
+            cond (torch.Tensor): Conditioning vector of shape (B, Tc, cond_dim)
 
         Returns:
-            torch.Tensor: Output tensor of shape (B, T, input_dim).
+            torch.Tensor: Output tensor of shape (B, Ti, input_dim).
         """
         raise NotImplementedError("Must implement forward method in derived class.")
