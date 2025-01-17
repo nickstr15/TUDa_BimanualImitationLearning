@@ -1,12 +1,13 @@
 import numpy as np
 
 from robosuite.models.objects import MujocoXMLObject
-from utils.paths import path_completion
+from utils.paths import path_completion, RS_ASSETS_DIR
+
 
 class QuadBracket(MujocoXMLObject):
     def __init__(self, name: str):
         super().__init__(
-            path_completion("objects/quad_insert/quad_peg/quad_bracket.xml"),
+            path_completion("objects/quad_insert/quad_peg/quad_bracket.xml", RS_ASSETS_DIR),
             name=name,
             joints=[dict(type="free", damping="0.0005")],
             obj_type="all",
@@ -53,7 +54,7 @@ class QuadBracket(MujocoXMLObject):
 class QuadPeg(MujocoXMLObject):
     def __init__(self, name: str):
         super().__init__(
-            path_completion("objects/quad_insert/quad_peg/quad_peg.xml"),
+            path_completion("objects/quad_insert/quad_peg/quad_peg.xml", RS_ASSETS_DIR),
             name=name,
             joints=[dict(type="free", damping="0.0005")],
             obj_type="all",

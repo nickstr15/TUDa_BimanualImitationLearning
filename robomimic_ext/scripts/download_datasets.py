@@ -68,8 +68,14 @@ def main():
             download_dataset(dataset_name)
 
     else:
-        assert args.dataset in DATASET_REGISTRY, "Dataset {} not found in registry.".format(args.dataset)
+        if not args.dataset in DATASET_REGISTRY:
+            print("Dataset {} not found in registry. Available datasets: {}".format(
+                args.dataset, list(DATASET_REGISTRY.keys())
+            ))
+            return
         download_dataset(args.dataset)
+
+    print("Download complete.")
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,7 @@ Script to collect waypoints for the Panda handover task.
 
 Arguments:
     --environment -e: environment to use
+    --waypoints -wp: waypoints file to use
     --robots -r: robots to use, e.g "Panda Panda" or "Baxter"
     --num_success -ns: number of successful demonstrations to collect, default is 100
     --visualize -v: flag to use human render mode

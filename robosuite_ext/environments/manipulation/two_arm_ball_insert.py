@@ -11,7 +11,7 @@ from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler, SequentialCompositeSampler
 from robosuite.utils.transform_utils import euler2mat, convert_quat
 
-from utils.paths import path_completion
+from utils.paths import path_completion, RS_ASSETS_DIR
 
 
 class TwoArmBallInsert(TwoArmEnv):
@@ -349,7 +349,7 @@ class TwoArmBallInsert(TwoArmEnv):
             "shininess": "0.1",
         }
         ball_mat = CustomMaterial(
-            texture=path_completion("textures/cricket.png"),
+            texture=path_completion("textures/cricket.png", RS_ASSETS_DIR),
             tex_name="basketball_tex",
             mat_name="ball_mat",
             tex_attrib=tex_attrib,

@@ -16,6 +16,7 @@ RS_ENVIRONMENTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "environme
 RS_SCENES_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "environments", "scenes")
 RS_WAYPOINTS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "demonstration", "waypoints", "files")
 RS_MODELS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "models")
+RS_ASSETS_DIR = os.path.join(PROJECT_ROOT_DIR, "robosuite_ext", "models", "assets")
 
 # ROBOMIMIC_EXT
 RM_DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT_DIR, "data", "robomimic_output")

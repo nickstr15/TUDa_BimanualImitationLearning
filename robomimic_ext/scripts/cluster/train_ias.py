@@ -7,7 +7,6 @@ The setup always tries to use the GPU if available.
 """
 import json
 import os.path
-import traceback
 import time
 import datetime
 

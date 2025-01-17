@@ -2,10 +2,10 @@ from collections import OrderedDict
 
 import numpy as np
 
-import robosuite_ext.utils.transform_utils as tu
-from robosuite_ext.environments.manipulation.two_arm_env import TwoArmEnv
-from robosuite_ext.models.arenas import TableArena
-from robosuite_ext.models.tasks import ManipulationTask
+import robosuite.utils.transform_utils as tu
+from robosuite.environments.manipulation.two_arm_env import TwoArmEnv
+from robosuite.models.arenas import TableArena
+from robosuite.models.tasks import ManipulationTask
 
 
 class TwoArmEmpty(TwoArmEnv):
