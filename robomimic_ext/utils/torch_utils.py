@@ -23,9 +23,9 @@ def optimizer_from_optim_params(optim_params: Config, thetas: ParamsT):
     Returns:
         optimizer (torch.optim.Optimizer): optimizer
     """
-    optimizer_type = optim_params.get("optimizer_type", "adam")
-    lr = optim_params["learning_rate"]["initial"]
+    optimizer_type = optim_params.get("optimizer_type", "adamw")
     betas = optim_params.get("betas", (0.9, 0.95))
+    lr = optim_params["learning_rate"]["initial"]
 
     if optimizer_type == "adam":
         return optim.Adam(

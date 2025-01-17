@@ -54,33 +54,32 @@
         ],
         "goal_mode": null,
         "cuda": false,
-        "batch_size": 64,
-        "num_epochs": 2000,
+        "batch_size": 128,
+        "num_epochs": 500,
         "seed": 1
     },
     "algo": {
         "optim_params": {
-            "noise_pred_net": {
+            "policy": {
                 "optimizer_type": "adamw",
-                "weight_decay": 0.001,
+                "betas": [0.9, 0.95],
                 "learning_rate": {
-                    "initial": 0.0001
+                    "initial": 0.0001,
+                    "warmup_epochs": 5,
+                    "decay_factor": 0.1,
+                    "epoch_schedule": [],
+                    "scheduler_type": "cosine"
                 },
-                "lr_scheduler_type": "cosine",
-                "warmup_epochs": 5,
-                "decay_factor": 0.1,
-                "epoch_schedule": []
-            },
-            "obs_encoder": {
-                "optimizer_type": "adamw",
-                "weight_decay": 0.000001,
-                "learning_rate": {
-                    "initial": 0.0001
+                "noise_pred_net" : {
+                    "regularization" : {
+                        "L2": 0.0001
+                    }
                 },
-                "lr_scheduler_type": "cosine",
-                "warmup_epochs": 5,
-                "decay_factor": 0.1,
-                "epoch_schedule": []
+                "obs_encoder" : {
+                    "regularization" : {
+                        "L2": 0.000001
+                    }
+                }
             }
         },
         "horizon": {

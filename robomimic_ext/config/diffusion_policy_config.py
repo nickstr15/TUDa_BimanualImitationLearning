@@ -3,6 +3,13 @@ from robomimic.config.base_config import BaseConfig
 class DiffusionPolicyConfig(BaseConfig):
     ALGO_NAME = "diffusion_policy"
 
+    def train_config(self):
+        """
+        Diffusion policy algorithms don't need "next_obs" from hdf5 - so save on storage and compute by disabling it.
+        """
+        super(DiffusionPolicyConfig, self).train_config()
+        self.train.hdf5_load_next_obs = False
+
     def algo_config(self):
         """
         This function populates the `config.algo` attribute of the config, and is given to the
@@ -11,20 +18,22 @@ class DiffusionPolicyConfig(BaseConfig):
         training and test-time behavior should be populated here.
         """
         # specific optimization parameters for the diffusion architecture
-        ## noise_pred_net
         ### optimizer parameters
-        self.algo.optim_params.noise_pred_net.optimizer_type = "adamw"
-        self.algo.optim_params.noise_pred_net.weight_decay = 1e-3
-        self.algo.optim_params.noise_pred_net.learning_rate.initial = 1e-4
-        ### learning rate scheduler parameters
-        self.algo.optim_params.noise_pred_net.decay_factor = 0.1
-        self.algo.optim_params.noise_pred_net.epoch_schedule = []
-        self.algo.optim_params.noise_pred_net.lr_scheduler_type = "cosine"
-        self.algo.optim_params.noise_pred_net.warmup_epochs = 5
+        self.algo.optim_params.policy.optimizer_type = "adamw"
+        self.algo.optim_params.policy.betas = (0.9, 0.95)
+        self.algo.optim_params.policy.learning_rate.initial = 1e-4
+        self.algo.optim_params.policy.learning_rate.warmup_epochs = 5
+        self.algo.optim_params.policy.learning_rate.decay_factor = 0.1
+        self.algo.optim_params.policy.learning_rate.epoch_schedule = []
+        self.algo.optim_params.policy.learning_rate.scheduler_type = "cosine"
+
+        self.algo.optim_params.policy.noise_pred_net.regularization.L2 = 1e-4
+        self.algo.optim_params.policy.obs_encoder.regularization.L2 = 1e-6
+
         ## observation encoder
         ### optimizer parameters
         self.algo.optim_params.obs_encoder.optimizer_type = "adamw"
-        self.algo.optim_params.obs_encoder.weight_decay = 1e-6
+
         self.algo.optim_params.obs_encoder.learning_rate.initial = 1e-4
         ### learning rate scheduler parameters
         self.algo.optim_params.obs_encoder.decay_factor = 0.1
