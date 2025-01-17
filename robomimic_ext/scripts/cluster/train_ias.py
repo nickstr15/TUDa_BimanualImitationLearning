@@ -38,9 +38,8 @@ def prep_training_run_cluster(
             # always try to use GPU if available
             config.train.cuda = True
 
-            # disable rendering and video saving
+            # disable rendering
             config.experiment.render = False
-            config.experiment.render_video = False
     else:
         raise ValueError("Must provide a config file to run training.")
 
