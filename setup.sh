@@ -15,6 +15,7 @@ pip install wandb
 pip3 install torch torchvision torchaudio
 pip install experiment-launcher
 pip install diffusers
+pip install gdown
 
 pip install -e .
 

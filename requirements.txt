@@ -12,3 +12,4 @@ pynput~=1.7.7
 pyyaml~=6.0.2
 diffusers~=0.32.1
 packaging~=24.2
+gdown~=5.2.0
