@@ -79,12 +79,13 @@ class ModuleForDiffusion(ABC, nn.Module):
         """
         raise NotImplementedError("Must implement forward method in derived class.")
 
-    def get_optim_groups(self, weight_decay: float = 1e-3) -> Union[list[dict], None]:
+    def get_optim_groups(self, weight_decay: float = 1e-3, name: str = "module") -> Union[list[dict], None]:
         """
         Returns the parameter groups for the optimizer and sets the weight decay strength for regularization.
 
         Args:
             weight_decay (float): Weight decay strength for regularization.
+            name (str): Name of the module.
 
         Returns:
             list[dict]: List of parameter groups for the optimizer, or None if no special parameter groups are needed.

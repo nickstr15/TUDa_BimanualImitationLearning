@@ -254,7 +254,7 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
 
         return out
 
-    def get_optim_groups(self, weight_decay: float = 1e-3):
+    def get_optim_groups(self, weight_decay: float = 1e-3, name: str = "transformer") -> list[dict]:
         """
         This long function is unfortunately doing something very simple and is being very defensive:
         It is separating out all parameters of the model into two buckets: those that will experience
@@ -262,6 +262,7 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
 
         Args:
             weight_decay (float): Weight decay strength for regularization.
+            name (str): Name of the model.
 
         Returns:
             list[dict]: List of parameter groups for the optimizer.
@@ -310,10 +311,12 @@ class ConditionalTransformerForDiffusion(ModuleForDiffusion):
             {
                 "params": [param_dict[pn] for pn in sorted(list(decay))],
                 "weight_decay": weight_decay,
+                "name": f"{name}_weight_decay",
             },
             {
                 "params": [param_dict[pn] for pn in sorted(list(no_decay))],
                 "weight_decay": 0.0,
+                "name": f"{name}_no_weight_decay",
             },
         ]
         return optim_groups

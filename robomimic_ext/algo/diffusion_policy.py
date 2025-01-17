@@ -478,17 +478,20 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         # create optim_groups
         ## noise_pred_net
         optim_groups = noise_pred_net.get_optim_groups(
-            weight_decay=self.algo_config.optim_params.policy.noise_pred_net.regularization.L2
+            weight_decay=self.algo_config.optim_params.policy.noise_pred_net.regularization.L2,
+            name="noise_pred_net"
         )
         if optim_groups is None: # all parameters in one group
             optim_groups = [{
                 "params": noise_pred_net.parameters(),
-                "weight_decay": self.algo_config.optim_params.policy.noise_pred_net.regularization.L2
+                "weight_decay": self.algo_config.optim_params.policy.noise_pred_net.regularization.L2,
+                "name": "noise_pred_net"
             }]
         ## obs_encoder
         optim_groups.append({
             "params": obs_encoder_net.parameters(),
-            "weight_decay": self.algo_config.optim_params.policy.obs_encoder.regularization.L2
+            "weight_decay": self.algo_config.optim_params.policy.obs_encoder.regularization.L2,
+            "name": "obs_encoder"
         })
 
         # create optimizer
