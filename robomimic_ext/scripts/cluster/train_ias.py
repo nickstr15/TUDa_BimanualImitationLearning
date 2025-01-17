@@ -40,6 +40,7 @@ def prep_training_run_cluster(
 
             # disable rendering
             config.experiment.render = False
+            config.experiment.render_video = False
     else:
         raise ValueError("Must provide a config file to run training.")
 
