@@ -1,6 +1,6 @@
-import argparse
 import json
-import os
+import logging
+from tqdm import tqdm
 import random
 
 import h5py
@@ -25,6 +25,9 @@ def play_back_from_hdf5(
     :param target_rt: flag to play back the demonstrations in real time
     :return:
     """
+    # disable robosuite logging
+    logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
+
     f = h5py.File(hdf5_path, "r")
     env_info = json.loads(f["data"].attrs["env_info"])
 
@@ -40,12 +43,14 @@ def play_back_from_hdf5(
 
     # list of all demonstrations episodes
     demos = list(f["data"].keys())
+    print(f"Found {len(demos)} episodes in the hdf5 file.")
     num_episodes = num_episodes if num_episodes is not None else len(demos)
     num_episodes = min(num_episodes, len(demos))
 
     demos_to_play = random.sample(demos, num_episodes)
+    print(f"Playing back {num_episodes} episodes.")
 
-    for ep in demos_to_play:
+    for ep in tqdm(demos_to_play, desc="Playing back episodes"):
         # read the model xml, using the metadata stored in the attribute for this episode
         model_xml = f["data/{}".format(ep)].attrs["model_file"]
 
@@ -96,3 +101,5 @@ def play_back_from_hdf5(
                 if target_rt:
                     rt.sleep()
     f.close()
+
+    print("Done.")

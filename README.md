@@ -85,7 +85,7 @@ The collected data will be stored in the `data` folder. Each trajectory is store
 #### Play back collected data
 To play back the collected data, use the following command:
 ```bash
-python -m robosuite_ext.scripts.playback_from_hdf5 --folder <folder>
+python -m robosuite_ext.scripts.playback_from_hdf5 -f <folder>
 ```
 with `<folder>` being the folder containing the created `demo.hdf5` file.
 
