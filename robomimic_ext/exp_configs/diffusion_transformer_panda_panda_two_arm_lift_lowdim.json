@@ -99,6 +99,9 @@
             "p_drop_attn": 0.3,
             "causal_attn": true,
             "n_cond_layers": 0
+        },
+        "ema" : {
+            "enabled" : false
         }
     },
     "observation": {
