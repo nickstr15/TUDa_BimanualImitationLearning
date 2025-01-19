@@ -242,7 +242,6 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             info (dict): dictionary of relevant inputs, outputs, and losses
                 that might be relevant for logging
         """
-        action_dim = self.ac_dim
         B = batch['actions'].shape[0]
 
         with torch_utils.maybe_no_grad(no_grad=validate):
@@ -291,7 +290,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
             if self.prediction_type == 'epsilon':
                 target = noise
             elif self.prediction_type == 'sample':
-                target = noisy_actions
+                target = actions
             else:
                 raise ValueError(f"Unsupported prediction type: {self.prediction_type}")
 
@@ -384,6 +383,19 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         return action
 
     def _get_action_trajectory(self, obs_dict, goal_dict=None):
+        """
+        Get a sequence of actions for the given observation sequence,
+        by predicting the next 'Tp' actions using the denoising process.
+        ! But only return the next 'Ta' action predictions,
+        as only these actions are actually executed.
+
+        Args:
+            obs_dict (dict): the last 'To' observations in the format { <key>: [1, To, obs_dim] }
+            goal_dict (dict): goal in the format { <key>: [1, goal_dim] }
+
+        Returns:
+            action_seq (torch.Tensor): the next 'Ta' action predictions in the format [1, Ta, action_dim]
+        """
         assert not self.nets.training
         Ta = self.algo_config.horizon.action_horizon
         Tp = self.algo_config.horizon.prediction_horizon
@@ -414,7 +426,7 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
         assert obs_features.ndim == 3  # (B, To, obs_feature_dim)
         B = obs_features.shape[0]
 
-        # initialize action from Gaussian noise
+        # initialize action from Gaussian noise => predict the next Tp actions
         prediction = torch.randn(
             size=(B, Tp, action_dim),
             device=self.device
@@ -438,9 +450,9 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
                 sample=prediction
             ).prev_sample
 
-            # only return the next 'Ta' action predictions
-            action_seq = prediction[:, :Ta, :] # shape (B, Ta, action_dim)
-            return action_seq
+        # only return the next 'Ta' action predictions
+        action_seq = prediction[:, :Ta, :]  # shape (B, Ta, action_dim)
+        return action_seq
 
 
     def serialize(self):
