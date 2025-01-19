@@ -416,7 +416,9 @@ class DiffusionPolicyBase(ABC, PolicyAlgo):
 
         # initialize action from Gaussian noise
         prediction = torch.randn(
-            (B, Tp, action_dim), device=self.device)
+            size=(B, Tp, action_dim),
+            device=self.device
+        )
 
         # init scheduler
         self.noise_scheduler.set_timesteps(self.num_inference_timesteps)
