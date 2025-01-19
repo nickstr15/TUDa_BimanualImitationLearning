@@ -1,0 +1,136 @@
+{
+    "algo_name": "diffusion_policy",
+    "experiment": {
+        "name": "Diffusion_Transformer_Panda_Panda_TwoArmLift_LowDim",
+        "validate": false,
+        "logging": {
+            "terminal_output_to_txt": true,
+            "log_tb": false,
+            "log_wandb": true,
+            "wandb_proj_name": "imitation_learning"
+        },
+        "save": {
+            "enabled": true,
+            "every_n_seconds": null,
+            "every_n_epochs": 50,
+            "epochs": [],
+            "on_best_validation": false,
+            "on_best_rollout_return": false,
+            "on_best_rollout_success_rate": true
+        },
+        "epoch_every_n_steps": null,
+        "validation_epoch_every_n_steps": null,
+        "env": null,
+        "additional_envs": null,
+        "render": false,
+        "render_video": true,
+        "keep_all_videos": false,
+        "video_skip": 5,
+        "rollout": {
+            "enabled": true,
+            "n": 10,
+            "horizon": 400,
+            "rate": 10,
+            "warmstart": 0,
+            "terminate_on_success": true
+        }
+    },
+    "train": {
+        "data": "Panda_Panda_TwoArmLift_lowdim.hdf5",
+        "output_dir": "DEFAULT",
+        "num_data_workers": 4,
+        "hdf5_cache_mode": "all",
+        "hdf5_use_swmr": true,
+        "hdf5_load_next_obs": false,
+        "hdf5_normalize_obs": false,
+        "hdf5_filter_key": null,
+        "hdf5_validation_filter_key": null,
+        "seq_length": 1,
+        "pad_seq_length": true,
+        "frame_stack": 5,
+        "pad_frame_stack": true,
+        "dataset_keys": [
+            "actions"
+        ],
+        "goal_mode": null,
+        "cuda": false,
+        "batch_size": 128,
+        "num_epochs": 500,
+        "seed": 1
+    },
+    "algo": {
+        "optim_params": {
+            "policy": {
+                "optimizer_type": "adamw",
+                "betas": [0.9, 0.95],
+                "learning_rate": {
+                    "initial": 0.0001,
+                    "warmup_epochs": 5,
+                    "decay_factor": 0.1,
+                    "epoch_schedule": [],
+                    "scheduler_type": "cosine"
+                },
+                "noise_pred_net" : {
+                    "regularization" : {
+                        "L2": 0.0001
+                    }
+                },
+                "obs_encoder" : {
+                    "regularization" : {
+                        "L2": 0.000001
+                    }
+                }
+            }
+        },
+        "horizon": {
+            "observation_horizon": 2,
+            "prediction_horizon": 4,
+            "action_horizon": 1
+        },
+        "unet": {
+            "enabled": false
+        },
+        "transformer": {
+            "enabled": true,
+            "num_layers": 8,
+            "num_heads": 4,
+            "embed_dim": 256,
+            "p_drop_embed": 0.0,
+            "p_drop_attn": 0.3,
+            "causal_attn": true,
+            "n_cond_layers": 0
+        }
+    },
+    "observation": {
+        "modalities": {
+            "obs": {
+                "low_dim": [
+                    "robot0_eef_pos",
+                    "robot0_eef_quat",
+                    "robot0_gripper_qpos",
+                    "robot1_eef_pos",
+                    "robot1_eef_quat",
+                    "robot1_gripper_qpos",
+                    "object"
+                ],
+                "rgb": [],
+                "depth": [],
+                "scan": []
+            },
+            "goal": {
+                "low_dim": [],
+                "rgb": [],
+                "depth": [],
+                "scan": []
+            }
+        },
+        "encoder": {
+            "low_dim": {
+                "core_class": null,
+                "core_kwargs": {},
+                "obs_randomizer_class": null,
+                "obs_randomizer_kwargs": {}
+            }
+        }
+    }
+}

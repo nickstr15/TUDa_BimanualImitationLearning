@@ -1,0 +1,1 @@
+This extension is based on the [robosuite](https://robosuite.ai/) library.

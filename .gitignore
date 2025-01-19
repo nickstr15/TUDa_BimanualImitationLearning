@@ -1,9 +1,8 @@
 # CUSTOM
-recordings/
-demonstrations/
-_research/
-trained_models/
 logs/
+data/
+_research/
+utils/wandb_private.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
