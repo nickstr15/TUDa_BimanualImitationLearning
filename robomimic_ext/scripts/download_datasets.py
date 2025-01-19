@@ -7,7 +7,13 @@ from utils.paths import DATASET_DIR
 
 # registry of datasets to download (name -> file_id)
 DATASET_REGISTRY = {
-    "Panda_Panda_TwoArmLift_lowdim": "1Q6GCdZurAnSbd_TJPmOO_LUw8lm6pW4i"
+    "Panda_Panda_TwoArmBallInsert_lowdim": "1NXANC1tqr96dHClHP-uejMxSQl3JqNZ2",
+    "Panda_Panda_TwoArmHandover_lowdim": "19pcgsdWEhfTiOcD1boc56pKT5IGEPnxT",
+    "Panda_Panda_TwoArmHingedBin_lowdim": "1pgQ-CQ_19ic3b3bvtSGaypqgjmJVEE4T",
+    "Panda_Panda_TwoArmLift_lowdim": "1Q6GCdZurAnSbd_TJPmOO_LUw8lm6pW4i",
+    "Panda_Panda_TwoArmPegInHole_lowdim": "1MnJpPVNjBjz9ZuBBSulhbuXd5CrX3v6C",
+    "Panda_Panda_TwoArmPickPlace_lowdim": "1C6orKF-MISwrudrdw2LQI5HryCfst15B",
+    "Panda_Panda_TwoArmQuadInsert_lowdim": "1ADbySivoo9XwsxxBa5EoRyYL4z1w9gkJ",
 }
 
 def download_file_from_google_drive(file_id: str, destination: str):
