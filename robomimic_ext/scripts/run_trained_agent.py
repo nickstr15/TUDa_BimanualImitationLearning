@@ -57,6 +57,8 @@ Example usage:
 
 import argparse
 import json
+import logging
+
 import h5py
 import imageio
 import numpy as np
@@ -71,8 +73,12 @@ import robomimic.utils.tensor_utils as tensor_utils
 import robomimic.utils.obs_utils as ou
 from robomimic.envs.env_base import EnvBase
 from robomimic.algo import RolloutPolicy
+from robomimic.envs.wrappers import EnvWrapper
 
-import robosuite_ext.environments # load custom environments
+#! do not remove this imports, needed to get registered components
+import robosuite_ext.environments
+import robomimic_ext.algo
+import robomimic_ext.config
 
 
 def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5, return_obs=False, camera_names=None):
@@ -97,8 +103,9 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
         stats (dict): some statistics for the rollout - such as return, horizon, and task success
         traj (dict): dictionary that corresponds to the rollout trajectory
     """
-    assert isinstance(env, EnvBase)
-    assert isinstance(policy, RolloutPolicy)
+    assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper), \
+        "env must be an instance of EnvBase or EnvWrapper, got {}".format(type(env))
+    assert isinstance(policy, RolloutPolicy), "policy must be an instance of RolloutPolicy, got {}".format(type(policy))
     assert not (render and (video_writer is not None))
 
     policy.start_episode()
@@ -220,6 +227,9 @@ def run_trained_agent(args):
         verbose=True,
     )
 
+    # disable robosuite logging
+    logging.getLogger("robosuite_logs").setLevel(logging.ERROR)
+
     # maybe set seed
     if args.seed is not None:
         np.random.seed(args.seed)
@@ -309,7 +319,7 @@ if __name__ == "__main__":
 
     # maximum horizon of rollout, to override the one stored in the model checkpoint
     parser.add_argument(
-        "--horizon", "-h",
+        "--horizon", "-ho",
         type=int,
         default=None,
         help="(optional) override maximum horizon of rollout from the one in the checkpoint",

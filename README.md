@@ -133,7 +133,7 @@ The `memory_single_job` parameter specifies the memory in MB that should be allo
 ### Evaluate/Run policy
 To evaluate a trained policy, run
 ```bash
-python -m robomimic_ext.scripts.run_trained_agent --agent <path/to/agent.pth>
+python -m robomimic_ext.scripts.run_trained_agent --agent <path/to/agent.pth> --render
 ```
 For all available settings, please refer to the `--help` flag of the script.
 
